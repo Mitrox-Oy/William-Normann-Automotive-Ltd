@@ -4,6 +4,10 @@
   "private": true,
   "scripts": {
     "build": "next build",
+    "build:gh-pages": "npm run prepare:gh-pages && next build && npm run restore:gh-pages && npm run copy-to-docs",
+    "prepare:gh-pages": "node scripts/prepare-gh-pages.js",
+    "restore:gh-pages": "node scripts/restore-gh-pages.js",
+    "copy-to-docs": "node scripts/copy-to-docs.js",
     "dev": "next dev",
     "lint": "eslint .",
     "start": "next start"
