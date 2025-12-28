@@ -6,6 +6,7 @@ import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { MobileCTA } from "@/components/mobile-cta"
 import { siteConfig } from "@/content/site"
+import { withBasePath } from "@/lib/base-path"
 import "./globals.css"
 
 import { Inter, Geist_Mono, Source_Serif_4, Inter as V0_Font_Inter, Geist_Mono as V0_Font_Geist_Mono, Source_Serif_4 as V0_Font_Source_Serif_4 } from 'next/font/google'
@@ -65,19 +66,19 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: "/icon-light-32x32.png",
+        url: withBasePath("/icon-light-32x32.png"),
         media: "(prefers-color-scheme: light)",
       },
       {
-        url: "/icon-dark-32x32.png",
+        url: withBasePath("/icon-dark-32x32.png"),
         media: "(prefers-color-scheme: dark)",
       },
       {
-        url: "/icon.svg",
+        url: withBasePath("/icon.svg"),
         type: "image/svg+xml",
       },
     ],
-    apple: "/apple-icon.png",
+    apple: withBasePath("/apple-icon.png"),
   },
 }
 
@@ -97,7 +98,7 @@ export default function RootLayout({
             playsInline
             className="absolute inset-0 h-full w-full object-cover"
           >
-            <source src="/blackcar.mp4" type="video/mp4" />
+            <source src={withBasePath("/blackcar.mp4")} type="video/mp4" />
           </video>
           {/* Dim overlay to improve readability */}
           <div className="absolute inset-0 bg-black/60 pointer-events-none" />
