@@ -10,7 +10,8 @@
     "copy-to-docs": "node scripts/copy-to-docs.js",
     "dev": "next dev",
     "lint": "eslint .",
-    "start": "next start"
+    "start": "next build && npx serve@latest out",
+    "serve": "npx serve@latest out"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "latest",
@@ -54,6 +55,7 @@
     "framer-motion": "12.23.26",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
+    "motion": "^12.23.26",
     "next": "16.0.10",
     "next-themes": "^0.4.6",
     "postprocessing": "^6.38.1",

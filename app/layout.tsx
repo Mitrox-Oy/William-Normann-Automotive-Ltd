@@ -5,7 +5,6 @@ import { Analytics } from "@vercel/analytics/next"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { MobileCTA } from "@/components/mobile-cta"
-import Dither from "@/components/dither"
 import { siteConfig } from "@/content/site"
 import "./globals.css"
 
@@ -91,18 +90,17 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.variable} ${geistMono.variable} ${sourceSerif4.variable} font-sans antialiased`}>
         <div className="fixed inset-0 z-0">
-          <Dither
-            waveColor={[0.5, 0.5, 0.5]}
-            disableAnimation={false}
-            enableMouseInteraction={true}
-            mouseRadius={0.3}
-            colorNum={3}
-            waveAmplitude={0.4}
-            waveFrequency={1}
-            waveSpeed={0.02}
-          />
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 h-full w-full object-cover"
+          >
+            <source src="/blackcar.mp4" type="video/mp4" />
+          </video>
           {/* Dim overlay to improve readability */}
-          <div className="absolute inset-0 bg-black/20 pointer-events-none" />
+          <div className="absolute inset-0 bg-black/60 pointer-events-none" />
         </div>
         <div className="relative z-10">
           <Navbar />

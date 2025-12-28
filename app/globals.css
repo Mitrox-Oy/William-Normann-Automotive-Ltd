@@ -4,40 +4,40 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Automotive color scheme with dark neutrals and amber accent */
+  /* Automotive color scheme with dark neutrals and cream accent */
   --background: #ffffff;
   --foreground: #1a1a1a;
   --card: #ffffff;
   --card-foreground: #1a1a1a;
   --popover: #ffffff;
   --popover-foreground: #1a1a1a;
-  --primary: #d97706;
-  --primary-foreground: #ffffff;
+  --primary: #FCFAFA;
+  --primary-foreground: #1a1a1a;
   --secondary: #f5f5f4;
   --secondary-foreground: #1a1a1a;
   --muted: #fafaf9;
   --muted-foreground: #737373;
-  --accent: #fef3c7;
-  --accent-foreground: #78350f;
+  --accent: #FCFAFA;
+  --accent-foreground: #1a1a1a;
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
   --border: #e7e5e4;
   --input: #e7e5e4;
-  --ring: #d97706;
-  --chart-1: #d97706;
-  --chart-2: #ea580c;
-  --chart-3: #f59e0b;
-  --chart-4: #fbbf24;
-  --chart-5: #fcd34d;
+  --ring: #FCFAFA;
+  --chart-1: #FCFAFA;
+  --chart-2: #FCFAFA;
+  --chart-3: #FCFAFA;
+  --chart-4: #FCFAFA;
+  --chart-5: #FCFAFA;
   --radius: 0.5rem;
   --sidebar: #fafaf9;
   --sidebar-foreground: #1a1a1a;
-  --sidebar-primary: #d97706;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #fef3c7;
-  --sidebar-accent-foreground: #78350f;
+  --sidebar-primary: #FCFAFA;
+  --sidebar-primary-foreground: #1a1a1a;
+  --sidebar-accent: #FCFAFA;
+  --sidebar-accent-foreground: #1a1a1a;
   --sidebar-border: #e7e5e4;
-  --sidebar-ring: #d97706;
+  --sidebar-ring: #FCFAFA;
   --shadow-x: 0px;
   --shadow-y: 1px;
   --shadow-blur: 3px;
@@ -53,32 +53,32 @@
   --card-foreground: #ededed;
   --popover: #171717;
   --popover-foreground: #ededed;
-  --primary: #f59e0b;
+  --primary: #FCFAFA;
   --primary-foreground: #0a0a0a;
   --secondary: #262626;
   --secondary-foreground: #ededed;
   --muted: #1a1a1a;
   --muted-foreground: #a3a3a3;
-  --accent: #78350f;
-  --accent-foreground: #fef3c7;
+  --accent: #FCFAFA;
+  --accent-foreground: #0a0a0a;
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
   --border: #2d2d2d;
   --input: #2d2d2d;
-  --ring: #f59e0b;
-  --chart-1: #fbbf24;
-  --chart-2: #f59e0b;
-  --chart-3: #ea580c;
-  --chart-4: #d97706;
-  --chart-5: #b45309;
+  --ring: #FCFAFA;
+  --chart-1: #FCFAFA;
+  --chart-2: #FCFAFA;
+  --chart-3: #FCFAFA;
+  --chart-4: #FCFAFA;
+  --chart-5: #FCFAFA;
   --sidebar: #0a0a0a;
   --sidebar-foreground: #ededed;
-  --sidebar-primary: #f59e0b;
+  --sidebar-primary: #FCFAFA;
   --sidebar-primary-foreground: #0a0a0a;
-  --sidebar-accent: #78350f;
-  --sidebar-accent-foreground: #fef3c7;
+  --sidebar-accent: #FCFAFA;
+  --sidebar-accent-foreground: #0a0a0a;
   --sidebar-border: #2d2d2d;
-  --sidebar-ring: #f59e0b;
+  --sidebar-ring: #FCFAFA;
   --shadow-x: 0px;
   --shadow-y: 1px;
   --shadow-blur: 3px;
@@ -188,6 +188,73 @@
   .text-card-foreground,
   .text-secondary-foreground {
     color: white !important;
+  }
+
+  /* Ensure text inside primary/accent colored elements is black, bold, and has subtle shadow */
+  .bg-primary,
+  .bg-accent,
+  [class*="bg-primary"],
+  [class*="bg-accent"] {
+    color: #000000 !important;
+    font-weight: 600 !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+  }
+
+  .bg-primary *,
+  .bg-accent *,
+  [class*="bg-primary"] *:not([class*="bg-primary/5"] *),
+  [class*="bg-accent"] * {
+    color: #000000 !important;
+    font-weight: 600 !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+  }
+
+  /* Exception: text in quote form response time box should be white */
+  section#contact .rounded-lg.p-4 p,
+  section#contact .rounded-lg.p-4 * {
+    color: white !important;
+  }
+
+  /* Exception: icons in bg-primary/10 should be white */
+  [class*="bg-primary/10"] svg * {
+    color: white !important;
+  }
+
+  /* Ensure primary-foreground and accent-foreground text is black, bold, and has subtle shadow */
+  .text-primary-foreground,
+  .text-accent-foreground {
+    color: #000000 !important;
+    font-weight: 600 !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+  }
+
+  /* Ensure icons inside circular boxes with bg-primary/10 are fully white - override all child rules */
+  [class*="bg-primary/10"] svg {
+    color: white !important;
+  }
+  
+  [class*="bg-primary/10"] svg * {
+    color: white !important;
+  }
+  
+  [class*="bg-primary/10"] svg path,
+  [class*="bg-primary/10"] svg circle,
+  [class*="bg-primary/10"] svg polyline,
+  [class*="bg-primary/10"] svg line,
+  [class*="bg-primary/10"] svg polygon,
+  [class*="bg-primary/10"] svg rect,
+  [class*="bg-primary/10"] svg g {
+    stroke: white !important;
+    fill: none !important;
+    color: white !important;
+  }
+  
+  /* For filled icons, use fill instead */
+  [class*="bg-primary/10"] svg path[fill],
+  [class*="bg-primary/10"] svg circle[fill],
+  [class*="bg-primary/10"] svg rect[fill] {
+    fill: white !important;
+    stroke: none !important;
   }
 
   /* Added gradient drift animation for background */

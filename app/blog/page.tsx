@@ -71,7 +71,7 @@ export default function BlogPage() {
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button asChild variant="ghost" className="group w-full">
+                  <Button asChild variant="ghost" className="group w-full bg-white text-black hover:bg-white/90">
                     <Link href={`/blog/${post.slug}`}>
                       Read article
                       <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />

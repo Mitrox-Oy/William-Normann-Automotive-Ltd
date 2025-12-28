@@ -12,6 +12,7 @@ import { GlassPanel } from "@/components/glass-panel"
 import { HowItWorksTimeline } from "@/components/how-it-works-timeline"
 import { QuoteForm } from "@/components/quote-form"
 import { motion } from "framer-motion"
+import CircularText from "@/components/circular-text"
 
 export default function HomePageClient() {
   return (
@@ -58,63 +59,14 @@ export default function HomePageClient() {
               </GlassPanel>
             </div>
 
-            {/* Right: Abstract illustration */}
+            {/* Right: Circular text */}
             <div className="relative hidden lg:block">
               <div className="absolute inset-0 flex items-center justify-center">
-                {/* <CHANGE> Abstract routes illustration with gradient */}
-                <div className="relative h-full w-full">
-                  <svg viewBox="0 0 400 400" className="h-full w-full" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                      <linearGradient id="routeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="white" stopOpacity="1" />
-                        <stop offset="100%" stopColor="white" stopOpacity="0.9" />
-                      </linearGradient>
-                      <filter id="glow">
-                        <feGaussianBlur stdDeviation="4" result="coloredBlur" />
-                        <feMerge>
-                          <feMergeNode in="coloredBlur" />
-                          <feMergeNode in="SourceGraphic" />
-                        </feMerge>
-                      </filter>
-                    </defs>
-                    {/* Network nodes representing global connections */}
-                    <circle cx="80" cy="100" r="12" fill="url(#routeGrad)" filter="url(#glow)" />
-                    <circle cx="320" cy="120" r="12" fill="url(#routeGrad)" filter="url(#glow)" />
-                    <circle cx="200" cy="200" r="16" fill="url(#routeGrad)" filter="url(#glow)" />
-                    <circle cx="100" cy="300" r="10" fill="url(#routeGrad)" filter="url(#glow)" />
-                    <circle cx="300" cy="280" r="10" fill="url(#routeGrad)" filter="url(#glow)" />
-                    {/* Connecting routes */}
-                    <path
-                      d="M 80 100 Q 140 150 200 200"
-                      stroke="url(#routeGrad)"
-                      strokeWidth="2"
-                      fill="none"
-                      strokeDasharray="5,5"
-                    />
-                    <path
-                      d="M 200 200 Q 260 160 320 120"
-                      stroke="url(#routeGrad)"
-                      strokeWidth="2"
-                      fill="none"
-                      strokeDasharray="5,5"
-                    />
-                    <path
-                      d="M 200 200 Q 150 250 100 300"
-                      stroke="url(#routeGrad)"
-                      strokeWidth="2"
-                      fill="none"
-                      strokeDasharray="5,5"
-                    />
-                    <path
-                      d="M 200 200 Q 250 240 300 280"
-                      stroke="url(#routeGrad)"
-                      strokeWidth="2"
-                      fill="none"
-                      strokeDasharray="5,5"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 blur-3xl" />
-                </div>
+                <CircularText
+                  text="William Normann Automotive "
+                  onHover="speedUp"
+                  spinDuration={25}
+                />
               </div>
             </div>
           </div>
@@ -207,10 +159,10 @@ export default function HomePageClient() {
                   transition={{ delay: i * 0.1 }}
                 >
                   <Card className="h-full transition-all">
-                    <CardContent className="p-6">
+                    <CardContent className="flex h-full flex-col p-6">
                       <Package className="mb-4 h-8 w-8 text-primary" />
                       <h3 className="mb-2 font-semibold">{service.title}</h3>
-                      <p className="mb-4 text-sm text-muted-foreground leading-relaxed">{service.description}</p>
+                      <p className="mb-4 flex-1 text-sm text-muted-foreground leading-relaxed">{service.description}</p>
                       <Badge variant="outline" className="text-xs">
                         {service.turnaround}
                       </Badge>
@@ -258,7 +210,7 @@ export default function HomePageClient() {
                     className="flex items-start gap-3 rounded-lg p-4"
                   >
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                      <CheckCircle2 className="h-4 w-4 text-primary" />
+                      <CheckCircle2 className="h-4 w-4 text-white" />
                     </div>
                     <p className="font-medium leading-relaxed">{benefit}</p>
                   </div>
@@ -348,8 +300,6 @@ export default function HomePageClient() {
       <section id="contact" className="py-28 lg:py-36">
         <Container>
           <div className="relative">
-            {/* Blurred gradient overlay behind text - extremely subtle */}
-            <div className="absolute inset-0 -inset-x-4 -inset-y-2 bg-gradient-to-b from-black/[0.03] via-black/[0.02] to-black/[0.03] backdrop-blur-[1px] rounded-2xl pointer-events-none" />
             <div className="relative">
               <SectionHeading
                 title="Request Your Quote"

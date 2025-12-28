@@ -201,7 +201,7 @@ export function QuoteForm({ source = "general" }: QuoteFormProps) {
           <div className="space-y-4">
             <div className="flex gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                <Mail className="h-5 w-5 text-primary" />
+                <Mail className="h-5 w-5 text-white" strokeWidth={2} />
               </div>
               <div>
                 <p className="mb-1 font-medium">1. Instant Confirmation</p>
@@ -211,7 +211,7 @@ export function QuoteForm({ source = "general" }: QuoteFormProps) {
 
             <div className="flex gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                <Clock className="h-5 w-5 text-primary" />
+                <Clock className="h-5 w-5 text-white" strokeWidth={2} />
               </div>
               <div>
                 <p className="mb-1 font-medium">2. Expert Review</p>
@@ -223,7 +223,7 @@ export function QuoteForm({ source = "general" }: QuoteFormProps) {
 
             <div className="flex gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                <CheckCheck className="h-5 w-5 text-primary" />
+                <CheckCheck className="h-5 w-5 text-white" strokeWidth={2} />
               </div>
               <div>
                 <p className="mb-1 font-medium">3. Detailed Quote</p>
@@ -235,10 +235,10 @@ export function QuoteForm({ source = "general" }: QuoteFormProps) {
           </div>
         </div>
 
-        <div className="rounded-lg bg-primary/5 p-4">
-          <p className="mb-1 text-sm font-medium">Typical Response Time</p>
-          <p className="text-2xl font-bold text-primary">4 Hours</p>
-          <p className="text-xs text-muted-foreground">On business days</p>
+        <div className="rounded-lg p-4">
+          <p className="mb-1 text-sm font-medium text-white">Typical Response Time</p>
+          <p className="text-2xl font-bold text-white">4 Hours</p>
+          <p className="text-xs text-white">On business days</p>
         </div>
       </div>
     </div>
