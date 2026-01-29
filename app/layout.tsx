@@ -5,6 +5,8 @@ import { Analytics } from "@vercel/analytics/next"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { MobileCTA } from "@/components/mobile-cta"
+import { CartProvider } from "@/components/CartContext"
+import { AuthProvider } from "@/components/AuthProvider"
 import { siteConfig } from "@/content/site"
 import { withBasePath } from "@/lib/base-path"
 import "./globals.css"
@@ -90,26 +92,30 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} ${geistMono.variable} ${sourceSerif4.variable} font-sans antialiased`}>
-        <div className="fixed inset-0 z-0">
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="absolute inset-0 h-full w-full object-cover"
-          >
-            <source src={withBasePath("/blackcar.mp4")} type="video/mp4" />
-          </video>
-          {/* Dim overlay to improve readability */}
-          <div className="absolute inset-0 bg-black/60 pointer-events-none" />
-        </div>
-        <div className="relative z-10">
-          <Navbar />
-          <main className="min-h-screen">{children}</main>
-          <Footer />
-          <MobileCTA />
-        </div>
-        <Analytics />
+        <AuthProvider>
+          <CartProvider>
+            <div className="fixed inset-0 z-0">
+              <video
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="absolute inset-0 h-full w-full object-cover"
+              >
+                <source src={withBasePath("/blackcar.mp4")} type="video/mp4" />
+              </video>
+              {/* Dim overlay to improve readability */}
+              <div className="absolute inset-0 bg-black/60 pointer-events-none" />
+            </div>
+            <div className="relative z-10">
+              <Navbar />
+              <main className="min-h-screen">{children}</main>
+              <Footer />
+              <MobileCTA />
+            </div>
+            <Analytics />
+          </CartProvider>
+        </AuthProvider>
       </body>
     </html>
   )

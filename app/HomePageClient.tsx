@@ -18,7 +18,7 @@ export default function HomePageClient() {
   return (
     <>
       {/* <CHANGE> Premium split hero with glass CTA panel */}
-      <section className="relative overflow-hidden py-24 lg:py-32">
+      <section className="relative overflow-hidden py-28 lg:py-40">
         <Container>
           <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
             {/* Left: Content */}
@@ -189,21 +189,54 @@ export default function HomePageClient() {
         </Container>
       </section>
 
-      {/* <CHANGE> Glass panel for differentiator */}
+      {/* Proof Points Strip - What You Get */}
+      <section className="py-20 lg:py-24">
+        <Container>
+          <SectionHeading 
+            title={siteConfig.proofPoints.headline} 
+            centered 
+            className="mb-12" 
+          />
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {siteConfig.proofPoints.items.map((item, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+              >
+                <Card className="h-full">
+                  <CardContent className="p-6">
+                    <CheckCircle2 className="mb-3 h-6 w-6 text-primary" />
+                    <h3 className="mb-2 font-semibold">{item.title}</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{item.description}</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </Container>
+      </section>
+
+      {/* <CHANGE> Compact teaser for global sourcing */}
       <section className="py-28 lg:py-36">
         <Container>
           <GlassPanel>
-            <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
+            <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
               <div>
                 <Globe className="mb-6 h-12 w-12 text-primary" />
-                <h2 className="mb-4 text-balance text-3xl font-bold tracking-tight sm:text-4xl">
+                <h2 className="mb-4 text-balance text-3xl font-bold tracking-tight">
                   {siteConfig.differentiator.headline}
                 </h2>
-                <p className="text-pretty text-muted-foreground leading-relaxed">
+                <p className="mb-6 text-pretty text-muted-foreground leading-relaxed">
                   {siteConfig.differentiator.description}
                 </p>
+                <CTAButton href={siteConfig.differentiator.learnMoreLink} variant="outline">
+                  Learn More <ArrowRight className="ml-2 h-4 w-4" />
+                </CTAButton>
               </div>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {siteConfig.differentiator.benefits.map((benefit, index) => (
                   <div
                     key={index}
@@ -220,30 +253,6 @@ export default function HomePageClient() {
           </GlassPanel>
         </Container>
       </section>
-
-      {/* Stats Section */}
-      {siteConfig.stats && (
-        <section className="py-20 lg:py-24">
-          <Container>
-            <SectionHeading title={siteConfig.stats.headline} centered className="mb-16" />
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-              {siteConfig.stats.items.map((stat, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                  className="text-center"
-                >
-                  <p className="mb-2 text-4xl font-bold text-primary lg:text-5xl">{stat.value}</p>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                </motion.div>
-              ))}
-            </div>
-          </Container>
-        </section>
-      )}
 
       {/* <CHANGE> Improved testimonials layout */}
       <section className="py-28 lg:py-36">
@@ -262,7 +271,6 @@ export default function HomePageClient() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className={i === 0 ? "md:col-span-2" : ""}
               >
                 <Card className="h-full">
                   <CardContent className="p-6">
@@ -278,20 +286,6 @@ export default function HomePageClient() {
                 </Card>
               </motion.div>
             ))}
-          </div>
-
-          {/* Logo row placeholder */}
-          <div className="mt-16 pt-16">
-            <p className="mb-8 text-center text-sm font-medium text-muted-foreground">
-              Trusted by workshops and distributors across
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-8">
-              {["UK", "Germany", "UAE", "Italy", "Spain", "France"].map((country) => (
-                <div key={country} className="flex h-12 items-center rounded px-6 font-medium text-white">
-                  {country}
-                </div>
-              ))}
-            </div>
           </div>
         </Container>
       </section>

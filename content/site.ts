@@ -23,6 +23,7 @@ export const siteConfig = {
   nav: [
     { label: "Home", href: "/" },
     { label: "Services", href: "/services" },
+    { label: "Shop", href: "/shop" },
     { label: "About & Contact", href: "/about" },
     { label: "Blog", href: "/blog" },
   ],
@@ -157,15 +158,15 @@ export const siteConfig = {
     },
   ],
   differentiator: {
-    headline: "Why Global Sourcing Matters",
+    headline: "Global Sourcing, Simplified",
     description:
-      "Most UK and EU distributors stock only fast-moving lines. When you need discontinued BMW E30 trim, obscure Japanese aftermarket kits, or MENA-market-specific OEM variants, local supply fails. We bridge that gap—direct access to supplier networks in Germany, UAE, Japan, Turkey, and China. You get real part numbers, realistic lead times, and transparent freight costs. No middleman markup, no vague 'we'll check and get back to you.' Just honest cross-border sourcing done right.",
+      "When local distributors can't deliver, we tap into verified supplier networks across EU, UK, MENA, and Asia. Direct access to discontinued lines, region-specific SKUs, and OEM archives—with transparent pricing and realistic lead times.",
     benefits: [
       "Direct factory and distributor relationships (no resellers)",
-      "10-30% cost savings vs. local premium pricing",
       "Access to region-locked SKUs (JDM, GCC-spec, Euro-only)",
       "Customs and compliance handled (HS codes, duties, COO docs)",
     ],
+    learnMoreLink: "/services#global-sourcing",
   },
   about: {
     story:
@@ -225,33 +226,33 @@ export const siteConfig = {
   testimonials: [
     {
       name: "James Fletcher",
-      role: "Workshop Owner, Manchester",
-      company: "Fletcher Automotive",
+      role: "Workshop Owner",
+      company: "Manchester, UK",
       quote:
-        "Sourced a discontinued E46 M3 CSL airbox and wiring loom from Germany in under a week. Pricing was 40% below UK specialist suppliers. They knew exactly where to look.",
+        "Sourced a discontinued E46 M3 CSL airbox from Germany in under a week. Pricing was 40% below UK suppliers.",
     },
     {
       name: "Omar Al-Rashid",
       role: "Parts Buyer",
-      company: "Dubai Auto Supplies",
+      company: "Dubai, UAE",
       quote:
-        "We've been importing JDM and Euro parts through William Normann for 18 months. Reliable lead times, clean documentation, and they handle the UK-UAE customs chain without issues.",
+        "18 months of reliable JDM imports. Clean documentation, and they handle UK-UAE customs without issues.",
     },
     {
       name: "Sofia Bianchi",
       role: "Classic Car Restorer",
-      company: "Bianchi Restorations, Milan",
+      company: "Milan, Italy",
       quote:
-        "Found NOS Alfa Romeo Giulia Sprint GT trim pieces that I'd been hunting for two years. They coordinated shipping from three different suppliers into one consolidated shipment.",
+        "Found NOS Alfa Romeo Giulia trim pieces I'd hunted for two years. Coordinated shipping from three suppliers into one shipment.",
     },
   ],
-  stats: {
-    headline: "By the Numbers",
+  proofPoints: {
+    headline: "What You Get in Every Quote",
     items: [
-      { value: "2,400+", label: "Parts sourced (2024)" },
-      { value: "43", label: "Countries accessed" },
-      { value: "4 hrs", label: "Avg. first response" },
-      { value: "89%", label: "Quote acceptance rate" },
+      { title: "Part Numbers & Alternatives", description: "OEM codes, cross-references, and verified aftermarket options" },
+      { title: "Origin & Lead Time", description: "Source location, availability status, and realistic delivery estimates" },
+      { title: "Shipping Options & Costs", description: "Multiple freight options with transparent pricing and tracking" },
+      { title: "Duties & HS Codes Guidance", description: "Import classification, estimated duties, and compliance documentation" },
     ],
   },
   footer: {

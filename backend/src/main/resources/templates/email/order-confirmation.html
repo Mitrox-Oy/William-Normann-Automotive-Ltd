@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Confirmation</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+    <table role="presentation" style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td style="padding: 20px 0; text-align: center; background-color: #ffffff;">
+                <table role="presentation" style="width: 600px; margin: 0 auto; background-color: #ffffff; border-collapse: collapse;">
+                    <!-- Header -->
+                    <tr>
+                        <td style="padding: 30px 20px; text-align: center; background-color: #0066cc; color: #ffffff;">
+                            <h1 style="margin: 0; font-size: 24px; font-weight: bold;">Order Confirmation</h1>
+                        </td>
+                    </tr>
+                    
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 30px 20px;">
+                            <p style="margin: 0 0 20px 0; font-size: 16px; color: #333333;">
+                                Hello <strong th:text="${customerName}">Customer</strong>,
+                            </p>
+                            
+                            <p style="margin: 0 0 20px 0; font-size: 16px; color: #333333;">
+                                Thank you for your order! Your order has been confirmed and payment has been received.
+                            </p>
+                            
+                            <!-- Order Summary -->
+                            <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #dddddd;">
+                                <tr>
+                                    <td style="padding: 15px; background-color: #f9f9f9; border-bottom: 1px solid #dddddd;">
+                                        <strong style="font-size: 16px; color: #333333;">Order Details</strong>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 15px;">
+                                        <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                                            <tr>
+                                                <td style="padding: 5px 0; color: #666666;">Order Number:</td>
+                                                <td style="padding: 5px 0; text-align: right; font-weight: bold; color: #333333;" th:text="${orderNumber}">ORD-1234567890</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 5px 0; color: #666666;">Order Date:</td>
+                                                <td style="padding: 5px 0; text-align: right; color: #333333;" th:text="${orderDate}">January 15, 2024</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 5px 0; color: #666666;">Total Amount:</td>
+                                                <td style="padding: 5px 0; text-align: right; font-weight: bold; font-size: 18px; color: #0066cc;" th:text="${'$' + #numbers.formatDecimal(totalAmount, 1, 2)}">$158.50</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Order Items -->
+                            <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #dddddd;">
+                                <tr>
+                                    <td style="padding: 15px; background-color: #f9f9f9; border-bottom: 1px solid #dddddd;">
+                                        <strong style="font-size: 16px; color: #333333;">Order Items</strong>
+                                    </td>
+                                </tr>
+                                <tr th:each="item : ${orderItems}">
+                                    <td style="padding: 15px; border-bottom: 1px solid #dddddd;">
+                                        <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                                            <tr>
+                                                <td style="padding: 5px 0;">
+                                                    <strong style="font-size: 14px; color: #333333;" th:text="${item.productName}">Product Name</strong>
+                                                </td>
+                                                <td style="padding: 5px 0; text-align: right; font-weight: bold; color: #333333;" th:text="${'$' + #numbers.formatDecimal(item.totalPrice, 1, 2)}">$140.00</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 5px 0; color: #666666; font-size: 12px;">
+                                                    SKU: <span th:text="${item.productSku}">SKU-123</span> | 
+                                                    Quantity: <span th:text="${item.quantity}">2</span> | 
+                                                    Unit Price: <span th:text="${'$' + #numbers.formatDecimal(item.unitPrice, 1, 2)}">$70.00</span>
+                                                </td>
+                                                <td></td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Shipping Address -->
+                            <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #dddddd;">
+                                <tr>
+                                    <td style="padding: 15px; background-color: #f9f9f9; border-bottom: 1px solid #dddddd;">
+                                        <strong style="font-size: 16px; color: #333333;">Shipping Address</strong>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 15px; color: #333333;">
+                                        <p style="margin: 0; line-height: 1.6;" th:text="${shippingAddress}">
+                                            123 Main St<br>
+                                            New York, NY 10001<br>
+                                            United States
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <p style="margin: 20px 0 0 0; font-size: 14px; color: #666666;">
+                                You will receive another email when your order ships.
+                            </p>
+                            
+                            <p style="margin: 20px 0 0 0; font-size: 14px; color: #666666;">
+                                If you have any questions, please contact our support team.
+                            </p>
+                            
+                            <p style="margin: 30px 0 0 0; font-size: 16px; color: #333333;">
+                                Best regards,<br>
+                                <strong>The Team</strong>
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 20px; text-align: center; background-color: #f9f9f9; color: #666666; font-size: 12px;">
+                            <p style="margin: 0;">This is an automated email. Please do not reply.</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+

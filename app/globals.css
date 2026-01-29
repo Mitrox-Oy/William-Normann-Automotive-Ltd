@@ -164,6 +164,51 @@
     @apply bg-background text-white;
   }
   
+  /* Force white text in input fields */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"],
+  textarea,
+  select {
+    color: white !important;
+  }
+  
+  /* Override browser autofill styles to ensure white text */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-text-fill-color: white !important;
+    color: white !important;
+  }
+  
+  /* Ensure input text is white even with autofill */
+  input::placeholder,
+  textarea::placeholder {
+    color: rgba(255, 255, 255, 0.5) !important;
+  }
+  
+  /* Force white text and caret in all input and textarea elements */
+  input[data-slot="input"],
+  textarea[data-slot="textarea"] {
+    color: white !important;
+    caret-color: white !important;
+  }
+  
+  /* Override any text color classes on inputs */
+  input.text-white,
+  textarea.text-white {
+    color: white !important;
+    caret-color: white !important;
+  }
+  
   /* Force white text globally with stronger text shadow for readability */
   h1, h2, h3, h4, h5, h6, p, span, div, a, li, td, th, label {
     color: white !important;

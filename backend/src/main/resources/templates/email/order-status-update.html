@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Status Update</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+    <table role="presentation" style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td style="padding: 20px 0; text-align: center; background-color: #ffffff;">
+                <table role="presentation" style="width: 600px; margin: 0 auto; background-color: #ffffff; border-collapse: collapse;">
+                    <!-- Header -->
+                    <tr>
+                        <td style="padding: 30px 20px; text-align: center; background-color: #17a2b8; color: #ffffff;">
+                            <h1 style="margin: 0; font-size: 24px; font-weight: bold;">Order Status Update</h1>
+                        </td>
+                    </tr>
+                    
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 30px 20px;">
+                            <p style="margin: 0 0 20px 0; font-size: 16px; color: #333333;">
+                                Hello <strong th:text="${customerName}">Customer</strong>,
+                            </p>
+                            
+                            <p style="margin: 0 0 20px 0; font-size: 16px; color: #333333;">
+                                Your order status has been updated:
+                            </p>
+                            
+                            <!-- Status Badge -->
+                            <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                                <tr>
+                                    <td style="padding: 15px; text-align: center; background-color: #f0f8ff; border: 2px solid #17a2b8; border-radius: 5px;">
+                                        <p style="margin: 0; font-size: 18px; font-weight: bold; color: #17a2b8; text-transform: uppercase;" th:text="${status}">SHIPPED</p>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <p style="margin: 20px 0; font-size: 16px; color: #333333; line-height: 1.6;" th:text="${statusMessage}">
+                                Your order has been shipped and is on its way to you. You will receive tracking information soon.
+                            </p>
+                            
+                            <!-- Order Summary -->
+                            <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #dddddd;">
+                                <tr>
+                                    <td style="padding: 15px; background-color: #f9f9f9; border-bottom: 1px solid #dddddd;">
+                                        <strong style="font-size: 16px; color: #333333;">Order Information</strong>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 15px;">
+                                        <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                                            <tr>
+                                                <td style="padding: 5px 0; color: #666666;">Order Number:</td>
+                                                <td style="padding: 5px 0; text-align: right; font-weight: bold; color: #333333;" th:text="${orderNumber}">ORD-1234567890</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 5px 0; color: #666666;">Order Date:</td>
+                                                <td style="padding: 5px 0; text-align: right; color: #333333;" th:text="${orderDate}">January 15, 2024</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 5px 0; color: #666666;">Total Amount:</td>
+                                                <td style="padding: 5px 0; text-align: right; font-weight: bold; color: #333333;" th:text="${'$' + #numbers.formatDecimal(totalAmount, 1, 2)}">$158.50</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <p style="margin: 20px 0 0 0; font-size: 14px; color: #666666;">
+                                You can view your order details and track your shipment in your account dashboard.
+                            </p>
+                            
+                            <p style="margin: 20px 0 0 0; font-size: 14px; color: #666666;">
+                                If you have any questions about your order, please contact our support team.
+                            </p>
+                            
+                            <p style="margin: 30px 0 0 0; font-size: 16px; color: #333333;">
+                                Best regards,<br>
+                                <strong>The Team</strong>
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 20px; text-align: center; background-color: #f9f9f9; color: #666666; font-size: 12px;">
+                            <p style="margin: 0;">This is an automated email. Please do not reply.</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+
