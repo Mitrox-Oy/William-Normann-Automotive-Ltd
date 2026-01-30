@@ -264,42 +264,6 @@ export default function HomePageClient() {
         </Container>
       </section>
 
-      {/* <CHANGE> Improved testimonials layout */}
-      <section className="py-28 lg:py-36">
-        <Container>
-          <SectionHeading
-            title="Trusted by Workshops and Distributors"
-            subtitle="Real feedback from clients who rely on our sourcing"
-            centered
-            className="mb-16"
-          />
-          <div className="grid gap-6 md:grid-cols-3">
-            {siteConfig.testimonials.map((testimonial, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-              >
-                <Card className="h-full">
-                  <CardContent className="p-6">
-                    <p className="mb-6 text-pretty italic text-muted-foreground leading-relaxed">
-                      "{testimonial.quote}"
-                    </p>
-                    <div>
-                      <p className="font-semibold">{testimonial.name}</p>
-                      <p className="text-sm text-muted-foreground">{testimonial.role}</p>
-                      {testimonial.company && <p className="text-xs text-muted-foreground">{testimonial.company}</p>}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        </Container>
-      </section>
-
       {/* <CHANGE> Quote form with premium layout */}
       <section id="contact" className="py-28 lg:py-36">
         <Container>
