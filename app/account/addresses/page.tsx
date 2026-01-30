@@ -40,7 +40,7 @@ function AddressesPageContent() {
 
   async function handleDelete(id: string) {
     if (!confirm("Are you sure you want to delete this address?")) return
-    
+
     try {
       await deleteAddress(id)
       setAddresses((prev) => prev.filter((addr) => addr.id !== id))
