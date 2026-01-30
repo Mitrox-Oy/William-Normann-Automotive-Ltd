@@ -192,10 +192,10 @@ export async function fetchProducts(params: SearchParams = {}): Promise<Products
 }
 
 /**
- * Fetch a single product by slug
+ * Fetch a single product by slug (using SKU endpoint)
  */
 export async function fetchProductBySlug(slug: string): Promise<Product | null> {
-  const url = `${API_BASE_URL}/api/products/${slug}`
+  const url = `${API_BASE_URL}/api/products/sku/${slug}`
 
   try {
     const response = await fetch(url, {
