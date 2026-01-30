@@ -104,21 +104,21 @@ export async function getOrders(params: OrdersListParams = {}): Promise<OrdersLi
     if (value !== undefined) searchParams.append(key, value.toString())
   })
   
-  return api.get<OrdersListResponse>(`/api/account/orders?${searchParams.toString()}`)
+  return api.get<OrdersListResponse>(`/api/orders?${searchParams.toString()}`)
 }
 
 /**
  * Get single order
  */
 export async function getOrder(id: string): Promise<CustomerOrder> {
-  return api.get<CustomerOrder>(`/api/account/orders/${id}`)
+  return api.get<CustomerOrder>(`/api/orders/${id}`)
 }
 
 /**
  * Cancel order
  */
 export async function cancelOrder(id: string): Promise<CustomerOrder> {
-  return api.post<CustomerOrder>(`/api/account/orders/${id}/cancel`, {})
+  return api.post<CustomerOrder>(`/api/orders/${id}/cancel`, {})
 }
 
 // ============================================================================
@@ -135,21 +135,21 @@ export interface WishlistItem {
  * Get wishlist
  */
 export async function getWishlist(): Promise<WishlistItem[]> {
-  return api.get<WishlistItem[]>('/api/account/wishlist')
+  return api.get<WishlistItem[]>('/api/wishlist')
 }
 
 /**
  * Add to wishlist
  */
 export async function addToWishlist(productId: string): Promise<WishlistItem> {
-  return api.post<WishlistItem>('/api/account/wishlist', { productId })
+  return api.post<WishlistItem>('/api/wishlist', { productId })
 }
 
 /**
  * Remove from wishlist
  */
 export async function removeFromWishlist(id: string): Promise<void> {
-  return api.delete<void>(`/api/account/wishlist/${id}`)
+  return api.delete<void>(`/api/wishlist/${id}`)
 }
 
 /**
