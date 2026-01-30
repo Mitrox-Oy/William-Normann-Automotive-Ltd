@@ -220,34 +220,44 @@ public class ProductService {
         product.setBrand(dto.getBrand());
         product.setInfoSection1Title(dto.getInfoSection1Title());
         product.setInfoSection1Content(dto.getInfoSection1Content());
-        product.setInfoSection1Enabled(dto.getInfoSection1Enabled() != null ? dto.getInfoSection1Enabled() : Boolean.FALSE);
+        product.setInfoSection1Enabled(
+                dto.getInfoSection1Enabled() != null ? dto.getInfoSection1Enabled() : Boolean.FALSE);
         product.setInfoSection2Title(dto.getInfoSection2Title());
         product.setInfoSection2Content(dto.getInfoSection2Content());
-        product.setInfoSection2Enabled(dto.getInfoSection2Enabled() != null ? dto.getInfoSection2Enabled() : Boolean.FALSE);
+        product.setInfoSection2Enabled(
+                dto.getInfoSection2Enabled() != null ? dto.getInfoSection2Enabled() : Boolean.FALSE);
         product.setInfoSection3Title(dto.getInfoSection3Title());
         product.setInfoSection3Content(dto.getInfoSection3Content());
-        product.setInfoSection3Enabled(dto.getInfoSection3Enabled() != null ? dto.getInfoSection3Enabled() : Boolean.FALSE);
+        product.setInfoSection3Enabled(
+                dto.getInfoSection3Enabled() != null ? dto.getInfoSection3Enabled() : Boolean.FALSE);
         product.setInfoSection4Title(dto.getInfoSection4Title());
         product.setInfoSection4Content(dto.getInfoSection4Content());
-        product.setInfoSection4Enabled(dto.getInfoSection4Enabled() != null ? dto.getInfoSection4Enabled() : Boolean.FALSE);
+        product.setInfoSection4Enabled(
+                dto.getInfoSection4Enabled() != null ? dto.getInfoSection4Enabled() : Boolean.FALSE);
         product.setInfoSection5Title(dto.getInfoSection5Title());
         product.setInfoSection5Content(dto.getInfoSection5Content());
-        product.setInfoSection5Enabled(dto.getInfoSection5Enabled() != null ? dto.getInfoSection5Enabled() : Boolean.FALSE);
+        product.setInfoSection5Enabled(
+                dto.getInfoSection5Enabled() != null ? dto.getInfoSection5Enabled() : Boolean.FALSE);
         product.setInfoSection6Title(dto.getInfoSection6Title());
         product.setInfoSection6Content(dto.getInfoSection6Content());
-        product.setInfoSection6Enabled(dto.getInfoSection6Enabled() != null ? dto.getInfoSection6Enabled() : Boolean.FALSE);
+        product.setInfoSection6Enabled(
+                dto.getInfoSection6Enabled() != null ? dto.getInfoSection6Enabled() : Boolean.FALSE);
         product.setInfoSection7Title(dto.getInfoSection7Title());
         product.setInfoSection7Content(dto.getInfoSection7Content());
-        product.setInfoSection7Enabled(dto.getInfoSection7Enabled() != null ? dto.getInfoSection7Enabled() : Boolean.FALSE);
+        product.setInfoSection7Enabled(
+                dto.getInfoSection7Enabled() != null ? dto.getInfoSection7Enabled() : Boolean.FALSE);
         product.setInfoSection8Title(dto.getInfoSection8Title());
         product.setInfoSection8Content(dto.getInfoSection8Content());
-        product.setInfoSection8Enabled(dto.getInfoSection8Enabled() != null ? dto.getInfoSection8Enabled() : Boolean.FALSE);
+        product.setInfoSection8Enabled(
+                dto.getInfoSection8Enabled() != null ? dto.getInfoSection8Enabled() : Boolean.FALSE);
         product.setInfoSection9Title(dto.getInfoSection9Title());
         product.setInfoSection9Content(dto.getInfoSection9Content());
-        product.setInfoSection9Enabled(dto.getInfoSection9Enabled() != null ? dto.getInfoSection9Enabled() : Boolean.FALSE);
+        product.setInfoSection9Enabled(
+                dto.getInfoSection9Enabled() != null ? dto.getInfoSection9Enabled() : Boolean.FALSE);
         product.setInfoSection10Title(dto.getInfoSection10Title());
         product.setInfoSection10Content(dto.getInfoSection10Content());
-        product.setInfoSection10Enabled(dto.getInfoSection10Enabled() != null ? dto.getInfoSection10Enabled() : Boolean.FALSE);
+        product.setInfoSection10Enabled(
+                dto.getInfoSection10Enabled() != null ? dto.getInfoSection10Enabled() : Boolean.FALSE);
         return product;
     }
 
@@ -264,34 +274,44 @@ public class ProductService {
         product.setBrand(dto.getBrand());
         product.setInfoSection1Title(dto.getInfoSection1Title());
         product.setInfoSection1Content(dto.getInfoSection1Content());
-        product.setInfoSection1Enabled(dto.getInfoSection1Enabled() != null ? dto.getInfoSection1Enabled() : Boolean.FALSE);
+        product.setInfoSection1Enabled(
+                dto.getInfoSection1Enabled() != null ? dto.getInfoSection1Enabled() : Boolean.FALSE);
         product.setInfoSection2Title(dto.getInfoSection2Title());
         product.setInfoSection2Content(dto.getInfoSection2Content());
-        product.setInfoSection2Enabled(dto.getInfoSection2Enabled() != null ? dto.getInfoSection2Enabled() : Boolean.FALSE);
+        product.setInfoSection2Enabled(
+                dto.getInfoSection2Enabled() != null ? dto.getInfoSection2Enabled() : Boolean.FALSE);
         product.setInfoSection3Title(dto.getInfoSection3Title());
         product.setInfoSection3Content(dto.getInfoSection3Content());
-        product.setInfoSection3Enabled(dto.getInfoSection3Enabled() != null ? dto.getInfoSection3Enabled() : Boolean.FALSE);
+        product.setInfoSection3Enabled(
+                dto.getInfoSection3Enabled() != null ? dto.getInfoSection3Enabled() : Boolean.FALSE);
         product.setInfoSection4Title(dto.getInfoSection4Title());
         product.setInfoSection4Content(dto.getInfoSection4Content());
-        product.setInfoSection4Enabled(dto.getInfoSection4Enabled() != null ? dto.getInfoSection4Enabled() : Boolean.FALSE);
+        product.setInfoSection4Enabled(
+                dto.getInfoSection4Enabled() != null ? dto.getInfoSection4Enabled() : Boolean.FALSE);
         product.setInfoSection5Title(dto.getInfoSection5Title());
         product.setInfoSection5Content(dto.getInfoSection5Content());
-        product.setInfoSection5Enabled(dto.getInfoSection5Enabled() != null ? dto.getInfoSection5Enabled() : Boolean.FALSE);
+        product.setInfoSection5Enabled(
+                dto.getInfoSection5Enabled() != null ? dto.getInfoSection5Enabled() : Boolean.FALSE);
         product.setInfoSection6Title(dto.getInfoSection6Title());
         product.setInfoSection6Content(dto.getInfoSection6Content());
-        product.setInfoSection6Enabled(dto.getInfoSection6Enabled() != null ? dto.getInfoSection6Enabled() : Boolean.FALSE);
+        product.setInfoSection6Enabled(
+                dto.getInfoSection6Enabled() != null ? dto.getInfoSection6Enabled() : Boolean.FALSE);
         product.setInfoSection7Title(dto.getInfoSection7Title());
         product.setInfoSection7Content(dto.getInfoSection7Content());
-        product.setInfoSection7Enabled(dto.getInfoSection7Enabled() != null ? dto.getInfoSection7Enabled() : Boolean.FALSE);
+        product.setInfoSection7Enabled(
+                dto.getInfoSection7Enabled() != null ? dto.getInfoSection7Enabled() : Boolean.FALSE);
         product.setInfoSection8Title(dto.getInfoSection8Title());
         product.setInfoSection8Content(dto.getInfoSection8Content());
-        product.setInfoSection8Enabled(dto.getInfoSection8Enabled() != null ? dto.getInfoSection8Enabled() : Boolean.FALSE);
+        product.setInfoSection8Enabled(
+                dto.getInfoSection8Enabled() != null ? dto.getInfoSection8Enabled() : Boolean.FALSE);
         product.setInfoSection9Title(dto.getInfoSection9Title());
         product.setInfoSection9Content(dto.getInfoSection9Content());
-        product.setInfoSection9Enabled(dto.getInfoSection9Enabled() != null ? dto.getInfoSection9Enabled() : Boolean.FALSE);
+        product.setInfoSection9Enabled(
+                dto.getInfoSection9Enabled() != null ? dto.getInfoSection9Enabled() : Boolean.FALSE);
         product.setInfoSection10Title(dto.getInfoSection10Title());
         product.setInfoSection10Content(dto.getInfoSection10Content());
-        product.setInfoSection10Enabled(dto.getInfoSection10Enabled() != null ? dto.getInfoSection10Enabled() : Boolean.FALSE);
+        product.setInfoSection10Enabled(
+                dto.getInfoSection10Enabled() != null ? dto.getInfoSection10Enabled() : Boolean.FALSE);
     }
 
     private ProductDTO convertToDTO(Product product) {
@@ -423,4 +443,3 @@ public class ProductService {
         }
     }
 }
-

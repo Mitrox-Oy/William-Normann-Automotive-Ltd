@@ -68,7 +68,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
          */
         @EntityGraph(attributePaths = { "images", "variants" })
         Optional<Product> findBySkuAndActiveTrue(String sku);
-        
+
         /**
          * Find product by SKU (case-insensitive)
          */

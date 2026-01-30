@@ -9,11 +9,11 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useCart } from "@/components/CartContext"
-import { 
-  fetchProductBySlug, 
-  formatCurrency, 
+import {
+  fetchProductBySlug,
+  formatCurrency,
   getAvailabilityBadge,
-  type Product 
+  type Product
 } from "@/lib/shopApi"
 import { ShoppingCart, Minus, Plus, ArrowLeft, Package, Truck, Shield, FileText } from "lucide-react"
 import Image from "next/image"
@@ -25,13 +25,13 @@ export default function ProductDetailPage() {
   const params = useParams()
   const router = useRouter()
   const slug = params.slug as string
-  
+
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedImage, setSelectedImage] = useState(0)
   const [quantity, setQuantity] = useState(1)
-  
+
   const { addItem } = useCart()
 
   useEffect(() => {
@@ -129,8 +129,8 @@ export default function ProductDetailPage() {
       <Container>
         {/* Breadcrumb */}
         <div className="mb-8">
-          <Link 
-            href="/shop" 
+          <Link
+            href="/shop"
             className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -169,11 +169,10 @@ export default function ProductDetailPage() {
                   <button
                     key={index}
                     onClick={() => setSelectedImage(index)}
-                    className={`relative aspect-square overflow-hidden rounded-lg border-2 transition-all ${
-                      selectedImage === index 
-                        ? 'border-primary ring-2 ring-primary/20' 
+                    className={`relative aspect-square overflow-hidden rounded-lg border-2 transition-all ${selectedImage === index
+                        ? 'border-primary ring-2 ring-primary/20'
                         : 'border-transparent hover:border-primary/50'
-                    }`}
+                      }`}
                   >
                     <Image
                       src={image}
@@ -381,7 +380,7 @@ export default function ProductDetailPage() {
                   ) : (
                     <div>
                       <p className="mb-4 text-muted-foreground">
-                        Compatibility information not available. 
+                        Compatibility information not available.
                       </p>
                       <p className="text-sm text-muted-foreground">
                         Please use the "Request Quote" button to verify fitment for your specific vehicle.

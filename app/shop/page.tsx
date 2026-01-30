@@ -11,14 +11,14 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { useCart } from "@/components/CartContext"
-import { 
-  fetchProducts, 
-  fetchCategories, 
-  formatCurrency, 
+import {
+  fetchProducts,
+  fetchCategories,
+  formatCurrency,
   getAvailabilityBadge,
   type Product,
   type Category,
-  type SearchParams 
+  type SearchParams
 } from "@/lib/shopApi"
 import { Search, ShoppingCart, Filter, X } from "lucide-react"
 import Image from "next/image"
@@ -37,7 +37,7 @@ export default function ShopPage() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [showMobileFilters, setShowMobileFilters] = useState(false)
-  
+
   const { addItem } = useCart()
 
   // Load categories
@@ -211,7 +211,7 @@ export default function ShopPage() {
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
-                  
+
                   <div>
                     <label className="mb-2 block text-sm font-medium">Category</label>
                     <Select value={selectedCategory} onValueChange={setSelectedCategory}>
@@ -309,7 +309,7 @@ export default function ShopPage() {
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                   {products.map((product, i) => {
                     const availabilityBadge = getAvailabilityBadge(product.availability)
-                    
+
                     return (
                       <motion.div
                         key={product.id}
@@ -333,7 +333,7 @@ export default function ShopPage() {
                                     <ShoppingCart className="h-16 w-16 text-muted-foreground" />
                                   </div>
                                 )}
-                                <Badge 
+                                <Badge
                                   variant={availabilityBadge.variant}
                                   className="absolute right-2 top-2"
                                 >
@@ -348,7 +348,7 @@ export default function ShopPage() {
                                   {product.name}
                                 </h3>
                               </Link>
-                              
+
                               {product.partNumber && (
                                 <p className="text-xs text-muted-foreground">
                                   Part #: {product.partNumber}

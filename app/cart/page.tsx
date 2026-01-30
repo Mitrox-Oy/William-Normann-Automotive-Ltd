@@ -39,7 +39,7 @@ export default function CartPage() {
       cart_items: cartSummary,
       total_items: totalItems.toString(),
     })
-    
+
     router.push(`/#contact?${queryParams.toString()}`)
   }
 
@@ -90,13 +90,13 @@ export default function CartPage() {
     } catch (error: any) {
       console.error('Error proceeding to checkout:', error)
       let errorMessage = 'Failed to proceed to checkout. Please try again.'
-      
+
       if (error?.message) {
         errorMessage = error.message
       } else if (error?.error) {
         errorMessage = error.error
       }
-      
+
       setCheckoutError(errorMessage)
     } finally {
       setIsProcessingCheckout(false)
@@ -132,8 +132,8 @@ export default function CartPage() {
     <section className="py-24 lg:py-32">
       <Container>
         <div className="mb-8">
-          <Link 
-            href="/shop" 
+          <Link
+            href="/shop"
             className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -161,7 +161,7 @@ export default function CartPage() {
                   <CardContent className="p-6">
                     <div className="flex gap-6">
                       {/* Image */}
-                      <Link 
+                      <Link
                         href={`/shop/${item.product.slug}`}
                         className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-muted"
                       >
@@ -183,7 +183,7 @@ export default function CartPage() {
                       <div className="flex flex-1 flex-col">
                         <div className="flex justify-between gap-4">
                           <div className="flex-1">
-                            <Link 
+                            <Link
                               href={`/shop/${item.product.slug}`}
                               className="font-semibold hover:text-primary transition-colors"
                             >
@@ -299,9 +299,9 @@ export default function CartPage() {
                 )}
 
                 <div className="space-y-3">
-                  <Button 
-                    onClick={handleCheckout} 
-                    size="lg" 
+                  <Button
+                    onClick={handleCheckout}
+                    size="lg"
                     className="w-full"
                     disabled={isProcessingCheckout}
                   >
@@ -338,7 +338,7 @@ export default function CartPage() {
                       We'll review your quote request and respond within 4 business hours with detailed pricing, lead times, and shipping options.
                     </p>
                   </div>
-                  
+
                   <div className="rounded-lg bg-muted p-3">
                     <p className="text-xs text-muted-foreground">
                       <span className="font-medium">✓</span> Transparent pricing with no hidden fees

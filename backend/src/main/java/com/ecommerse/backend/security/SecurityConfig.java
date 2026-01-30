@@ -66,7 +66,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(csrf -> csrf.disable())  // Disable CSRF for stateless JWT API
+                .csrf(csrf -> csrf.disable()) // Disable CSRF for stateless JWT API
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
@@ -133,7 +133,8 @@ public class SecurityConfig {
         if (origins.isEmpty()) {
             configuration.setAllowedOriginPatterns(List.of("*"));
         } else {
-            // Merge provided origins with common localhost dev patterns and configured frontend URL
+            // Merge provided origins with common localhost dev patterns and configured
+            // frontend URL
             List<String> merged = new java.util.ArrayList<>(origins);
 
             String normalizedFrontend = normalizeFrontendBaseUrl();
@@ -146,8 +147,7 @@ public class SecurityConfig {
                     "http://localhost:4200",
                     "http://127.0.0.1:4200",
                     "http://localhost:3000",
-                    "http://127.0.0.1:3000"
-            )) {
+                    "http://127.0.0.1:3000")) {
                 addIfMissing(merged, def);
             }
             configuration.setAllowedOriginPatterns(merged);

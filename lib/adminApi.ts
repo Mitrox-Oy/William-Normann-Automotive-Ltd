@@ -99,12 +99,12 @@ export interface ProductsListResponse {
  */
 export async function getAdminProducts(params: ProductsListParams = {}): Promise<ProductsListResponse> {
   const searchParams = new URLSearchParams()
-  
+
   // Backend uses 0-based page numbers, frontend uses 1-based
   const backendPage = params.page ? (params.page - 1) : 0
   searchParams.append('page', backendPage.toString())
   searchParams.append('size', (params.limit || 20).toString())
-  
+
   if (params.search) {
     searchParams.append('search', params.search)
   }
@@ -117,7 +117,7 @@ export async function getAdminProducts(params: ProductsListParams = {}): Promise
   if (params.sortOrder) {
     searchParams.append('sortDir', params.sortOrder)
   }
-  
+
   // Backend uses /api/products, not /admin/products
   // Backend returns Spring Page format, we need to transform it
   const backendResponse = await api.get<{
@@ -127,7 +127,7 @@ export async function getAdminProducts(params: ProductsListParams = {}): Promise
     number: number
     size: number
   }>(`/api/products?${searchParams.toString()}`)
-  
+
   // Transform backend ProductDTO to AdminProduct format
   const products: AdminProduct[] = (backendResponse.content || []).map((p: any) => ({
     id: p.id?.toString() || '',
@@ -147,7 +147,7 @@ export async function getAdminProducts(params: ProductsListParams = {}): Promise
     createdAt: p.createdDate || new Date().toISOString(),
     updatedAt: p.updatedDate || new Date().toISOString(),
   }))
-  
+
   // Transform Spring Page format to frontend format
   return {
     products,
@@ -170,11 +170,11 @@ export async function getAllCategories(): Promise<Category[]> {
     },
     credentials: 'include',
   })
-  
+
   if (!response.ok) {
     throw new Error(`Failed to fetch categories: ${response.status}`)
   }
-  
+
   return response.json()
 }
 
@@ -209,7 +209,7 @@ export async function uploadProductImage(productId: string, file: File, isMain: 
   const formData = new FormData()
   formData.append('file', file)
   formData.append('isMain', isMain.toString())
-  
+
   // Use fetch directly for FormData
   const { getAccessToken } = await import('./apiClient')
   const token = getAccessToken()
@@ -222,12 +222,12 @@ export async function uploadProductImage(productId: string, file: File, isMain: 
     body: formData,
     credentials: 'include',
   })
-  
+
   if (!response.ok) {
     const error = await response.text()
     throw new Error(`Failed to upload image: ${error}`)
   }
-  
+
   return response.json()
 }
 
@@ -305,7 +305,7 @@ export async function updateCategory(id: string, data: Partial<CategoryCreateInp
   if (data.description !== undefined) payload.description = data.description
   if (data.status !== undefined) payload.active = data.status === 'active'
   if (data.parentId !== undefined) payload.parentId = data.parentId ? parseInt(data.parentId) : null
-  
+
   return api.put<AdminCategory>(`/api/categories/${id}`, payload)
 }
 
@@ -376,7 +376,7 @@ export async function getAdminOrders(params: OrdersListParams = {}): Promise<Ord
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined) searchParams.append(key, value.toString())
   })
-  
+
   return api.get<OrdersListResponse>(`/admin/orders?${searchParams.toString()}`)
 }
 
@@ -439,7 +439,7 @@ export async function getAdminCustomers(params: CustomersListParams = {}): Promi
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined) searchParams.append(key, value.toString())
   })
-  
+
   return api.get<CustomersListResponse>(`/admin/customers?${searchParams.toString()}`)
 }
 

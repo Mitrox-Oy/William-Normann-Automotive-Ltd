@@ -114,7 +114,7 @@ function AddressesPageContent() {
                 <CardContent className="p-6">
                   <div className="mb-4 flex items-start justify-between">
                     <div>
-                      <h3 className="font-semibold">{address.label}</h3>
+                      <h3 className="font-semibold">{address.fullName}</h3>
                       {address.isDefault && (
                         <Badge variant="default" className="mt-1">
                           Default
@@ -137,12 +137,12 @@ function AddressesPageContent() {
                   </div>
 
                   <div className="space-y-1 text-sm text-muted-foreground">
-                    <p className="font-medium text-foreground">{address.recipientName}</p>
-                    <p>{address.street}</p>
+                    <p>{address.addressLine1}</p>
+                    {address.addressLine2 && <p>{address.addressLine2}</p>}
                     <p>{address.city}, {address.state}</p>
                     <p>{address.postalCode}</p>
                     <p>{address.country}</p>
-                    <p className="mt-2">{address.phone}</p>
+                    {address.phoneNumber && <p className="mt-2">{address.phoneNumber}</p>}
                   </div>
 
                   {!address.isDefault && (
@@ -183,14 +183,14 @@ function AddressesPageContent() {
 // Address Dialog Component
 function AddressDialog({ address, onSuccess }: { address: Address | null; onSuccess: () => void }) {
   const [formData, setFormData] = useState({
-    label: address?.label || "",
-    recipientName: address?.recipientName || "",
-    phone: address?.phone || "",
-    street: address?.street || "",
+    fullName: address?.fullName || "",
+    addressLine1: address?.addressLine1 || "",
+    addressLine2: address?.addressLine2 || "",
     city: address?.city || "",
     state: address?.state || "",
-    country: address?.country || "",
     postalCode: address?.postalCode || "",
+    country: address?.country || "",
+    phoneNumber: address?.phoneNumber || "",
     isDefault: address?.isDefault || false,
   })
   const [submitting, setSubmitting] = useState(false)
@@ -222,23 +222,17 @@ function AddressDialog({ address, onSuccess }: { address: Address | null; onSucc
         </DialogDescription>
       </DialogHeader>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <Label htmlFor="label">Label</Label>
-            <Input id="label" value={formData.label} onChange={(e) => setFormData({ ...formData, label: e.target.value })} required />
-          </div>
-          <div>
-            <Label htmlFor="recipientName">Recipient Name</Label>
-            <Input id="recipientName" value={formData.recipientName} onChange={(e) => setFormData({ ...formData, recipientName: e.target.value })} required />
-          </div>
+        <div>
+          <Label htmlFor="fullName">Full Name</Label>
+          <Input id="fullName" value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} required />
         </div>
         <div>
-          <Label htmlFor="phone">Phone</Label>
-          <Input id="phone" type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} required />
+          <Label htmlFor="addressLine1">Address Line 1</Label>
+          <Input id="addressLine1" value={formData.addressLine1} onChange={(e) => setFormData({ ...formData, addressLine1: e.target.value })} required />
         </div>
         <div>
-          <Label htmlFor="street">Street Address</Label>
-          <Input id="street" value={formData.street} onChange={(e) => setFormData({ ...formData, street: e.target.value })} required />
+          <Label htmlFor="addressLine2">Address Line 2 (Optional)</Label>
+          <Input id="addressLine2" value={formData.addressLine2} onChange={(e) => setFormData({ ...formData, addressLine2: e.target.value })} />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
@@ -259,6 +253,10 @@ function AddressDialog({ address, onSuccess }: { address: Address | null; onSucc
             <Label htmlFor="country">Country</Label>
             <Input id="country" value={formData.country} onChange={(e) => setFormData({ ...formData, country: e.target.value })} required />
           </div>
+        </div>
+        <div>
+          <Label htmlFor="phoneNumber">Phone Number (Optional)</Label>
+          <Input id="phoneNumber" type="tel" value={formData.phoneNumber} onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })} />
         </div>
         <DialogFooter>
           <Button type="submit" disabled={submitting}>

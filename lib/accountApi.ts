@@ -103,7 +103,7 @@ export async function getOrders(params: OrdersListParams = {}): Promise<OrdersLi
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined) searchParams.append(key, value.toString())
   })
-  
+
   return api.get<OrdersListResponse>(`/api/orders?${searchParams.toString()}`)
 }
 
@@ -170,29 +170,29 @@ export async function isInWishlist(productId: string): Promise<boolean> {
 
 export interface Address {
   id: string
-  label: string // e.g., "Home", "Work", "Shipping"
-  isDefault: boolean
-  recipientName: string
-  phone: string
-  street: string
+  fullName: string
+  addressLine1: string
+  addressLine2?: string
   city: string
   state: string
-  country: string
   postalCode: string
+  country: string
+  phoneNumber?: string
+  isDefault: boolean
   createdAt: string
   updatedAt: string
 }
 
 export interface AddressCreateInput {
-  label: string
-  isDefault?: boolean
-  recipientName: string
-  phone: string
-  street: string
+  fullName: string
+  addressLine1: string
+  addressLine2?: string
   city: string
   state: string
-  country: string
   postalCode: string
+  country: string
+  phoneNumber?: string
+  isDefault?: boolean
 }
 
 /**

@@ -69,7 +69,7 @@ export interface SearchParams {
  */
 export async function fetchProducts(params: SearchParams = {}): Promise<ProductsResponse> {
   const searchParams = new URLSearchParams()
-  
+
   if (params.query) searchParams.append('query', params.query)
   if (params.category) searchParams.append('category', params.category)
   if (params.page) searchParams.append('page', params.page.toString())
@@ -83,7 +83,7 @@ export async function fetchProducts(params: SearchParams = {}): Promise<Products
   const backendPage = params.page ? (params.page - 1) : 0
   searchParams.set('page', backendPage.toString())
   searchParams.set('size', (params.limit || 12).toString())
-  
+
   // Map frontend params to backend params
   if (params.category) {
     searchParams.set('category', params.category)
@@ -131,7 +131,7 @@ export async function fetchProducts(params: SearchParams = {}): Promise<Products
 
     // Backend returns Spring Page format: { content, totalElements, totalPages, number, size }
     const backendData = await response.json()
-    
+
     // Transform backend ProductDTO to frontend Product format
     const products: Product[] = (backendData.content || []).map((p: any) => {
       // Extract images from ProductImageResponse array or use imageUrl
@@ -142,7 +142,7 @@ export async function fetchProducts(params: SearchParams = {}): Promise<Products
       if (p.imageUrl && !images.includes(p.imageUrl)) {
         images.unshift(p.imageUrl)
       }
-      
+
       // Determine availability
       const stockQty = p.stockQuantity || 0
       let availability: 'in_stock' | 'low_stock' | 'out_of_stock' | 'pre_order' = 'out_of_stock'
@@ -151,7 +151,7 @@ export async function fetchProducts(params: SearchParams = {}): Promise<Products
       } else if (stockQty > 0) {
         availability = 'low_stock'
       }
-      
+
       return {
         id: p.id?.toString() || '',
         slug: p.slug || p.sku?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || p.id?.toString() || '',
@@ -169,7 +169,7 @@ export async function fetchProducts(params: SearchParams = {}): Promise<Products
         updatedAt: p.updatedDate || new Date().toISOString(),
       }
     })
-    
+
     // Transform Spring Page format to frontend format
     return {
       products,
