@@ -93,7 +93,7 @@ function AccountDashboardContent() {
                   <h3 className="text-xl font-bold">{user?.name}</h3>
                   <p className="text-sm text-muted-foreground">{user?.email}</p>
                   {user?.phone && (
-                    <p className="text-sm text-muted-foreground mt-1">{user.phone}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{user?.phone}</p>
                   )}
                   <Badge variant="secondary" className="mt-3">
                     Customer Account
