@@ -298,3 +298,79 @@ export function getAvailabilityBadge(availability: Product['availability']): {
   }
 }
 
+/**
+ * Checkout API Functions
+ */
+
+export interface CreateOrderRequest {
+  shippingAddress: string
+  shippingCity: string
+  shippingPostalCode: string
+  shippingCountry: string
+  shippingAmount?: number
+  taxAmount?: number
+}
+
+export interface CreateOrderResponse {
+  orderId: number
+  orderNumber: string
+  totalCents: number
+  currency: string
+}
+
+export interface CreateSessionResponse {
+  id: string
+}
+
+/**
+ * Create an order from the user's cart
+ * This is the first step in the checkout process
+ */
+export async function createCheckoutOrder(
+  orderData: CreateOrderRequest,
+  token: string
+): Promise<CreateOrderResponse> {
+  const url = `${API_BASE_URL}/api/checkout/create-order`
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(orderData),
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null)
+    throw new Error(errorData?.error || `Failed to create order: ${response.statusText}`)
+  }
+
+  return response.json()
+}
+
+/**
+ * Create a Stripe Checkout Session for an existing order
+ * Returns the session ID to redirect to Stripe hosted checkout
+ */
+export async function createCheckoutSession(orderId: string): Promise<CreateSessionResponse> {
+  const url = `${API_BASE_URL}/api/checkout/create-session`
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ orderId }),
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null)
+    throw new Error(errorData?.error || `Failed to create checkout session: ${response.statusText}`)
+  }
+
+  return response.json()
+}
+

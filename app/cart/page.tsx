@@ -6,16 +6,25 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { useCart } from "@/components/CartContext"
-import { formatCurrency } from "@/lib/shopApi"
-import { ShoppingCart, Minus, Plus, Trash2, ArrowLeft, FileText, Package } from "lucide-react"
+import { useAuth } from "@/components/AuthProvider"
+import { formatCurrency, createCheckoutOrder, createCheckoutSession } from "@/lib/shopApi"
+import { ShoppingCart, Minus, Plus, Trash2, ArrowLeft, FileText, Package, CreditCard, Loader2 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
+import { loadStripe } from "@stripe/stripe-js"
+import { useState } from "react"
+
+// Initialize Stripe
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '')
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, clearCart, getTotalItems, getTotalPrice } = useCart()
+  const { isAuthenticated, token } = useAuth()
   const router = useRouter()
+  const [isProcessingCheckout, setIsProcessingCheckout] = useState(false)
+  const [checkoutError, setCheckoutError] = useState<string>("")
 
   const totalItems = getTotalItems()
   const totalPrice = getTotalPrice()
@@ -32,6 +41,66 @@ export default function CartPage() {
     })
     
     router.push(`/#contact?${queryParams.toString()}`)
+  }
+
+  const handleCheckout = async () => {
+    if (!isAuthenticated || !token) {
+      router.push('/login?redirect=/cart')
+      return
+    }
+
+    setIsProcessingCheckout(true)
+    setCheckoutError("")
+
+    try {
+      // Step 1: Create order from cart
+      const orderResponse = await createCheckoutOrder({
+        shippingAddress: "To be provided",
+        shippingCity: "To be provided",
+        shippingPostalCode: "To be provided",
+        shippingCountry: "GB",
+        shippingAmount: 0,
+        taxAmount: 0,
+      }, token)
+
+      if (!orderResponse?.orderId) {
+        throw new Error('Failed to create order')
+      }
+
+      // Step 2: Create Stripe Checkout Session
+      const sessionResponse = await createCheckoutSession(String(orderResponse.orderId))
+
+      if (!sessionResponse?.id) {
+        throw new Error('Failed to create checkout session')
+      }
+
+      // Step 3: Redirect to Stripe Checkout
+      const stripe = await stripePromise
+      if (!stripe) {
+        throw new Error('Failed to initialize payment system')
+      }
+
+      const result = await stripe.redirectToCheckout({
+        sessionId: sessionResponse.id
+      })
+
+      if (result.error) {
+        throw new Error(result.error.message || 'Failed to redirect to checkout')
+      }
+    } catch (error: any) {
+      console.error('Error proceeding to checkout:', error)
+      let errorMessage = 'Failed to proceed to checkout. Please try again.'
+      
+      if (error?.message) {
+        errorMessage = error.message
+      } else if (error?.error) {
+        errorMessage = error.error
+      }
+      
+      setCheckoutError(errorMessage)
+    } finally {
+      setIsProcessingCheckout(false)
+    }
   }
 
   if (items.length === 0) {
@@ -223,14 +292,40 @@ export default function CartPage() {
 
                 <Separator />
 
+                {checkoutError && (
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+                    <p className="text-sm text-red-900">{checkoutError}</p>
+                  </div>
+                )}
+
                 <div className="space-y-3">
-                  <Button onClick={handleRequestQuote} size="lg" className="w-full">
-                    <FileText className="mr-2 h-5 w-5" />
-                    Request Quote
+                  <Button 
+                    onClick={handleCheckout} 
+                    size="lg" 
+                    className="w-full"
+                    disabled={isProcessingCheckout}
+                  >
+                    {isProcessingCheckout ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="mr-2 h-5 w-5" />
+                        Proceed to Checkout
+                      </>
+                    )}
                   </Button>
-                  <p className="text-center text-xs text-muted-foreground">
-                    Checkout coming soon
-                  </p>
+                  <Button onClick={handleRequestQuote} variant="outline" size="lg" className="w-full">
+                    <FileText className="mr-2 h-5 w-5" />
+                    Request Quote Instead
+                  </Button>
+                  {!isAuthenticated && (
+                    <p className="text-center text-xs text-muted-foreground">
+                      You'll be asked to sign in to complete checkout
+                    </p>
+                  )}
                 </div>
 
                 <Separator />
