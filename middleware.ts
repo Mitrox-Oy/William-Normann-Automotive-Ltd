@@ -17,18 +17,18 @@ import type { NextRequest } from 'next/server'
  * cookie here and extract user info from it.
  */
 
-const publicPaths = ['/', '/shop', '/services', '/about', '/blog', '/login']
+const publicPaths = ['/', '/shop', '/about', '/gallery', '/login']
 const accountPaths = ['/account']
 const adminPaths = ['/admin']
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-  
+
   // Allow public paths
   if (publicPaths.some(path => pathname === path || pathname.startsWith(`${path}/`))) {
     return NextResponse.next()
   }
-  
+
   // Allow static files and API routes
   if (
     pathname.startsWith('/_next') ||
@@ -37,7 +37,7 @@ export function middleware(request: NextRequest) {
   ) {
     return NextResponse.next()
   }
-  
+
   /**
    * Protected routes - redirect to login if not authenticated
    * 
@@ -64,21 +64,21 @@ export function middleware(request: NextRequest) {
    *   return NextResponse.redirect(new URL('/login', request.url))
    * }
    */
-  
+
   // Check for admin routes
   if (adminPaths.some(path => pathname.startsWith(path))) {
     // In client-side auth mode, let the client handle the redirect
     // If you have server-side session, verify role here
     return NextResponse.next()
   }
-  
+
   // Check for account routes
   if (accountPaths.some(path => pathname.startsWith(path))) {
     // In client-side auth mode, let the client handle the redirect
     // If you have server-side session, verify authentication here
     return NextResponse.next()
   }
-  
+
   return NextResponse.next()
 }
 

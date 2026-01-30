@@ -59,10 +59,7 @@ export function Navbar() {
           )}
         >
           <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary font-bold text-white shadow-sm">
-              WN
-            </div>
-            <span className="hidden font-bold text-white sm:inline-block">{siteConfig.company.shortName}</span>
+            <span className="font-bold text-white text-lg">William Automotive</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -83,7 +80,7 @@ export function Navbar() {
 
           <div className="flex items-center gap-2">
             <CartDrawer />
-            
+
             {/* Auth Section - Desktop */}
             <div className="hidden md:flex items-center gap-2">
               {!loading && (
@@ -236,7 +233,7 @@ export function Navbar() {
                   {item.label}
                 </Link>
               ))}
-              
+
               {/* Auth Section - Mobile */}
               {!loading && (
                 <div className="pt-2 space-y-1">
@@ -253,7 +250,7 @@ export function Navbar() {
                         <p className="text-sm font-medium">{user.name}</p>
                         <p className="text-xs text-muted-foreground">{user.email}</p>
                       </div>
-                      
+
                       {/* Role-specific links */}
                       {isOwner ? (
                         <>
@@ -294,7 +291,7 @@ export function Navbar() {
                           </Link>
                         </>
                       )}
-                      
+
                       <button
                         onClick={() => {
                           handleLogout()

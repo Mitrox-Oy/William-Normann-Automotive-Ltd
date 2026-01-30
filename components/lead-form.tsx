@@ -138,7 +138,7 @@ export function LeadForm({ source = "general" }: LeadFormProps) {
           onCheckedChange={(checked) => setConsent(checked === true)}
         />
         <Label htmlFor="consent" className="text-sm leading-relaxed">
-          I agree to be contacted by William Normann Automotive Ltd regarding my inquiry and understand my data will be
+          I agree to be contacted by William Automotive regarding my inquiry and understand my data will be
           processed according to the privacy policy. <span className="text-destructive">*</span>
         </Label>
       </div>

@@ -16,11 +16,11 @@ export function CartDrawer() {
   return (
     <Sheet open={isOpen} onOpenChange={(open) => (open ? openCart() : closeCart())}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="sm" className="relative text-white">
+        <Button variant="ghost" size="sm" className="relative text-primary bg-white hover:bg-white/90">
           <ShoppingCart className="h-5 w-5" />
           {totalItems > 0 && (
-            <Badge 
-              variant="destructive" 
+            <Badge
+              variant="destructive"
               className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full p-0 text-xs"
             >
               {totalItems}

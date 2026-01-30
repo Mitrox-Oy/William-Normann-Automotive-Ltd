@@ -1,7 +1,7 @@
 export const siteConfig = {
   company: {
-    name: "William Normann Automotive Ltd",
-    shortName: "WNA",
+    name: "William Automotive",
+    shortName: "William Automotive",
     tagline: "Connecting Automotive Markets Across Continents",
     description:
       "Specialized automotive parts sourcing connecting workshops, distributors, and enthusiasts with verified suppliers across EU, UK, MENA, and Asia.",
@@ -18,22 +18,21 @@ export const siteConfig = {
   social: {
     linkedin: "https://linkedin.com/company/williamnormann",
     twitter: "https://twitter.com/williamnormann",
-    instagram: "https://instagram.com/williamnormann",
+    instagram: "https://instagram.com/williamautomotive",
   },
   nav: [
     { label: "Home", href: "/" },
-    { label: "Services", href: "/services" },
     { label: "Shop", href: "/shop" },
     { label: "About & Contact", href: "/about" },
-    { label: "Blog", href: "/blog" },
+    { label: "Gallery", href: "/gallery" },
   ],
   hero: {
     headline: "Hard-to-Source Automotive Parts, Delivered Globally",
     subheadline:
       "From OEM classics to performance upgrades and rare SKUs. We connect serious workshops, distributors, and builders with verified suppliers across Europe, Middle East, and Asia.",
     primaryCTA: "Request a Quote",
-    secondaryCTA: "Browse Services",
-    badges: ["First reply within 4 business hours", "Cross-border sourcing: EU • UK • MENA • Asia"],
+    secondaryCTA: "Browse Shop",
+    badges: ["First reply within 24 hours", "Cross-border sourcing: EU • UK • MENA • Asia"],
   },
   trust: [
     {
@@ -45,7 +44,7 @@ export const siteConfig = {
       description: "Direct access to EU, UK, Middle East, and Asian markets",
     },
     {
-      title: "4-Hour Response SLA",
+      title: "24-Hour Response SLA",
       description: "Part numbers, origin, lead time, and FOB pricing",
     },
     {
@@ -59,79 +58,64 @@ export const siteConfig = {
   ],
   services: [
     {
-      title: "Hard-to-Source Parts Finder",
-      slug: "parts-sourcing",
+      title: "Turnkey Car Import Service",
+      slug: "car-import",
       description:
-        "Discontinued OEM, classic car components, and obscure SKUs. We dig deep across global supplier networks to find what local distributors can't.",
-      icon: "search",
-      forWho: "Workshops • Restoration shops • Collectors",
-      turnaround: "Quote within 24-72h",
+        "Complete car import solution from start to finish. We handle everything from sourcing to delivery at your doorstep.",
+      icon: "truck",
+      forWho: "Private buyers • Dealerships • Collectors",
+      turnaround: "Quote within 24h",
       featured: true,
       features: [
-        "Access to OEM archives and secondary markets",
-        "Classic, vintage, and discontinued lines",
-        "Cross-reference verification (OE numbers, VIN decoding)",
-        "Alternative supplier matching if original unavailable",
+        "XXXX Text - Work in progress",
+        "XXXX Text - Work in progress",
+        "XXXX Text - Work in progress",
+        "XXXX Text - Work in progress",
       ],
     },
     {
-      title: "Wholesale & Bulk Orders",
-      slug: "wholesale",
+      title: "Parts & Engines Import by Commission",
+      slug: "parts-engines-import",
       description:
-        "Container and pallet-level sourcing for distributors. Volume pricing, reliable lead times, and dedicated account management for repeat clients.",
-      icon: "truck",
-      forWho: "Parts distributors • Retailers • Resellers",
+        "Specialized import service for spare parts and engines. We source and import on commission basis for your specific needs.",
+      icon: "search",
+      forWho: "Workshops • Distributors • Restoration shops",
       turnaround: "Quote within 24h",
       features: [
-        "MOQ negotiation and volume discounts",
-        "FCL/LCL container shipping coordination",
-        "Flexible payment terms (LC, TT, escrow)",
-        "Ongoing price monitoring and reorder support",
+        "XXXX Text - Work in progress",
+        "XXXX Text - Work in progress",
+        "XXXX Text - Work in progress",
+        "XXXX Text - Work in progress",
       ],
     },
     {
-      title: "Cross-Border Market Access",
-      slug: "market-connections",
+      title: "Webshop with Partner & Own Inventory",
+      slug: "webshop",
       description:
-        "Direct channels into European, Middle Eastern, and Asian automotive supply chains. Compliance, customs documentation, and local liaison handled.",
+        "Access our online shop featuring products from trusted partners and our own inventory. Delivery within 4-7 days from market to market.",
       icon: "globe",
-      forWho: "International buyers • Export operations",
-      turnaround: "Ongoing partnerships",
+      forWho: "Businesses • Individual buyers • Workshops",
+      turnaround: "Delivery 4-7 days",
       features: [
-        "HS code classification and duty estimates",
-        "Trade compliance (INCOTERMS, COO)",
-        "Multi-currency quoting (EUR, GBP, USD, AED)",
-        "Regional supplier relationship management",
+        "XXXX Text - Work in progress",
+        "XXXX Text - Work in progress",
+        "XXXX Text - Work in progress",
+        "XXXX Text - Work in progress",
       ],
     },
     {
-      title: "Technical Verification",
-      slug: "consulting",
+      title: "Global Product Warranty",
+      slug: "warranty",
       description:
-        "Pre-purchase compatibility checks, spec validation, and installation guidance. We confirm fitment before you commit.",
+        "All products come with global warranty. Products are either inspected or new with manufacturer warranty.",
       icon: "wrench",
-      forWho: "Workshops • Project builds • DIY enthusiasts",
-      turnaround: "Same-day response",
+      forWho: "All customers • Global coverage",
+      turnaround: "Warranty included",
       features: [
-        "VIN-based part compatibility lookup",
-        "OE vs aftermarket comparison",
-        "Technical datasheet provision",
-        "Installation torque specs and procedures",
-      ],
-    },
-    {
-      title: "Custom Sourcing Projects",
-      slug: "custom",
-      description:
-        "Bespoke requirements for one-off builds, fleet upgrades, or specialty applications. Full project management from spec to delivery.",
-      icon: "settings",
-      forWho: "Custom builds • Fleet operators • Specialty shops",
-      turnaround: "Project-scoped",
-      features: [
-        "Tailored sourcing strategy",
-        "Multi-vendor coordination",
-        "Quality inspection at origin (optional)",
-        "White-glove logistics and tracking",
+        "XXXX Text - Work in progress",
+        "XXXX Text - Work in progress",
+        "XXXX Text - Work in progress",
+        "XXXX Text - Work in progress",
       ],
     },
   ],
@@ -170,7 +154,7 @@ export const siteConfig = {
   },
   about: {
     story:
-      "William Normann Automotive Ltd was founded with a simple mission: make global automotive sourcing accessible to everyone. Starting from a passion for classic cars and a frustration with limited local availability, we've grown into a trusted partner for workshops, enthusiasts, and distributors across three continents.\n\nToday, we leverage our extensive network and expertise to help clients find exactly what they need, wherever it comes from. Whether you're restoring a vintage classic, running a busy workshop, or managing wholesale distribution, we're here to make your automotive sourcing seamless and reliable.",
+      "William Automotive was founded with a simple mission: make global automotive sourcing accessible to everyone. Starting from a passion for classic cars and a frustration with limited local availability, we've grown into a trusted partner for workshops, enthusiasts, and distributors across three continents.\n\nToday, we leverage our extensive network and expertise to help clients find exactly what they need, wherever it comes from. Whether you're restoring a vintage classic, running a busy workshop, or managing wholesale distribution, we're here to make your automotive sourcing seamless and reliable.",
     values: [
       {
         title: "Trust & Transparency",
@@ -193,8 +177,8 @@ export const siteConfig = {
   leadForm: {
     headline: "Get Your Quote",
     description:
-      "Part numbers, vehicle details, quantities—whatever you've got. We'll respond within 4 business hours with pricing, lead time, and shipping options.",
-    responseTime: "Typical first reply: 4 business hours on weekdays",
+      "Part numbers, vehicle details, quantities—whatever you've got. We'll respond within 24 hours with pricing, lead time, and shipping options.",
+    responseTime: "Typical first reply: 24 hours on weekdays",
     interests: [
       "Hard-to-source parts",
       "Wholesale / bulk orders",
@@ -257,7 +241,7 @@ export const siteConfig = {
   },
   footer: {
     tagline: "Your trusted partner for global automotive solutions.",
-    copyright: `© ${new Date().getFullYear()} William Normann Automotive Ltd. All rights reserved.`,
+    copyright: `© ${new Date().getFullYear()} William Automotive. All rights reserved.`,
     quickLinks: [
       { label: "Privacy Policy", href: "/privacy" },
       { label: "Terms of Service", href: "/terms" },

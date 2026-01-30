@@ -8,7 +8,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ""
 
   // Static pages
-  const routes = ["", "/services", "/about", "/blog"].map((route) => ({
+  const routes = ["", "/shop", "/about", "/gallery"].map((route) => ({
     url: `${baseUrl}${basePath}${route}`,
     lastModified: new Date(),
     changeFrequency: "weekly" as const,

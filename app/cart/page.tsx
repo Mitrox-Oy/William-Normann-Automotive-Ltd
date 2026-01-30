@@ -348,7 +348,7 @@ export default function CartPage() {
                   <div className="rounded-lg border p-3">
                     <p className="text-sm font-medium">What happens next?</p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      We'll review your quote request and respond within 4 business hours with detailed pricing, lead times, and shipping options.
+                      We'll review your quote request and respond within 24 hours with detailed pricing, lead times, and shipping options.
                     </p>
                   </div>
 

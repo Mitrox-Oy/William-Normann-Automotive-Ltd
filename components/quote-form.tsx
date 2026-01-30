@@ -70,7 +70,7 @@ export function QuoteForm({ source = "general" }: QuoteFormProps) {
         <h3 className="mb-3 text-2xl font-bold">Quote Request Received</h3>
         <p className="mb-6 text-muted-foreground leading-relaxed">
           Thank you for your inquiry. Our team is reviewing your requirements and will respond with a detailed quote
-          within 4 business hours.
+          within 24 hours.
         </p>
         <div className="rounded-lg p-4 text-sm text-muted-foreground">
           Check your email for confirmation and next steps.
@@ -172,7 +172,7 @@ export function QuoteForm({ source = "general" }: QuoteFormProps) {
                 className="mt-1"
               />
               <Label htmlFor="consent" className="text-sm leading-relaxed">
-                I agree to be contacted by William Normann Automotive Ltd regarding my quote request.{" "}
+                I agree to be contacted by William Automotive regarding my quote request.{" "}
                 <span className="text-destructive">*</span>
               </Label>
             </div>
@@ -216,7 +216,7 @@ export function QuoteForm({ source = "general" }: QuoteFormProps) {
               <div>
                 <p className="mb-1 font-medium">2. Expert Review</p>
                 <p className="text-sm text-muted-foreground">
-                  Our team sources from our global network within 4 business hours.
+                  Our team sources from our global network within 24 hours.
                 </p>
               </div>
             </div>
@@ -237,7 +237,7 @@ export function QuoteForm({ source = "general" }: QuoteFormProps) {
 
         <div className="rounded-lg p-4">
           <p className="mb-1 text-sm font-medium text-white">Typical Response Time</p>
-          <p className="text-2xl font-bold text-white">4 Hours</p>
+          <p className="text-2xl font-bold text-white">24 Hours</p>
           <p className="text-xs text-white">On business days</p>
         </div>
       </div>

@@ -8,7 +8,7 @@ import { Mail, Phone, MapPin } from "lucide-react"
 export const metadata = {
   title: "About & Contact",
   description:
-    "Learn about William Normann Automotive Ltd and get in touch with our team for automotive parts sourcing and global market connections.",
+    "Learn about William Automotive and get in touch with our team for automotive parts sourcing and global market connections.",
 }
 
 export default function AboutPage() {
