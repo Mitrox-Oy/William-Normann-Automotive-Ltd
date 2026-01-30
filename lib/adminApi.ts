@@ -485,7 +485,7 @@ export interface DashboardStats {
 export async function getDashboardStats(): Promise<DashboardStats> {
   try {
     // Try the admin endpoint first
-    return await api.get<DashboardStats>('/admin/dashboard/stats')
+    return await api.get<DashboardStats>('/api/admin/dashboard/stats')
   } catch (error: any) {
     // If endpoint doesn't exist, return default stats
     if (error.status === 404 || error.message?.includes('No static resource')) {
