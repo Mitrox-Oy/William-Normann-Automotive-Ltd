@@ -12,8 +12,8 @@
  * - Cookie approach is more secure (not accessible to JavaScript)
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_SHOP_API_BASE_URL || 'http://localhost:8080'
-const AUTH_API_BASE_URL = process.env.NEXT_PUBLIC_AUTH_API_BASE_URL || API_BASE_URL
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_SHOP_API_BASE_URL || 'http://localhost:8080'
+const AUTH_API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_AUTH_API_BASE_URL || API_BASE_URL
 
 // In-memory token storage (only used if backend doesn't use httpOnly cookies)
 let accessToken: string | null = null
@@ -58,21 +58,21 @@ export async function apiRequest<T>(
   options: RequestOptions = {}
 ): Promise<T> {
   const { skipAuth = false, baseUrl, allow401 = false, ...fetchOptions } = options
-  
+
   const url = `${baseUrl || API_BASE_URL}${endpoint}`
-  
+
   const headers = new Headers(fetchOptions.headers || {})
-  
+
   // Set Content-Type if not already set and body exists
   if (fetchOptions.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
-  
+
   // Add Authorization header if token exists and not skipped
   if (!skipAuth && accessToken) {
     headers.set('Authorization', `Bearer ${accessToken}`)
   }
-  
+
   // Include credentials to send/receive cookies
   const config: RequestInit = {
     ...fetchOptions,
@@ -82,7 +82,7 @@ export async function apiRequest<T>(
 
   try {
     const response = await fetch(url, config)
-    
+
     // Handle different response statuses
     if (response.status === 401) {
       // For login endpoints, 401 means invalid credentials (not unauthorized request)
@@ -90,7 +90,7 @@ export async function apiRequest<T>(
         // Try to parse error message from response
         let errorMessage = 'Invalid email or password'
         let errorErrors: Record<string, string[]> | undefined
-        
+
         try {
           const contentType = response.headers.get('content-type')
           if (contentType && contentType.includes('application/json')) {
@@ -114,22 +114,22 @@ export async function apiRequest<T>(
           console.warn('Failed to parse error response:', parseError)
           // Use default message if parsing fails
         }
-        
+
         throw new ApiException(errorMessage, 401, errorErrors)
       }
       // For other endpoints, 401 means unauthorized - clear token
       setAccessToken(null)
       throw new ApiException('Unauthorized', 401)
     }
-    
+
     if (response.status === 403) {
       throw new ApiException('Forbidden', 403)
     }
-    
+
     if (response.status === 404) {
       throw new ApiException('Not found', 404)
     }
-    
+
     if (!response.ok) {
       // Try to parse error response
       try {
@@ -144,12 +144,12 @@ export async function apiRequest<T>(
         throw new ApiException(`Request failed with status ${response.status}`, response.status)
       }
     }
-    
+
     // Handle empty responses (204 No Content, etc.)
     if (response.status === 204 || response.headers.get('content-length') === '0') {
       return {} as T
     }
-    
+
     // Parse JSON response
     const data = await response.json()
     return data
@@ -158,7 +158,7 @@ export async function apiRequest<T>(
     if (error instanceof ApiException) {
       throw error
     }
-    
+
     console.error('API Request Error:', error)
     throw new ApiException(
       error instanceof Error ? error.message : 'Network error',
@@ -173,28 +173,28 @@ export async function apiRequest<T>(
 export const api = {
   get: <T>(endpoint: string, options?: RequestOptions) =>
     apiRequest<T>(endpoint, { ...options, method: 'GET' }),
-  
+
   post: <T>(endpoint: string, body?: any, options?: RequestOptions) =>
     apiRequest<T>(endpoint, {
       ...options,
       method: 'POST',
       body: body ? JSON.stringify(body) : undefined,
     }),
-  
+
   put: <T>(endpoint: string, body?: any, options?: RequestOptions) =>
     apiRequest<T>(endpoint, {
       ...options,
       method: 'PUT',
       body: body ? JSON.stringify(body) : undefined,
     }),
-  
+
   patch: <T>(endpoint: string, body?: any, options?: RequestOptions) =>
     apiRequest<T>(endpoint, {
       ...options,
       method: 'PATCH',
       body: body ? JSON.stringify(body) : undefined,
     }),
-  
+
   delete: <T>(endpoint: string, options?: RequestOptions) =>
     apiRequest<T>(endpoint, { ...options, method: 'DELETE' }),
 }
@@ -205,7 +205,7 @@ export const api = {
 export const authApi = {
   get: <T>(endpoint: string, options?: RequestOptions) =>
     apiRequest<T>(endpoint, { ...options, method: 'GET', baseUrl: AUTH_API_BASE_URL, skipAuth: true }),
-  
+
   post: <T>(endpoint: string, body?: any, options?: RequestOptions) => {
     // Login endpoint should allow 401 (invalid credentials)
     const isLoginEndpoint = endpoint.includes('/login')

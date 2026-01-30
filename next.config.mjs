@@ -6,7 +6,6 @@ const nextConfig = {
   images: {
     unoptimized: true,
     // Configure remote image patterns for the shop backend
-    // Update the hostname to match your backend domain
     remotePatterns: [
       {
         protocol: 'http',
@@ -16,14 +15,18 @@ const nextConfig = {
       },
       {
         protocol: 'https',
+        hostname: '**.herokuapp.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
         hostname: '**.yourdomain.com',
         pathname: '/**',
       },
-      // Add more patterns as needed for your image CDN or backend
     ],
   },
-  // GitHub Pages configuration
-  output: 'export',
+  // Use 'export' for GitHub Pages, remove for Netlify
+  output: process.env.NEXT_PUBLIC_BASE_PATH ? 'export' : undefined,
   basePath: process.env.NEXT_PUBLIC_BASE_PATH || '',
   assetPrefix: process.env.NEXT_PUBLIC_BASE_PATH || '',
   trailingSlash: true,
