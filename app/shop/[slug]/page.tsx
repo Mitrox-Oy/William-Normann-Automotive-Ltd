@@ -147,7 +147,7 @@ export default function ProductDetailPage() {
           >
             {/* Main Image */}
             <div className="relative aspect-square overflow-hidden rounded-lg bg-muted">
-              {product.images.length > 0 ? (
+              {product.images && product.images.length > 0 ? (
                 <Image
                   src={product.images[selectedImage] || product.images[0]}
                   alt={product.name}
@@ -163,7 +163,7 @@ export default function ProductDetailPage() {
             </div>
 
             {/* Thumbnail Gallery */}
-            {product.images.length > 1 && (
+            {product.images && product.images.length > 1 && (
               <div className="grid grid-cols-4 gap-4">
                 {product.images.map((image, index) => (
                   <button

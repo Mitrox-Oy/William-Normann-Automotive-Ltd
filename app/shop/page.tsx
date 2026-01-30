@@ -321,7 +321,7 @@ export default function ShopPage() {
                           <CardContent className="p-0">
                             <Link href={`/shop/${product.slug}`} className="block">
                               <div className="relative aspect-square overflow-hidden bg-muted">
-                                {product.images[0] ? (
+                                {product.images && product.images[0] ? (
                                   <Image
                                     src={product.images[0]}
                                     alt={product.name}
