@@ -23,7 +23,7 @@ function AccountDashboardContent() {
     async function loadRecentOrders() {
       try {
         const response = await getOrders({ limit: 3 })
-        setRecentOrders(response.orders)
+        setRecentOrders(Array.isArray(response?.orders) ? response.orders : [])
       } catch (error) {
         console.error("Failed to load recent orders:", error)
         setRecentOrders([])
@@ -159,7 +159,7 @@ function AccountDashboardContent() {
                     </div>
                   ) : recentOrders.length > 0 ? (
                     <div className="divide-y">
-                      {recentOrders.map((order) => (
+                      {recentOrders.map((order) => order && order.id ? (
                         <Link
                           key={order.id}
                           href={`/account/orders/${order.id}`}
@@ -167,25 +167,25 @@ function AccountDashboardContent() {
                         >
                           <div className="flex items-start justify-between">
                             <div className="space-y-1">
-                              <p className="font-medium">Order #{order.orderNumber}</p>
+                              <p className="font-medium">Order #{order.orderNumber || order.id}</p>
                               <p className="text-sm text-muted-foreground">
-                                {new Date(order.createdAt).toLocaleDateString()}
+                                {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A'}
                               </p>
                               <p className="text-sm">
-                                {order.items.length} {order.items.length === 1 ? "item" : "items"}
+                                {order.items?.length || 0} {(order.items?.length || 0) === 1 ? "item" : "items"}
                               </p>
                             </div>
                             <div className="text-right space-y-2">
                               <p className="font-bold">
-                                {formatCurrency(order.total, order.currency)}
+                                {formatCurrency(order.total || 0, order.currency || 'USD')}
                               </p>
-                              <Badge variant={getStatusBadgeVariant(order.status)}>
-                                {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                              <Badge variant={getStatusBadgeVariant(order.status || 'pending')}>
+                                {(order.status || 'pending').charAt(0).toUpperCase() + (order.status || 'pending').slice(1)}
                               </Badge>
                             </div>
                           </div>
                         </Link>
-                      ))}
+                      ) : null)}
                     </div>
                   ) : (
                     <div className="py-12 text-center">
