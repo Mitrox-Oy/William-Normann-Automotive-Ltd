@@ -10,6 +10,8 @@
  * - GET /categories
  */
 
+import { apiRequest } from './apiClient'
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_SHOP_API_BASE_URL || 'http://localhost:8080'
 
 export interface Product {
@@ -328,26 +330,11 @@ export interface CreateSessionResponse {
  */
 export async function createCheckoutOrder(
   orderData: CreateOrderRequest,
-  token: string
 ): Promise<CreateOrderResponse> {
-  const url = `${API_BASE_URL}/api/checkout/create-order`
-
-  const response = await fetch(url, {
+  return apiRequest<CreateOrderResponse>('/api/checkout/create-order', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
     body: JSON.stringify(orderData),
-    credentials: 'include',
   })
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => null)
-    throw new Error(errorData?.error || `Failed to create order: ${response.statusText}`)
-  }
-
-  return response.json()
 }
 
 /**
@@ -355,22 +342,37 @@ export async function createCheckoutOrder(
  * Returns the session ID to redirect to Stripe hosted checkout
  */
 export async function createCheckoutSession(orderId: string): Promise<CreateSessionResponse> {
-  const url = `${API_BASE_URL}/api/checkout/create-session`
-
-  const response = await fetch(url, {
+  return apiRequest<CreateSessionResponse>('/api/checkout/create-session', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
     body: JSON.stringify({ orderId }),
-    credentials: 'include',
   })
+}
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => null)
-    throw new Error(errorData?.error || `Failed to create checkout session: ${response.statusText}`)
-  }
+export interface OrderSummary {
+  id: number
+  orderNumber: string
+  status: string
+  totalAmount: number
+  currency: string
+  stripeCheckoutSessionId?: string
+}
 
-  return response.json()
+export async function getOrder(orderId: number | string): Promise<OrderSummary> {
+  return apiRequest<OrderSummary>(`/api/orders/${orderId}`)
+}
+
+export async function getOrderByCheckoutSession(sessionId: string): Promise<OrderSummary> {
+  return apiRequest<OrderSummary>(`/api/orders/checkout-session/${sessionId}`)
+}
+
+export async function getLatestOrder(): Promise<OrderSummary> {
+  return apiRequest<OrderSummary>('/api/orders/me/latest')
+}
+
+export async function finalizeCheckout(orderId: number | string, sessionId?: string): Promise<OrderSummary> {
+  return apiRequest<OrderSummary>(`/api/orders/${orderId}/finalize`, {
+    method: 'POST',
+    body: sessionId ? JSON.stringify({ sessionId }) : undefined,
+  })
 }
 

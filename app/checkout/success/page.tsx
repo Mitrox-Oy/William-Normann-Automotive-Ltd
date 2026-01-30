@@ -1,13 +1,14 @@
 "use client"
 
-import { useEffect, useState, Suspense } from "react"
+import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Container } from "@/components/container"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CheckCircle2, Loader2, ShoppingBag, FileText } from "lucide-react"
 import Link from "next/link"
-import { apiRequest } from "@/lib/apiClient"
+import { useCart } from "@/components/CartContext"
+import { finalizeCheckout, getLatestOrder, getOrder, getOrderByCheckoutSession } from "@/lib/shopApi"
 
 interface Order {
     id: number
@@ -15,6 +16,7 @@ interface Order {
     status: string
     totalAmount: number
     currency: string
+    stripeCheckoutSessionId?: string
     shippingAmount?: number
     taxAmount?: number
     orderItems?: Array<{
@@ -29,6 +31,7 @@ interface Order {
 function CheckoutSuccessContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
+    const { clearCart } = useCart()
     const [order, setOrder] = useState<Order | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState("")
@@ -51,32 +54,47 @@ function CheckoutSuccessContent() {
 
         const fetchOrder = async () => {
             try {
-                let response: Order
+                let response: Order | null = null
 
                 if (orderId) {
-                    response = await apiRequest<Order>(`/api/orders/${orderId}`)
+                    response = await getOrder(Number(orderId))
                 } else if (sessionId) {
-                    response = await apiRequest<Order>(`/api/orders/checkout-session/${sessionId}`)
+                    response = await getOrderByCheckoutSession(sessionId)
                 } else {
+                    response = await getLatestOrder()
+                }
+
+                if (!response) return
+
+                // Fallback finalize if not paid yet and we have a session reference
+                if (response.status !== "PAID" && (sessionId || response.stripeCheckoutSessionId)) {
+                    try {
+                        const sessionRef = sessionId || (response as any).stripeCheckoutSessionId
+                        if (sessionRef) {
+                            response = await finalizeCheckout(response.id, sessionRef)
+                        }
+                    } catch (finalizeErr) {
+                        console.warn("Finalize checkout fallback failed", finalizeErr)
+                    }
+                }
+
+                setOrder(response)
+                setError("")
+
+                if (response.status === "PAID") {
+                    clearCart()
+                    setPolling(false)
+                    setLoading(false)
                     return
                 }
 
-                if (response) {
-                    setOrder(response)
-                    setError("")
-
-                    // If order is paid, stop polling
-                    if (response.status === "PAID") {
-                        setPolling(false)
-                        setLoading(false)
-                    } else if (pollCount < maxPolls) {
-                        pollCount++
-                        setTimeout(fetchOrder, pollInterval)
-                    } else {
-                        setPolling(false)
-                        setLoading(false)
-                        setError("Payment is still being confirmed. Please check your email or contact support.")
-                    }
+                if (pollCount < maxPolls) {
+                    pollCount++
+                    setTimeout(fetchOrder, pollInterval)
+                } else {
+                    setPolling(false)
+                    setLoading(false)
+                    setError("Payment is still being confirmed. Please check your email or contact support.")
                 }
             } catch (err: any) {
                 console.error("Error fetching order:", err)

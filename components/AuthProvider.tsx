@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { login as apiLogin, logout as apiLogout, register as apiRegister, getCurrentUser, type User } from '@/lib/authApi'
-import { ApiException } from '@/lib/apiClient'
+import { ApiException, getAccessToken, setAccessToken } from '@/lib/apiClient'
 
 interface AuthContextType {
   user: User | null
@@ -16,14 +16,18 @@ interface AuthContextType {
   isOwner: boolean
   isCustomer: boolean
   isAuthenticated: boolean
+  token: string | null
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
+
+const TOKEN_STORAGE_KEY = 'wna-auth-token'
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [token, setToken] = useState<string | null>(null)
   const router = useRouter()
   const pathname = usePathname()
 
@@ -34,6 +38,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true)
       setError(null)
+      // Ensure apiClient has the token before fetching profile
+      const storedToken = token || getAccessToken()
+      if (storedToken) {
+        setAccessToken(storedToken)
+      }
       const currentUser = await getCurrentUser()
       setUser(currentUser)
     } catch (err) {
@@ -45,6 +54,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
+    const persisted = typeof window !== 'undefined' ? localStorage.getItem(TOKEN_STORAGE_KEY) : null
+    if (persisted) {
+      setAccessToken(persisted)
+      setToken(persisted)
+    }
     refreshUser()
   }, [refreshUser])
 
@@ -57,6 +71,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setError(null)
       
       const loggedInUser = await apiLogin(email, password)
+      const latestToken = getAccessToken()
+      if (latestToken) {
+        setToken(latestToken)
+        localStorage.setItem(TOKEN_STORAGE_KEY, latestToken)
+      }
       setUser(loggedInUser)
       
       // Redirect based on role
@@ -90,6 +109,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Register returns user with token, so user is automatically logged in
       const registeredUser = await apiRegister(email, password, firstName, lastName)
+      const latestToken = getAccessToken()
+      if (latestToken) {
+        setToken(latestToken)
+        localStorage.setItem(TOKEN_STORAGE_KEY, latestToken)
+      }
       setUser(registeredUser)
       
       // Redirect to account page after registration
@@ -111,11 +135,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(true)
       await apiLogout()
       setUser(null)
+      setToken(null)
+      setAccessToken(null)
+      localStorage.removeItem(TOKEN_STORAGE_KEY)
       router.push('/')
     } catch (err) {
       console.error('Logout error:', err)
       // Clear user anyway
       setUser(null)
+      setToken(null)
+      setAccessToken(null)
+      localStorage.removeItem(TOKEN_STORAGE_KEY)
       router.push('/')
     } finally {
       setLoading(false)
@@ -133,6 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isOwner: user?.role === 'owner',
     isCustomer: user?.role === 'customer',
     isAuthenticated: user !== null,
+    token,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

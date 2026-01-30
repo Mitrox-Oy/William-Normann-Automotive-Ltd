@@ -17,11 +17,12 @@ import { loadStripe } from "@stripe/stripe-js"
 import { useState } from "react"
 
 // Initialize Stripe
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '')
+const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''
+const stripePromise = loadStripe(stripePublishableKey)
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, clearCart, getTotalItems, getTotalPrice } = useCart()
-  const { isAuthenticated, token } = useAuth()
+  const { isAuthenticated } = useAuth()
   const router = useRouter()
   const [isProcessingCheckout, setIsProcessingCheckout] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string>("")
@@ -52,6 +53,12 @@ export default function CartPage() {
     setIsProcessingCheckout(true)
     setCheckoutError("")
 
+    if (!stripePublishableKey) {
+      setCheckoutError("Stripe key missing: configure NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY")
+      setIsProcessingCheckout(false)
+      return
+    }
+
     try {
       // Step 1: Create order from cart
       const orderResponse = await createCheckoutOrder({
@@ -61,7 +68,7 @@ export default function CartPage() {
         shippingCountry: "GB",
         shippingAmount: 0,
         taxAmount: 0,
-      }, token)
+      })
 
       if (!orderResponse?.orderId) {
         throw new Error('Failed to create order')
