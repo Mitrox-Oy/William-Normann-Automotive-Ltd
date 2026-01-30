@@ -72,11 +72,11 @@ public class ProductService {
     }
 
     /**
-     * Get product by SKU
+     * Get product by SKU (case-insensitive)
      */
     @Transactional(readOnly = true)
     public Optional<ProductDTO> getProductBySku(String sku) {
-        return productRepository.findBySkuAndActiveTrue(sku)
+        return productRepository.findBySkuIgnoreCaseAndActiveTrue(sku)
                 .map(this::convertToDTO);
     }
 

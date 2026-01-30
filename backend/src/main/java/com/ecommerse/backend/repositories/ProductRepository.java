@@ -64,10 +64,16 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         List<Product> findByFeaturedTrueAndActiveTrueOrderByCreatedDateDesc();
 
         /**
-         * Find product by SKU
+         * Find product by SKU (case-insensitive)
          */
         @EntityGraph(attributePaths = { "images", "variants" })
         Optional<Product> findBySkuAndActiveTrue(String sku);
+        
+        /**
+         * Find product by SKU (case-insensitive)
+         */
+        @EntityGraph(attributePaths = { "images", "variants" })
+        Optional<Product> findBySkuIgnoreCaseAndActiveTrue(String sku);
 
         /**
          * Check if SKU exists (for unique validation)
