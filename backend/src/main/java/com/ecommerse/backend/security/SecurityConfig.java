@@ -69,34 +69,40 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())  // Disable CSRF for stateless JWT API
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth.requestMatchers("/api/auth/login").permitAll()
+                .authorizeHttpRequests(auth -> auth
+                        // Public endpoints - must be first
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/checkout/**", "/api/stripe/webhook").permitAll()
+                        .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/register").permitAll()
                         .requestMatchers("/api/auth/owner/login").permitAll()
-                        .requestMatchers("/api/auth/debug/**").permitAll() // AUTH DEBUG ENDPOINTS
-                        .requestMatchers("/api/auth/change-password").authenticated()
+                        .requestMatchers("/api/auth/debug/**").permitAll()
+                        .requestMatchers("/api/checkout/**", "/api/stripe/webhook").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
                         .requestMatchers("/api/images/**").permitAll()
                         .requestMatchers("/api/test/public").permitAll()
-                        .requestMatchers("/api/debug/**").permitAll() // DEBUG ENDPOINTS
+                        .requestMatchers("/api/debug/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
+                        // Public read access to products and categories
                         .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
+                        // Product and Category write operations - require authentication
+                        .requestMatchers(HttpMethod.POST, "/api/products/**").hasAnyRole("OWNER", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/products/**").hasAnyRole("OWNER", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/products/**").hasAnyRole("OWNER", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/categories/**").hasAnyRole("OWNER", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/categories/**").hasAnyRole("OWNER", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/categories/**").hasAnyRole("OWNER", "ADMIN")
                         // Customer endpoints
                         .requestMatchers("/api/customer/**").hasRole("CUSTOMER")
-                        // Product management - allow CUSTOMER (read via method auth), OWNER, and ADMIN
-                        .requestMatchers("/api/products/**").hasAnyRole("CUSTOMER", "OWNER", "ADMIN")
-                        // Category management - allow access (method-level auth will restrict write ops)
-                        .requestMatchers("/api/categories/**").hasAnyRole("CUSTOMER", "OWNER", "ADMIN")
+                        .requestMatchers("/api/auth/change-password").authenticated()
                         // File management - only OWNER and ADMIN
                         .requestMatchers("/api/files/**").hasAnyRole("OWNER", "ADMIN")
                         .requestMatchers("/api/cart/**").hasRole("CUSTOMER")
                         .requestMatchers("/api/wishlist/**").hasRole("CUSTOMER")
                         .requestMatchers("/api/shipping/**").hasRole("CUSTOMER")
                         .requestMatchers("/api/orders/**").hasAnyRole("CUSTOMER", "OWNER", "ADMIN")
-                        // Test endpoints (except public)
+                        // Test endpoints
                         .requestMatchers("/api/test/user").hasAnyRole("CUSTOMER", "OWNER", "ADMIN")
                         .requestMatchers("/api/test/customer").hasRole("CUSTOMER")
                         .requestMatchers("/api/test/owner").hasAnyRole("OWNER", "ADMIN")
