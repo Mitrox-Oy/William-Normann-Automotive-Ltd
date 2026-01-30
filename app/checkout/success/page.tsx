@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Container } from "@/components/container"
 import { Card, CardContent } from "@/components/ui/card"
@@ -26,7 +26,7 @@ interface Order {
   }>
 }
 
-export default function CheckoutSuccessPage() {
+function CheckoutSuccessContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [order, setOrder] = useState<Order | null>(null)
@@ -250,5 +250,29 @@ export default function CheckoutSuccessPage() {
         </Card>
       </Container>
     </section>
+  )
+}
+
+export default function CheckoutSuccessPage() {
+  return (
+    <Suspense fallback={
+      <section className="py-24 lg:py-32">
+        <Container>
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center gap-6 py-20 text-center">
+              <Loader2 className="h-16 w-16 animate-spin text-primary" />
+              <div>
+                <h2 className="mb-2 text-2xl font-bold">Loading...</h2>
+                <p className="text-muted-foreground">
+                  Please wait
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </Container>
+      </section>
+    }>
+      <CheckoutSuccessContent />
+    </Suspense>
   )
 }
