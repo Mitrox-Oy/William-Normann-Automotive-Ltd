@@ -163,7 +163,7 @@ export async function getAdminProducts(params: ProductsListParams = {}): Promise
  * Backend endpoint: GET /api/categories
  */
 export async function getAllCategories(): Promise<Category[]> {
-  const API_BASE_URL = process.env.NEXT_PUBLIC_SHOP_API_BASE_URL || 'http://localhost:8080'
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_SHOP_API_BASE_URL || 'http://localhost:8080'
   const response = await fetch(`${API_BASE_URL}/api/categories`, {
     headers: {
       'Content-Type': 'application/json',
@@ -213,7 +213,7 @@ export async function uploadProductImage(productId: string, file: File, isMain: 
   // Use fetch directly for FormData
   const { getAccessToken } = await import('./apiClient')
   const token = getAccessToken()
-  const baseUrl = process.env.NEXT_PUBLIC_SHOP_API_BASE_URL || 'http://localhost:8080'
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_SHOP_API_BASE_URL || 'http://localhost:8080'
   const response = await fetch(`${baseUrl}/api/products/${productId}/images/upload`, {
     method: 'POST',
     headers: token ? {
