@@ -100,18 +100,84 @@ export interface OrdersListResponse {
  */
 export async function getOrders(params: OrdersListParams = {}): Promise<OrdersListResponse> {
   const searchParams = new URLSearchParams()
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined) searchParams.append(key, value.toString())
-  })
+  const page = params.page ? Math.max(params.page - 1, 0) : 0
+  const size = params.limit ?? 10
 
-  return api.get<OrdersListResponse>(`/api/orders?${searchParams.toString()}`)
+  searchParams.set('page', page.toString())
+  searchParams.set('size', size.toString())
+
+  // Backend customer orders endpoint does not support status filter
+  const response = await api.get<any>(`/api/orders?${searchParams.toString()}`)
+
+  const orders: CustomerOrder[] = (response.content || []).map((order: any) => ({
+    id: String(order.id),
+    orderNumber: order.orderNumber,
+    items: (order.orderItems || []).map((item: any) => ({
+      id: String(item.id),
+      productId: String(item.productId),
+      productName: item.productName,
+      productImage: undefined,
+      quantity: item.quantity,
+      price: Number(item.unitPrice),
+    })),
+    total: Number(order.totalAmount ?? 0),
+    currency: (order.currency || 'eur').toUpperCase(),
+    status: String(order.status || 'pending').toLowerCase(),
+    paymentStatus: order.paymentIntentId ? 'paid' : 'pending',
+    shippingAddress: {
+      street: order.shippingAddress || '',
+      city: order.shippingCity || '',
+      state: '',
+      country: order.shippingCountry || '',
+      postalCode: order.shippingPostalCode || '',
+    },
+    trackingNumber: undefined,
+    createdAt: order.createdDate || order.orderDate || new Date().toISOString(),
+    updatedAt: order.updatedDate || order.createdDate || new Date().toISOString(),
+    estimatedDelivery: undefined,
+  }))
+
+  return {
+    orders,
+    total: response.totalElements ?? orders.length,
+    page: (response.number ?? 0) + 1,
+    limit: response.size ?? size,
+    totalPages: response.totalPages ?? 1,
+  }
 }
 
 /**
  * Get single order
  */
 export async function getOrder(id: string): Promise<CustomerOrder> {
-  return api.get<CustomerOrder>(`/api/orders/${id}`)
+  const order = await api.get<any>(`/api/orders/${id}`)
+  return {
+    id: String(order.id),
+    orderNumber: order.orderNumber,
+    items: (order.orderItems || []).map((item: any) => ({
+      id: String(item.id),
+      productId: String(item.productId),
+      productName: item.productName,
+      productImage: undefined,
+      quantity: item.quantity,
+      price: Number(item.unitPrice),
+    })),
+    total: Number(order.totalAmount ?? 0),
+    currency: (order.currency || 'eur').toUpperCase(),
+    status: String(order.status || 'pending').toLowerCase(),
+    paymentStatus: order.paymentIntentId ? 'paid' : 'pending',
+    shippingAddress: {
+      street: order.shippingAddress || '',
+      city: order.shippingCity || '',
+      state: '',
+      country: order.shippingCountry || '',
+      postalCode: order.shippingPostalCode || '',
+    },
+    trackingNumber: undefined,
+    createdAt: order.createdDate || order.orderDate || new Date().toISOString(),
+    updatedAt: order.updatedDate || order.createdDate || new Date().toISOString(),
+    estimatedDelivery: undefined,
+  }
 }
 
 /**

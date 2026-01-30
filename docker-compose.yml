@@ -41,6 +41,8 @@ services:
       LOG_LEVEL: INFO
     ports:
       - "8080:8080"
+    volumes:
+      - william_normann_shop_uploads:/app/uploads
     depends_on:
       - postgres
     networks:
@@ -55,6 +57,7 @@ services:
 
 volumes:
   william_normann_shop_data:
+  william_normann_shop_uploads:
 
 networks:
   william-normann-shop-network:

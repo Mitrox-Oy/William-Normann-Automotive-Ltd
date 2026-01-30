@@ -45,6 +45,14 @@ public class ProductVariantService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public ProductVariantResponse getVariant(Long productId, Long variantId) {
+        ProductVariant variant = productVariantRepository.findByIdAndProductId(variantId, productId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Variant not found for product: " + productId + " and variant: " + variantId));
+        return new ProductVariantResponse(variant);
+    }
+
     public ProductVariantResponse createVariant(Long productId, @Valid ProductVariantRequest request) {
         Product product = getManagedProduct(productId);
 
@@ -204,6 +212,7 @@ public class ProductVariantService {
         variant.setName(request.getName());
         variant.setSku(request.getSku());
         variant.setPrice(request.getPrice());
+        variant.setImageUrl(request.getImageUrl());
     }
 
     private int calculateNextPosition(Long productId) {
@@ -240,7 +249,8 @@ public class ProductVariantService {
     }
 
     private void rebalancePositions(Long productId) {
-        List<ProductVariant> variants = new ArrayList<>(productVariantRepository.findByProductIdOrderByPositionAsc(productId));
+        List<ProductVariant> variants = new ArrayList<>(
+                productVariantRepository.findByProductIdOrderByPositionAsc(productId));
         variants.sort(Comparator.comparing(variant -> variant.getPosition() != null ? variant.getPosition() : 0));
 
         int index = 0;
@@ -256,10 +266,11 @@ public class ProductVariantService {
             return;
         }
 
-        productVariantRepository.findByProductIdOrderByPositionAsc(productId).stream().findFirst().ifPresent(variant -> {
-            variant.setDefaultVariant(Boolean.TRUE);
-            productVariantRepository.save(variant);
-        });
+        productVariantRepository.findByProductIdOrderByPositionAsc(productId).stream().findFirst()
+                .ifPresent(variant -> {
+                    variant.setDefaultVariant(Boolean.TRUE);
+                    productVariantRepository.save(variant);
+                });
     }
 
     private void recalculateProductStock(Product product) {

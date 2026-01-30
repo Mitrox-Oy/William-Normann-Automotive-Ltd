@@ -16,7 +16,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,10 +37,10 @@ import java.util.Optional;
 public class OrderService {
 
     private static final Logger logger = LoggerFactory.getLogger(OrderService.class);
-    private static final EnumSet<OrderStatus> PROCESSED_STATUSES =
-            EnumSet.of(OrderStatus.PAID, OrderStatus.PROCESSING, OrderStatus.SHIPPED, OrderStatus.DELIVERED);
-    private static final EnumSet<OrderStatus> PAYMENT_ELIGIBLE_STATUSES =
-            EnumSet.of(OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.CHECKOUT_CREATED);
+    private static final EnumSet<OrderStatus> PROCESSED_STATUSES = EnumSet.of(OrderStatus.PAID, OrderStatus.PROCESSING,
+            OrderStatus.SHIPPED, OrderStatus.DELIVERED);
+    private static final EnumSet<OrderStatus> PAYMENT_ELIGIBLE_STATUSES = EnumSet.of(OrderStatus.PENDING,
+            OrderStatus.CONFIRMED, OrderStatus.CHECKOUT_CREATED);
 
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
@@ -50,10 +52,10 @@ public class OrderService {
     private final String stripeSecretKeyProperty;
 
     public OrderService(OrderRepository orderRepository, UserRepository userRepository,
-                       CartRepository cartRepository, CartService cartService, ProductRepository productRepository,
-                       EmailService emailService,
-                       com.ecommerse.backend.services.analytics.AlertService alertService,
-                       @Value("${stripe.secret.key:}") String stripeSecretKeyProperty) {
+            CartRepository cartRepository, CartService cartService, ProductRepository productRepository,
+            EmailService emailService,
+            com.ecommerse.backend.services.analytics.AlertService alertService,
+            @Value("${stripe.secret.key:}") String stripeSecretKeyProperty) {
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
         this.cartRepository = cartRepository;
@@ -135,22 +137,32 @@ public class OrderService {
         return convertToDto(order);
     }
 
+    @Transactional(readOnly = true)
+    public List<OrderDTO> getRecentOrdersForOwner(int limit) {
+        Pageable pageable = PageRequest.of(0, Math.max(limit, 1), Sort.by(Sort.Direction.DESC, "createdDate"));
+        return orderRepository.findAll(pageable)
+                .getContent()
+                .stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+
     /**
      * Create an order from the user's cart
      *
-     * @param userId User ID
-     * @param shippingAddress Shipping address line
-     * @param shippingCity Shipping city
+     * @param userId             User ID
+     * @param shippingAddress    Shipping address line
+     * @param shippingCity       Shipping city
      * @param shippingPostalCode Shipping postal code
-     * @param shippingCountry Shipping country
-     * @param shippingAmount Shipping cost
-     * @param taxAmount Tax amount
+     * @param shippingCountry    Shipping country
+     * @param shippingAmount     Shipping cost
+     * @param taxAmount          Tax amount
      * @return Created OrderDTO
      */
     @Transactional
     public OrderDTO createOrderFromCart(Long userId, String shippingAddress, String shippingCity,
-                                        String shippingPostalCode, String shippingCountry,
-                                        BigDecimal shippingAmount, BigDecimal taxAmount) {
+            String shippingPostalCode, String shippingCountry,
+            BigDecimal shippingAmount, BigDecimal taxAmount) {
         // Validate cart
         CartValidationResult validation = cartService.validateCartComprehensive(userId);
         if (!validation.isValid()) {
@@ -178,7 +190,7 @@ public class OrderService {
         // Convert cart items to order items (stock already reserved while in cart)
         for (CartItem cartItem : cart.getItems()) {
             Product product = cartItem.getProduct();
-            
+
             // Final stock check
             if (!product.getActive() || !product.isAvailable()) {
                 throw new IllegalArgumentException("Product '" + product.getName() + "' is no longer available");
@@ -206,9 +218,9 @@ public class OrderService {
     /**
      * Mark an order as paid after successful payment
      *
-     * @param orderId Order ID
+     * @param orderId         Order ID
      * @param paymentIntentId Stripe PaymentIntent ID
-     * @param username Username for verification
+     * @param username        Username for verification
      * @return Updated OrderDTO
      */
     @Transactional
@@ -229,7 +241,8 @@ public class OrderService {
     }
 
     /**
-     * Finalize a checkout session by verifying payment status and transitioning the order when appropriate.
+     * Finalize a checkout session by verifying payment status and transitioning the
+     * order when appropriate.
      */
     @Transactional
     public OrderDTO finalizeCheckout(Long orderId, String checkoutSessionId, String username) {
@@ -254,13 +267,15 @@ public class OrderService {
         String secretKey = resolveStripeSecretKey();
 
         if (secretKey == null || secretKey.isBlank()) {
-            logger.warn("Stripe secret key not configured; marking order {} as PAID without verification", order.getOrderNumber());
+            logger.warn("Stripe secret key not configured; marking order {} as PAID without verification",
+                    order.getOrderNumber());
             Order processed = finalizeOrderPayment(order, null);
             return convertToDto(processed);
         }
 
         if (effectiveSessionId == null || effectiveSessionId.isBlank()) {
-            logger.warn("Order {} does not have a checkout session id; marking as PAID without verification", order.getOrderNumber());
+            logger.warn("Order {} does not have a checkout session id; marking as PAID without verification",
+                    order.getOrderNumber());
             Order processed = finalizeOrderPayment(order, null);
             return convertToDto(processed);
         }
@@ -284,7 +299,8 @@ public class OrderService {
                         order.getOrderNumber());
             }
         } catch (StripeException e) {
-            logger.error("Unable to verify checkout session {} for order {}: {}", effectiveSessionId, order.getOrderNumber(), e.getMessage(), e);
+            logger.error("Unable to verify checkout session {} for order {}: {}", effectiveSessionId,
+                    order.getOrderNumber(), e.getMessage(), e);
             Order processed = finalizeOrderPayment(order, null);
             return convertToDto(processed);
         }
@@ -311,7 +327,8 @@ public class OrderService {
 
         if (order.getStatus() == OrderStatus.PAID || order.getStatus() == OrderStatus.SHIPPED
                 || order.getStatus() == OrderStatus.DELIVERED) {
-            logger.info("Ignoring payment failure event for order {} with status {}", order.getOrderNumber(), order.getStatus());
+            logger.info("Ignoring payment failure event for order {} with status {}", order.getOrderNumber(),
+                    order.getStatus());
             return convertToDto(order);
         }
 
@@ -421,7 +438,8 @@ public class OrderService {
 
             product.setStockQuantity(updatedStock);
             productRepository.save(product);
-            logger.debug("Order {} decremented product {} stock to {}", order.getOrderNumber(), productId, updatedStock);
+            logger.debug("Order {} decremented product {} stock to {}", order.getOrderNumber(), productId,
+                    updatedStock);
         }
     }
 
@@ -526,7 +544,7 @@ public class OrderService {
     /**
      * Get orders filtered by status
      *
-     * @param status Order status
+     * @param status   Order status
      * @param pageable Pagination parameters
      * @return Page of OrderDTOs
      */
@@ -540,8 +558,8 @@ public class OrderService {
      * Get orders filtered by date range
      *
      * @param startDate Start date (inclusive)
-     * @param endDate End date (inclusive)
-     * @param pageable Pagination parameters
+     * @param endDate   End date (inclusive)
+     * @param pageable  Pagination parameters
      * @return Page of OrderDTOs
      */
     @Transactional(readOnly = true)
@@ -553,16 +571,16 @@ public class OrderService {
     /**
      * Get orders filtered by status and date range
      *
-     * @param status Order status (optional, null for all statuses)
-     * @param startDate Start date (optional)
-     * @param endDate End date (optional)
+     * @param status     Order status (optional, null for all statuses)
+     * @param startDate  Start date (optional)
+     * @param endDate    End date (optional)
      * @param searchTerm Order number search term (optional)
-     * @param pageable Pagination parameters
+     * @param pageable   Pagination parameters
      * @return Page of OrderDTOs
      */
     @Transactional(readOnly = true)
     public Page<OrderDTO> getOrdersForOwner(OrderStatus status, LocalDateTime startDate, LocalDateTime endDate,
-                                             String searchTerm, Pageable pageable) {
+            String searchTerm, Pageable pageable) {
         Page<Order> orders;
 
         // Search by order number
@@ -573,19 +591,19 @@ public class OrderService {
                 List<Order> filtered = orders.getContent().stream()
                         .filter(order -> order.getStatus() == status)
                         .collect(Collectors.toList());
-                
+
                 // Manually paginate the filtered list
                 int start = (int) pageable.getOffset();
                 int end = Math.min(start + pageable.getPageSize(), filtered.size());
-                List<Order> pagedList = start < filtered.size() 
-                    ? filtered.subList(start, end) 
-                    : Collections.emptyList();
-                
+                List<Order> pagedList = start < filtered.size()
+                        ? filtered.subList(start, end)
+                        : Collections.emptyList();
+
                 // Convert to DTOs and create Page
                 List<OrderDTO> dtos = pagedList.stream()
                         .map(this::convertToDto)
                         .collect(Collectors.toList());
-                
+
                 return new org.springframework.data.domain.PageImpl<>(dtos, pageable, filtered.size());
             }
             return orders.map(this::convertToDto);
@@ -638,9 +656,9 @@ public class OrderService {
     /**
      * Update order status with validation
      *
-     * @param orderId Order ID
+     * @param orderId   Order ID
      * @param newStatus New order status
-     * @param username Username performing the update (for authorization)
+     * @param username  Username performing the update (for authorization)
      * @return Updated OrderDTO
      */
     @Transactional
@@ -758,15 +776,15 @@ public class OrderService {
     /**
      * Export orders to CSV format
      *
-     * @param status Order status filter (optional)
+     * @param status    Order status filter (optional)
      * @param startDate Start date filter (optional)
-     * @param endDate End date filter (optional)
+     * @param endDate   End date filter (optional)
      * @return CSV content as string
      */
     @Transactional(readOnly = true)
     public String exportOrdersToCsv(OrderStatus status, LocalDateTime startDate, LocalDateTime endDate) {
         List<Order> orders;
-        
+
         // Build query based on filters
         if (status != null && startDate != null && endDate != null) {
             // Status and date range
@@ -784,16 +802,17 @@ public class OrderService {
             // No filters - get all orders
             orders = orderRepository.findAll();
         }
-        
+
         // Build CSV
         StringBuilder csv = new StringBuilder();
         csv.append("Order Number,Date,Customer,Status,Total Amount,Items Count,Shipping Address\n");
-        
+
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        
+
         for (Order order : orders) {
             csv.append(escapeCsv(order.getOrderNumber())).append(",");
-            csv.append(escapeCsv(order.getCreatedDate() != null ? order.getCreatedDate().format(dateFormatter) : "N/A")).append(",");
+            csv.append(escapeCsv(order.getCreatedDate() != null ? order.getCreatedDate().format(dateFormatter) : "N/A"))
+                    .append(",");
             csv.append(escapeCsv(order.getUser() != null ? order.getUser().getUsername() : "N/A")).append(",");
             csv.append(escapeCsv(order.getStatus().name())).append(",");
             csv.append(order.getTotalAmount() != null ? order.getTotalAmount().toString() : "0.00").append(",");
@@ -802,12 +821,13 @@ public class OrderService {
                     ", " + order.getShippingPostalCode() + ", " + order.getShippingCountry();
             csv.append(escapeCsv(shippingAddress)).append("\n");
         }
-        
+
         return csv.toString();
     }
-    
+
     /**
-     * Find a pending order by string order identifier which can be either numeric ID or exact orderNumber.
+     * Find a pending order by string order identifier which can be either numeric
+     * ID or exact orderNumber.
      */
     @Transactional(readOnly = true)
     public java.util.Optional<Order> findPending(String orderIdOrNumber) {
@@ -830,45 +850,48 @@ public class OrderService {
         }
         return java.util.Optional.empty();
     }
-    
+
     /**
-     * Recalculate total in cents from DB for a given order (by id or orderNumber), updating the order total.
+     * Recalculate total in cents from DB for a given order (by id or orderNumber),
+     * updating the order total.
      */
     @Transactional
     public long recalculateTotalCents(String orderIdOrNumber) {
         // Parse order ID and load with items
         final Long orderId = parseOrderId(orderIdOrNumber);
-        
+
         // Load order with items using JOIN FETCH
         Order order = orderRepository.findByIdWithItems(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderId));
-        
+
         // Verify order is in correct state
         if (!isAwaitingPayment(order)) {
             throw new IllegalArgumentException("Order is not in PENDING/CHECKOUT_CREATED state: " + order.getStatus());
         }
-        
+
         // Force initialization of items collection and recalculate
         int itemCount = order.getOrderItems().size();
         if (itemCount == 0) {
             throw new IllegalArgumentException("Order has no items");
         }
-        
+
         order.calculateTotalAmount();
         Order saved = orderRepository.save(order);
-        
-        java.math.BigDecimal total = saved.getTotalAmount() != null ? saved.getTotalAmount() : java.math.BigDecimal.ZERO;
+
+        java.math.BigDecimal total = saved.getTotalAmount() != null ? saved.getTotalAmount()
+                : java.math.BigDecimal.ZERO;
         long totalCents = total.multiply(java.math.BigDecimal.valueOf(100)).longValue();
-        
+
         if (totalCents <= 0) {
             throw new IllegalArgumentException("Calculated total is 0. Items: " + itemCount + ", Total: " + total);
         }
-        
+
         return totalCents;
     }
-    
+
     /**
-     * Helper method to parse order ID from string (supports both numeric ID and order number)
+     * Helper method to parse order ID from string (supports both numeric ID and
+     * order number)
      */
     private Long parseOrderId(String orderIdOrNumber) {
         try {
@@ -885,9 +908,10 @@ public class OrderService {
         return orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderIdOrNumber));
     }
-    
+
     /**
-     * Attach a Stripe PaymentIntent to the order and set status to CONFIRMED (PI created).
+     * Attach a Stripe PaymentIntent to the order and set status to CONFIRMED (PI
+     * created).
      */
     @Transactional
     public void attachPaymentIntent(String orderIdOrNumber, String paymentIntentId) {
@@ -902,7 +926,8 @@ public class OrderService {
     }
 
     /**
-     * Attach Stripe Checkout Session ID to the order and set status to CHECKOUT_CREATED.
+     * Attach Stripe Checkout Session ID to the order and set status to
+     * CHECKOUT_CREATED.
      */
     @Transactional
     public void attachCheckoutSession(String orderIdOrNumber, String checkoutSessionId) {
@@ -924,11 +949,11 @@ public class OrderService {
     public List<OrderItem> findItems(String orderIdOrNumber) {
         // Parse order ID
         final Long orderId = parseOrderId(orderIdOrNumber);
-        
+
         // Load order with items using JOIN FETCH
         Order order = orderRepository.findByIdWithItems(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderId));
-        
+
         // Force initialization and return
         List<OrderItem> items = order.getOrderItems();
         items.size(); // Force initialization
@@ -965,7 +990,7 @@ public class OrderService {
     private boolean isAwaitingPayment(Order order) {
         return PAYMENT_ELIGIBLE_STATUSES.contains(order.getStatus());
     }
-    
+
     /**
      * Escape CSV field (handle commas and quotes)
      */
@@ -979,7 +1004,7 @@ public class OrderService {
         }
         return field;
     }
-    
+
     private OrderDTO convertToDto(Order order) {
         OrderDTO dto = new OrderDTO();
         dto.setId(order.getId());
@@ -1011,10 +1036,10 @@ public class OrderService {
                 .map(this::convertItemToDto)
                 .collect(Collectors.toList());
         dto.setOrderItems(items);
-        
+
         return dto;
     }
-    
+
     private OrderItemDTO convertItemToDto(OrderItem item) {
         OrderItemDTO dto = new OrderItemDTO();
         dto.setId(item.getId());

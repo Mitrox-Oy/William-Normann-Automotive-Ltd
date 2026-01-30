@@ -42,16 +42,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const storedToken = token || getAccessToken()
       if (storedToken) {
         setAccessToken(storedToken)
+        const currentUser = await getCurrentUser()
+        setUser(currentUser)
+      } else {
+        // No token, so user is not authenticated
+        setUser(null)
       }
-      const currentUser = await getCurrentUser()
-      setUser(currentUser)
     } catch (err) {
       console.error('Failed to fetch user:', err)
       setUser(null)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [token])
 
   useEffect(() => {
     const persisted = typeof window !== 'undefined' ? localStorage.getItem(TOKEN_STORAGE_KEY) : null
@@ -69,7 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true)
       setError(null)
-      
+
       const loggedInUser = await apiLogin(email, password)
       const latestToken = getAccessToken()
       if (latestToken) {
@@ -77,12 +80,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem(TOKEN_STORAGE_KEY, latestToken)
       }
       setUser(loggedInUser)
-      
+
       // Redirect based on role
       // Read 'next' query param for redirect, or use default based on role
       const params = new URLSearchParams(window.location.search)
       const next = params.get('next')
-      
+
       if (next) {
         router.push(next)
       } else if (loggedInUser.role === 'owner') {
@@ -106,7 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true)
       setError(null)
-      
+
       // Register returns user with token, so user is automatically logged in
       const registeredUser = await apiRegister(email, password, firstName, lastName)
       const latestToken = getAccessToken()
@@ -115,7 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem(TOKEN_STORAGE_KEY, latestToken)
       }
       setUser(registeredUser)
-      
+
       // Redirect to account page after registration
       router.push('/account')
     } catch (err) {

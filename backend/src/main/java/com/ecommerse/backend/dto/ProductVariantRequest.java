@@ -48,6 +48,9 @@ public class ProductVariantRequest {
     @Schema(description = "Optional map of option key/value pairs (e.g. colour, size)")
     private Map<String, String> options = new LinkedHashMap<>();
 
+    @Schema(description = "Variant-specific image URL")
+    private String imageUrl;
+
     public String getName() {
         return name;
     }
@@ -110,5 +113,13 @@ public class ProductVariantRequest {
 
     public void setOptions(Map<String, String> options) {
         this.options = options != null ? new LinkedHashMap<>(options) : new LinkedHashMap<>();
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 }

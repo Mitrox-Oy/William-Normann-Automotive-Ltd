@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Container } from "@/components/container"
 import { Card, CardContent } from "@/components/ui/card"
@@ -201,8 +201,8 @@ function CheckoutSuccessContent() {
                                     <div className="flex justify-between">
                                         <span className="font-medium">Status:</span>
                                         <span className={`rounded-full px-3 py-1 text-sm font-medium ${order.status === "PAID"
-                                                ? "bg-green-100 text-green-800"
-                                                : "bg-yellow-100 text-yellow-800"
+                                            ? "bg-green-100 text-green-800"
+                                            : "bg-yellow-100 text-yellow-800"
                                             }`}>
                                             {order.status}
                                         </span>

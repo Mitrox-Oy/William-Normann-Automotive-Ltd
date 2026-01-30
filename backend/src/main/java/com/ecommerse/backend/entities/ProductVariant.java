@@ -1,5 +1,6 @@
 package com.ecommerse.backend.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -11,8 +12,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.MapKeyColumn;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.DecimalMin;
@@ -30,7 +29,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * ProductVariant captures purchasable options for a product such as colour/size combinations.
+ * ProductVariant captures purchasable options for a product such as colour/size
+ * combinations.
  */
 @Entity
 @Table(name = "product_variants", uniqueConstraints = {
@@ -45,6 +45,7 @@ public class ProductVariant {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "product_id", nullable = false)
     @NotNull(message = "Variant must belong to a product")
+    @JsonIgnore
     private Product product;
 
     @NotBlank(message = "Variant name is required")
@@ -81,6 +82,9 @@ public class ProductVariant {
     @Column(name = "option_value", length = 100)
     private Map<String, String> options = new LinkedHashMap<>();
 
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
+
     @CreationTimestamp
     @Column(name = "created_date", nullable = false, updatable = false)
     private LocalDateTime createdDate;
@@ -93,18 +97,18 @@ public class ProductVariant {
         // default constructor
     }
 
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
     public ProductVariant(Product product, String name, String sku) {
         this.product = product;
         this.name = name;
         this.sku = sku;
-    }
-
-    @PrePersist
-    @PreUpdate
-    private void ensureOptionOrder() {
-        if (this.options != null && !(this.options instanceof LinkedHashMap)) {
-            this.options = new LinkedHashMap<>(this.options);
-        }
     }
 
     public boolean isInStock() {
@@ -188,7 +192,16 @@ public class ProductVariant {
     }
 
     public void setOptions(Map<String, String> options) {
-        this.options = new LinkedHashMap<>(options);
+        if (options == null) {
+            this.options = new LinkedHashMap<>();
+        } else if (this.options instanceof LinkedHashMap) {
+            // If already a LinkedHashMap, clear and update
+            this.options.clear();
+            this.options.putAll(options);
+        } else {
+            // For new instances, create a new LinkedHashMap
+            this.options = new LinkedHashMap<>(options);
+        }
     }
 
     public LocalDateTime getCreatedDate() {

@@ -79,6 +79,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/checkout/**", "/api/stripe/webhook").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
                         .requestMatchers("/api/images/**").permitAll()
+                        .requestMatchers("/uploads/**").permitAll()
                         .requestMatchers("/api/test/public").permitAll()
                         .requestMatchers("/api/debug/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()

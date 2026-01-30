@@ -11,6 +11,7 @@ import { RequireAuth } from "@/components/AuthProvider"
 import { useCart } from "@/components/CartContext"
 import { getWishlist, removeFromWishlist, type WishlistItem } from "@/lib/accountApi"
 import { formatCurrency, getAvailabilityBadge } from "@/lib/shopApi"
+import { getImageUrl } from "@/lib/utils"
 import { Heart, ShoppingCart, Trash2, ChevronLeft } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -84,14 +85,14 @@ function WishlistPageContent() {
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {wishlist.map((item) => {
               const availabilityBadge = getAvailabilityBadge(item.product.availability)
-              
+
               return (
                 <Card key={item.id} className="group overflow-hidden">
                   <CardContent className="p-0">
                     <Link href={`/shop/${item.product.slug}`} className="block relative aspect-square">
                       {item.product.images[0] ? (
                         <Image
-                          src={item.product.images[0]}
+                          src={getImageUrl(item.product.images[0])}
                           alt={item.product.name}
                           fill
                           className="object-cover transition-transform group-hover:scale-105"
@@ -112,7 +113,7 @@ function WishlistPageContent() {
                           {item.product.name}
                         </h3>
                       </Link>
-                      
+
                       <p className="text-lg font-bold">
                         {formatCurrency(item.product.price, item.product.currency)}
                       </p>

@@ -14,6 +14,20 @@ import { apiRequest } from './apiClient'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_SHOP_API_BASE_URL || 'http://localhost:8080'
 
+export interface ProductVariant {
+  id: number
+  name: string
+  sku: string
+  price?: number
+  stockQuantity: number
+  active: boolean
+  defaultVariant: boolean
+  position: number
+  options: Record<string, string>
+  createdDate?: string
+  updatedDate?: string
+}
+
 export interface Product {
   id: string
   slug: string
@@ -34,6 +48,7 @@ export interface Product {
   leadTime?: string
   minQuantity?: number
   stockLevel?: number
+  variants?: ProductVariant[]
   createdAt?: string
   updatedAt?: string
 }
@@ -117,9 +132,9 @@ export async function fetchProducts(params: SearchParams = {}): Promise<Products
     })
 
     if (!response.ok) {
-      // Don't throw for 401 on public endpoints - return empty result
-      if (response.status === 401) {
-        console.warn('Products endpoint returned 401 - backend may require public endpoint configuration')
+      // Don't throw for 401/400 on public endpoints - return empty result
+      if (response.status === 401 || response.status === 400) {
+        console.warn(`Products endpoint returned ${response.status} - backend may require public endpoint configuration`)
         return {
           products: [],
           total: 0,
@@ -212,9 +227,9 @@ export async function fetchProductBySlug(slug: string): Promise<Product | null> 
       if (response.status === 404) {
         return null
       }
-      // Don't throw for 401 on public endpoints
-      if (response.status === 401) {
-        console.warn('Product endpoint returned 401 - backend may require public endpoint configuration')
+      // Don't throw for 401/400 on public endpoints
+      if (response.status === 401 || response.status === 400) {
+        console.warn(`Product endpoint returned ${response.status} - backend may require public endpoint configuration`)
         return null
       }
       throw new Error(`Failed to fetch product: ${response.status} ${response.statusText}`)
@@ -252,9 +267,9 @@ export async function fetchCategories(): Promise<Category[]> {
     })
 
     if (!response.ok) {
-      // Don't throw for 401 on public endpoints - just return empty array
-      if (response.status === 401) {
-        console.warn('Categories endpoint returned 401 - backend may require public endpoint configuration')
+      // Don't throw for 401/400 on public endpoints - just return empty array
+      if (response.status === 401 || response.status === 400) {
+        console.warn(`Categories endpoint returned ${response.status} - backend may require public endpoint configuration`)
         return []
       }
       throw new Error(`Failed to fetch categories: ${response.status} ${response.statusText}`)
@@ -322,6 +337,7 @@ export interface CreateOrderResponse {
 
 export interface CreateSessionResponse {
   id: string
+  url: string
 }
 
 /**
@@ -376,3 +392,34 @@ export async function finalizeCheckout(orderId: number | string, sessionId?: str
   })
 }
 
+/**
+ * Sync cart items from localStorage to backend
+ * This is needed before checkout since the backend creates orders from its own cart
+ */
+export async function syncCartToBackend(items: { productId: string, quantity: number }[]): Promise<void> {
+  console.log('Syncing cart to backend:', items)
+
+  // Try to clear backend cart first, but don't fail if it doesn't exist
+  try {
+    await apiRequest('/api/cart', { method: 'DELETE' })
+    console.log('Backend cart cleared')
+  } catch (error: any) {
+    // Ignore errors - cart might not exist yet or be empty
+    console.log('Cart clear skipped (may not exist):', error?.message)
+  }
+
+  // Add each item to backend cart
+  for (const item of items) {
+    console.log('Adding item to backend cart:', item)
+    const result = await apiRequest('/api/cart/items', {
+      method: 'POST',
+      body: JSON.stringify({
+        productId: parseInt(item.productId),
+        quantity: item.quantity,
+      }),
+    })
+    console.log('Item added to backend cart:', result)
+  }
+
+  console.log('Cart sync completed')
+}

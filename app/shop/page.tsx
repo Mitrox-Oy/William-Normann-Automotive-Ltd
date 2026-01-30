@@ -20,6 +20,7 @@ import {
   type Category,
   type SearchParams
 } from "@/lib/shopApi"
+import { getImageUrl } from "@/lib/utils"
 import { Search, ShoppingCart, Filter, X } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -323,7 +324,7 @@ export default function ShopPage() {
                               <div className="relative aspect-square overflow-hidden bg-muted">
                                 {product.images && product.images[0] ? (
                                   <Image
-                                    src={product.images[0]}
+                                    src={getImageUrl(product.images[0])}
                                     alt={product.name}
                                     fill
                                     className="object-cover transition-transform group-hover:scale-105"

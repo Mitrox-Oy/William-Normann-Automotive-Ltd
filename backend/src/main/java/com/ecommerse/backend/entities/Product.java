@@ -1,5 +1,6 @@
 package com.ecommerse.backend.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import org.hibernate.annotations.BatchSize;
@@ -172,12 +173,14 @@ public class Product {
     @OrderBy("position ASC")
     @BatchSize(size = 25)
     @Fetch(FetchMode.SUBSELECT)
+    @JsonIgnore
     private List<ProductImage> images = new ArrayList<>();
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("position ASC")
     @BatchSize(size = 25)
     @Fetch(FetchMode.SUBSELECT)
+    @JsonIgnore
     private Set<ProductVariant> variants = new LinkedHashSet<>();
 
     @CreationTimestamp

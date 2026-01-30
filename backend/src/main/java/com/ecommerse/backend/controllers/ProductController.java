@@ -4,6 +4,7 @@ import com.ecommerse.backend.dto.ProductDTO;
 import com.ecommerse.backend.dto.ProductVariantPositionRequest;
 import com.ecommerse.backend.dto.ProductVariantRequest;
 import com.ecommerse.backend.dto.ProductVariantResponse;
+import com.ecommerse.backend.services.FileService;
 import com.ecommerse.backend.services.ProductService;
 import com.ecommerse.backend.services.ProductVariantService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,8 +24,11 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -39,10 +43,13 @@ public class ProductController {
 
     private final ProductService productService;
     private final ProductVariantService productVariantService;
+    private final FileService fileService;
 
-    public ProductController(ProductService productService, ProductVariantService productVariantService) {
+    public ProductController(ProductService productService, ProductVariantService productVariantService,
+            FileService fileService) {
         this.productService = productService;
         this.productVariantService = productVariantService;
+        this.fileService = fileService;
     }
 
     @Operation(summary = "Get all products", description = "Retrieve a paginated list of all active products. Available to all users.")
@@ -486,6 +493,62 @@ public class ProductController {
             return ResponseEntity.ok(reordered);
         } catch (IllegalArgumentException e) {
             return isNotFound(e) ? ResponseEntity.notFound().build() : ResponseEntity.badRequest().build();
+        }
+    }
+
+    @Operation(summary = "Upload variant image", description = "Upload an image for a specific variant. Requires OWNER role.", security = @SecurityRequirement(name = "Bearer Authentication"))
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Image uploaded successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid file or file too large"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - requires OWNER role"),
+            @ApiResponse(responseCode = "404", description = "Product or variant not found"),
+            @ApiResponse(responseCode = "500", description = "File upload failed")
+    })
+    @PostMapping("/{productId}/variants/{variantId}/image")
+    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN')")
+    public ResponseEntity<Map<String, String>> uploadVariantImage(
+            @Parameter(description = "Product ID", example = "1", required = true) @PathVariable Long productId,
+            @Parameter(description = "Variant ID", example = "10", required = true) @PathVariable Long variantId,
+            @Parameter(description = "Image file to upload", required = true) @RequestParam("file") MultipartFile file) {
+
+        try {
+            // Verify product and variant exist
+            productVariantService.getVariant(productId, variantId);
+
+            // Upload the image
+            String relativePath = fileService.uploadProductImage(file);
+            String fileUrl = fileService.getFileUrl(relativePath);
+
+            // Update variant with image URL
+            ProductVariantResponse variant = productVariantService.getVariant(productId, variantId);
+            ProductVariantRequest updateRequest = new ProductVariantRequest();
+            updateRequest.setName(variant.getName());
+            updateRequest.setSku(variant.getSku());
+            updateRequest.setPrice(variant.getPrice());
+            updateRequest.setStockQuantity(variant.getStockQuantity());
+            updateRequest.setActive(variant.getActive());
+            updateRequest.setDefaultVariant(variant.getDefaultVariant());
+            updateRequest.setOptions(variant.getOptions());
+            updateRequest.setImageUrl(relativePath);
+
+            productVariantService.updateVariant(productId, variantId, updateRequest);
+
+            Map<String, String> response = new HashMap<>();
+            response.put("imageUrl", relativePath);
+            response.put("fullUrl", fileUrl);
+            response.put("message", "Variant image uploaded successfully");
+
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("error", e.getMessage());
+            return isNotFound(e) ? ResponseEntity.status(HttpStatus.NOT_FOUND).body(response)
+                    : ResponseEntity.badRequest().body(response);
+        } catch (IOException e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("error", "Failed to upload file: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 

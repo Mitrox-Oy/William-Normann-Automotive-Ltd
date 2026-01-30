@@ -55,11 +55,11 @@ function OrdersPageContent() {
     }
   }
 
-  const filteredOrders = searchQuery
+  const filteredOrders = searchQuery && orders
     ? orders.filter((order) =>
-        order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : orders
+      order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    : orders || []
 
   return (
     <section className="py-24 lg:py-32">
@@ -190,8 +190,8 @@ function OrdersPageContent() {
                 {searchQuery
                   ? "Try a different search term"
                   : statusFilter !== "all"
-                  ? "No orders with this status"
-                  : "You haven't placed any orders yet"}
+                    ? "No orders with this status"
+                    : "You haven't placed any orders yet"}
               </p>
               {!searchQuery && statusFilter === "all" && (
                 <Button asChild>

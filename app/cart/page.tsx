@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { useCart } from "@/components/CartContext"
 import { useAuth } from "@/components/AuthProvider"
-import { formatCurrency, createCheckoutOrder, createCheckoutSession } from "@/lib/shopApi"
+import { formatCurrency, createCheckoutOrder, createCheckoutSession, syncCartToBackend } from "@/lib/shopApi"
+import { getImageUrl } from "@/lib/utils"
 import { ShoppingCart, Minus, Plus, Trash2, ArrowLeft, FileText, Package, CreditCard, Loader2 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -22,7 +23,7 @@ const stripePromise = loadStripe(stripePublishableKey)
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, clearCart, getTotalItems, getTotalPrice } = useCart()
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, token } = useAuth()
   const router = useRouter()
   const [isProcessingCheckout, setIsProcessingCheckout] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string>("")
@@ -60,6 +61,12 @@ export default function CartPage() {
     }
 
     try {
+      // Step 0: Sync cart to backend (localStorage cart → backend cart)
+      await syncCartToBackend(items.map(item => ({
+        productId: item.product.id,
+        quantity: item.quantity,
+      })))
+
       // Step 1: Create order from cart
       const orderResponse = await createCheckoutOrder({
         shippingAddress: "To be provided",
@@ -77,32 +84,31 @@ export default function CartPage() {
       // Step 2: Create Stripe Checkout Session
       const sessionResponse = await createCheckoutSession(String(orderResponse.orderId))
 
-      if (!sessionResponse?.id) {
+      if (!sessionResponse?.id || !sessionResponse?.url) {
         throw new Error('Failed to create checkout session')
       }
 
       // Step 3: Redirect to Stripe Checkout
-      const stripe = await stripePromise
-      if (!stripe) {
-        throw new Error('Failed to initialize payment system')
-      }
-
-      const result = await stripe.redirectToCheckout({
-        sessionId: sessionResponse.id
-      })
-
-      if (result.error) {
-        throw new Error(result.error.message || 'Failed to redirect to checkout')
-      }
+      // Using direct URL redirect (redirectToCheckout is deprecated)
+      window.location.href = sessionResponse.url
     } catch (error: any) {
       console.error('Error proceeding to checkout:', error)
       let errorMessage = 'Failed to proceed to checkout. Please try again.'
 
+      // Extract error message from ApiException or error object
       if (error?.message) {
         errorMessage = error.message
       } else if (error?.error) {
         errorMessage = error.error
       }
+
+      // Log detailed error for debugging
+      console.error('Checkout error details:', {
+        message: error?.message,
+        status: error?.status,
+        errors: error?.errors,
+        error: error?.error
+      })
 
       setCheckoutError(errorMessage)
     } finally {
@@ -174,7 +180,7 @@ export default function CartPage() {
                       >
                         {item.product.images[0] ? (
                           <Image
-                            src={item.product.images[0]}
+                            src={getImageUrl(item.product.images[0])}
                             alt={item.product.name}
                             fill
                             className="object-cover"

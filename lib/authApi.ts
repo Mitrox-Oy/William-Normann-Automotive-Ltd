@@ -73,7 +73,7 @@ interface BackendAuthResponse {
 export async function login(email: string, password: string): Promise<User> {
   // Debug logging (remove in production)
   console.log('Attempting login:', { email, passwordLength: password.length })
-  
+
   // Try regular customer login first
   let customerError: any = null
   try {
@@ -81,14 +81,14 @@ export async function login(email: string, password: string): Promise<User> {
       username: email, // Backend expects 'username' field, not 'email'
       password,
     })
-    
+
     console.log('Login successful (customer):', { id: response.id, username: response.username, role: response.role })
-    
+
     // Store token in memory
     if (response.token) {
       setAccessToken(response.token)
     }
-    
+
     // Map backend response to frontend User format
     const user: User = {
       id: response.id.toString(),
@@ -97,7 +97,7 @@ export async function login(email: string, password: string): Promise<User> {
       role: response.role === 'OWNER' || response.role === 'ADMIN' ? 'owner' : 'customer',
       createdAt: new Date().toISOString(), // Backend doesn't return this in login response
     }
-    
+
     // Validate user data
     const validatedUser = UserSchema.parse(user)
     return validatedUser
@@ -106,7 +106,7 @@ export async function login(email: string, password: string): Promise<User> {
     customerError = error
     console.log('Customer login failed, trying owner login as fallback...')
   }
-  
+
   // Try owner login as fallback (owner accounts get "Invalid username or password" from customer endpoint)
   try {
     console.log('Attempting owner login with:', { email, passwordLength: password.length })
@@ -116,14 +116,14 @@ export async function login(email: string, password: string): Promise<User> {
     }, {
       allow401: true, // Allow 401 for invalid credentials
     })
-    
+
     console.log('Login successful (owner):', { id: ownerResponse.id, username: ownerResponse.username, role: ownerResponse.role })
-    
+
     // Store token in memory
     if (ownerResponse.token) {
       setAccessToken(ownerResponse.token)
     }
-    
+
     // Map backend response to frontend User format
     const user: User = {
       id: ownerResponse.id.toString(),
@@ -132,7 +132,7 @@ export async function login(email: string, password: string): Promise<User> {
       role: ownerResponse.role === 'OWNER' || ownerResponse.role === 'ADMIN' ? 'owner' : 'customer',
       createdAt: new Date().toISOString(),
     }
-    
+
     // Validate user data
     const validatedUser = UserSchema.parse(user)
     return validatedUser
@@ -159,7 +159,7 @@ export async function register(
 ): Promise<User> {
   try {
     console.log('Attempting registration:', { email, firstName, lastName })
-    
+
     const response = await authApi.post<BackendAuthResponse>('/api/auth/register', {
       username: email, // Backend expects 'username' field, not 'email'
       password,
@@ -167,14 +167,14 @@ export async function register(
       lastName,
       role: 'CUSTOMER', // Backend always creates CUSTOMER, but we include it for clarity
     })
-    
+
     console.log('Registration successful:', { id: response.id, username: response.username, role: response.role })
-    
+
     // Store token in memory (user is automatically logged in)
     if (response.token) {
       setAccessToken(response.token)
     }
-    
+
     // Map backend response to frontend User format
     const user: User = {
       id: response.id.toString(),
@@ -183,7 +183,7 @@ export async function register(
       role: response.role === 'OWNER' || response.role === 'ADMIN' ? 'owner' : 'customer',
       createdAt: new Date().toISOString(),
     }
-    
+
     // Validate user data
     const validatedUser = UserSchema.parse(user)
     return validatedUser
@@ -217,24 +217,24 @@ export async function logout(): Promise<void> {
  */
 export async function getCurrentUser(): Promise<User | null> {
   try {
-    const response = await authApi.get<any>('/api/auth/profile')
-    
+    const response = await authApi.getAuthenticated<any>('/api/auth/profile')
+
     // Map backend response to frontend User format
     // Backend returns: { id, username, firstName, lastName, role, createdAt }
     // Frontend expects: { id, email, name, role, ... }
     const user: User = {
-      id: response.id,
+      id: String(response.id), // Convert number to string
       email: response.username, // Backend uses 'username' as email
       name: `${response.firstName || ''} ${response.lastName || ''}`.trim() || response.username,
       role: response.role?.toLowerCase() === 'owner' ? 'owner' : 'customer',
       createdAt: response.createdAt,
     }
-    
+
     const validatedUser = UserSchema.parse(user)
     return validatedUser
   } catch (error: any) {
-    // 401 means not authenticated
-    if (error.status === 401) {
+    // 401 means not authenticated, 400 could mean invalid/missing token
+    if (error.status === 401 || error.status === 400) {
       return null
     }
     console.error('Get current user error:', error)

@@ -134,8 +134,10 @@ export async function apiRequest<T>(
       // Try to parse error response
       try {
         const errorData = await response.json()
+        // Backend can return either { message: "..." } or { error: "..." }
+        const errorMessage = errorData.message || errorData.error || `Request failed with status ${response.status}`
         throw new ApiException(
-          errorData.message || `Request failed with status ${response.status}`,
+          errorMessage,
           response.status,
           errorData.errors
         )
@@ -205,6 +207,10 @@ export const api = {
 export const authApi = {
   get: <T>(endpoint: string, options?: RequestOptions) =>
     apiRequest<T>(endpoint, { ...options, method: 'GET', baseUrl: AUTH_API_BASE_URL, skipAuth: true }),
+
+  // Authenticated GET request (requires token)
+  getAuthenticated: <T>(endpoint: string, options?: RequestOptions) =>
+    apiRequest<T>(endpoint, { ...options, method: 'GET', baseUrl: AUTH_API_BASE_URL, skipAuth: false }),
 
   post: <T>(endpoint: string, body?: any, options?: RequestOptions) => {
     // Login endpoint should allow 401 (invalid credentials)

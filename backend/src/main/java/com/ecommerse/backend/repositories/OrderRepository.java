@@ -84,7 +84,9 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
      */
     @Query("SELECT o FROM Order o LEFT JOIN FETCH o.orderItems oi LEFT JOIN FETCH oi.product WHERE o.id = :orderId")
     Optional<Order> findByIdWithItems(@Param("orderId") Long orderId);
+
     List<Order> findByCreatedDateBetween(LocalDateTime startDate, LocalDateTime endDate);
+
     Long countByCreatedDateBetween(LocalDateTime startDate, LocalDateTime endDate);
 
     /**
@@ -112,4 +114,21 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Optional<Order> findByStripeCheckoutSessionId(String sessionId);
 
     Optional<Order> findTopByUserOrderByCreatedDateDesc(User user);
+
+    /**
+     * Count orders for a specific user
+     */
+    Long countByUser(User user);
+
+    /**
+     * Sum total amount for a specific user
+     */
+    @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o WHERE o.user = :user")
+    BigDecimal sumTotalAmountByUser(@Param("user") User user);
+
+    /**
+     * Get last order date for a user
+     */
+    @Query("SELECT MAX(o.createdDate) FROM Order o WHERE o.user = :user")
+    LocalDateTime findLastOrderDateByUser(@Param("user") User user);
 }

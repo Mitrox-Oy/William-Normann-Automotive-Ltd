@@ -41,6 +41,9 @@ public class ProductVariantResponse {
     @Schema(description = "Key/value map describing option selections (e.g. colour/size)")
     private Map<String, String> options = new LinkedHashMap<>();
 
+    @Schema(description = "Variant-specific image URL")
+    private String imageUrl;
+
     @Schema(description = "Variant creation timestamp")
     private LocalDateTime createdDate;
 
@@ -61,6 +64,7 @@ public class ProductVariantResponse {
         this.defaultVariant = variant.getDefaultVariant();
         this.position = variant.getPosition();
         this.options = new LinkedHashMap<>(variant.getOptions());
+        this.imageUrl = variant.getImageUrl();
         this.createdDate = variant.getCreatedDate();
         this.updatedDate = variant.getUpdatedDate();
     }
@@ -135,6 +139,14 @@ public class ProductVariantResponse {
 
     public void setOptions(Map<String, String> options) {
         this.options = options != null ? new LinkedHashMap<>(options) : new LinkedHashMap<>();
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
     public LocalDateTime getCreatedDate() {

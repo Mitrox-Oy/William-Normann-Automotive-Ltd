@@ -68,6 +68,7 @@ export interface ProductVariantCreateInput {
   defaultVariant?: boolean // Optional, default false
   position?: number // Optional
   options?: Record<string, string> // Optional map of option key/value pairs
+  imageUrl?: string // Optional, variant-specific image
 }
 
 export interface ProductUpdateInput extends Partial<ProductCreateInput> {
@@ -182,7 +183,7 @@ export async function getAllCategories(): Promise<Category[]> {
  * Get single product (admin view)
  */
 export async function getAdminProduct(id: string): Promise<AdminProduct> {
-  return api.get<AdminProduct>(`/admin/products/${id}`)
+  return api.get<AdminProduct>(`/api/products/${id}`)
 }
 
 /**
@@ -198,7 +199,15 @@ export async function createProduct(data: ProductCreateInput): Promise<any> {
  * Backend endpoint: POST /api/products/{productId}/variants
  */
 export async function createProductVariant(productId: string, data: ProductVariantCreateInput): Promise<any> {
-  return api.post<any>(`/api/products/${productId}/variants`, data)
+  console.log('Creating variant for product', productId, 'with data:', JSON.stringify(data, null, 2))
+  try {
+    const response = await api.post<any>(`/api/products/${productId}/variants`, data)
+    console.log('Variant creation response:', response)
+    return response
+  } catch (error) {
+    console.error('Variant creation error:', error)
+    throw error
+  }
 }
 
 /**
@@ -232,24 +241,84 @@ export async function uploadProductImage(productId: string, file: File, isMain: 
 }
 
 /**
+ * Upload variant image
+ * Backend endpoint: POST /api/products/{productId}/variants/{variantId}/image
+ */
+export async function uploadVariantImage(productId: string, variantId: string, file: File): Promise<any> {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const { getAccessToken } = await import('./apiClient')
+  const token = getAccessToken()
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_SHOP_API_BASE_URL || 'http://localhost:8080'
+  const response = await fetch(`${baseUrl}/api/products/${productId}/variants/${variantId}/image`, {
+    method: 'POST',
+    headers: token ? {
+      'Authorization': `Bearer ${token}`,
+    } : {},
+    body: formData,
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    const error = await response.text()
+    throw new Error(`Failed to upload variant image: ${error}`)
+  }
+
+  return response.json()
+}
+
+/**
  * Update product
  */
 export async function updateProduct(id: string, data: Partial<ProductCreateInput>): Promise<AdminProduct> {
-  return api.put<AdminProduct>(`/admin/products/${id}`, data)
+  return api.put<AdminProduct>(`/api/products/${id}`, data)
+}
+
+/**
+ * Delete product image
+ * Backend endpoint: DELETE /api/products/{productId}/images/{imageId}
+ */
+export async function deleteProductImage(productId: string, imageId: string): Promise<void> {
+  return api.delete<void>(`/api/products/${productId}/images/${imageId}`)
+}
+
+/**
+ * Set main product image
+ * Backend endpoint: PUT /api/products/{productId}/images/{imageId}/main
+ */
+export async function setMainProductImage(productId: string, imageId: string): Promise<void> {
+  return api.put<void>(`/api/products/${productId}/images/${imageId}/main`, {})
+}
+
+/**
+ * Update product variant
+ * Backend endpoint: PUT /api/products/{productId}/variants/{variantId}
+ */
+export async function updateProductVariant(productId: string, variantId: string, data: Partial<ProductVariantCreateInput>): Promise<any> {
+  return api.put<any>(`/api/products/${productId}/variants/${variantId}`, data)
+}
+
+/**
+ * Delete product variant
+ * Backend endpoint: DELETE /api/products/{productId}/variants/{variantId}
+ */
+export async function deleteProductVariant(productId: string, variantId: string): Promise<void> {
+  return api.delete<void>(`/api/products/${productId}/variants/${variantId}`)
 }
 
 /**
  * Delete product
  */
 export async function deleteProduct(id: string): Promise<void> {
-  return api.delete<void>(`/admin/products/${id}`)
+  return api.delete<void>(`/api/products/${id}`)
 }
 
 /**
  * Update product stock
  */
 export async function updateProductStock(id: string, stockLevel: number): Promise<AdminProduct> {
-  return api.patch<AdminProduct>(`/admin/products/${id}/stock`, { stockLevel })
+  return api.patch<AdminProduct>(`/api/products/${id}/stock`, { stockLevel })
 }
 
 // ============================================================================
@@ -338,7 +407,17 @@ export interface AdminOrder {
   }[]
   total: number
   currency: string
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+  status:
+  | 'pending'
+  | 'confirmed'
+  | 'checkout_created'
+  | 'paid'
+  | 'failed'
+  | 'processing'
+  | 'shipped'
+  | 'delivered'
+  | 'cancelled'
+  | 'refunded'
   paymentStatus: 'pending' | 'paid' | 'refunded'
   shippingAddress: {
     street: string
@@ -373,18 +452,89 @@ export interface OrdersListResponse {
  */
 export async function getAdminOrders(params: OrdersListParams = {}): Promise<OrdersListResponse> {
   const searchParams = new URLSearchParams()
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined) searchParams.append(key, value.toString())
-  })
+  const page = params.page ? Math.max(params.page - 1, 0) : 0
+  const size = params.limit ?? 20
 
-  return api.get<OrdersListResponse>(`/admin/orders?${searchParams.toString()}`)
+  searchParams.set('page', page.toString())
+  searchParams.set('size', size.toString())
+  if (params.status) searchParams.set('status', params.status)
+  if (params.search) searchParams.set('search', params.search)
+
+  const response = await api.get<any>(`/api/orders/owner?${searchParams.toString()}`)
+
+  const orders: AdminOrder[] = (response.content || []).map((order: any) => ({
+    id: String(order.id),
+    orderNumber: order.orderNumber,
+    customer: {
+      id: String(order.userId ?? ''),
+      name: order.username || 'Customer',
+      email: order.username || '',
+    },
+    items: (order.orderItems || []).map((item: any) => ({
+      id: String(item.id),
+      productId: String(item.productId),
+      productName: item.productName,
+      quantity: item.quantity,
+      price: Number(item.unitPrice),
+    })),
+    total: Number(order.totalAmount ?? 0),
+    currency: (order.currency || 'eur').toUpperCase(),
+    status: String(order.status || 'pending').toLowerCase(),
+    paymentStatus: order.paymentIntentId ? 'paid' : 'pending',
+    shippingAddress: {
+      street: order.shippingAddress || '',
+      city: order.shippingCity || '',
+      state: '',
+      country: order.shippingCountry || '',
+      postalCode: order.shippingPostalCode || '',
+    },
+    createdAt: order.createdDate || order.orderDate || new Date().toISOString(),
+    updatedAt: order.updatedDate || order.createdDate || new Date().toISOString(),
+  }))
+
+  return {
+    orders,
+    total: response.totalElements ?? orders.length,
+    page: (response.number ?? 0) + 1,
+    limit: response.size ?? size,
+    totalPages: response.totalPages ?? 1,
+  }
 }
 
 /**
  * Get single order
  */
 export async function getAdminOrder(id: string): Promise<AdminOrder> {
-  return api.get<AdminOrder>(`/admin/orders/${id}`)
+  const order = await api.get<any>(`/api/orders/owner/orders/${id}`)
+  return {
+    id: String(order.id),
+    orderNumber: order.orderNumber,
+    customer: {
+      id: String(order.userId ?? ''),
+      name: order.username || 'Customer',
+      email: order.username || '',
+    },
+    items: (order.orderItems || []).map((item: any) => ({
+      id: String(item.id),
+      productId: String(item.productId),
+      productName: item.productName,
+      quantity: item.quantity,
+      price: Number(item.unitPrice),
+    })),
+    total: Number(order.totalAmount ?? 0),
+    currency: (order.currency || 'eur').toUpperCase(),
+    status: String(order.status || 'pending').toLowerCase(),
+    paymentStatus: order.paymentIntentId ? 'paid' : 'pending',
+    shippingAddress: {
+      street: order.shippingAddress || '',
+      city: order.shippingCity || '',
+      state: '',
+      country: order.shippingCountry || '',
+      postalCode: order.shippingPostalCode || '',
+    },
+    createdAt: order.createdDate || order.orderDate || new Date().toISOString(),
+    updatedAt: order.updatedDate || order.createdDate || new Date().toISOString(),
+  }
 }
 
 /**
@@ -394,7 +544,36 @@ export async function updateOrderStatus(
   id: string,
   status: AdminOrder['status']
 ): Promise<AdminOrder> {
-  return api.patch<AdminOrder>(`/admin/orders/${id}/status`, { status })
+  const order = await api.patch<any>(`/api/orders/owner/orders/${id}/status`, { status: status.toUpperCase() })
+  return {
+    id: String(order.id),
+    orderNumber: order.orderNumber,
+    customer: {
+      id: String(order.userId ?? ''),
+      name: order.username || 'Customer',
+      email: order.username || '',
+    },
+    items: (order.orderItems || []).map((item: any) => ({
+      id: String(item.id),
+      productId: String(item.productId),
+      productName: item.productName,
+      quantity: item.quantity,
+      price: Number(item.unitPrice),
+    })),
+    total: Number(order.totalAmount ?? 0),
+    currency: (order.currency || 'eur').toUpperCase(),
+    status: String(order.status || 'pending').toLowerCase(),
+    paymentStatus: order.paymentIntentId ? 'paid' : 'pending',
+    shippingAddress: {
+      street: order.shippingAddress || '',
+      city: order.shippingCity || '',
+      state: '',
+      country: order.shippingCountry || '',
+      postalCode: order.shippingPostalCode || '',
+    },
+    createdAt: order.createdDate || order.orderDate || new Date().toISOString(),
+    updatedAt: order.updatedDate || order.createdDate || new Date().toISOString(),
+  }
 }
 
 // ============================================================================
@@ -436,18 +615,55 @@ export interface CustomersListResponse {
  */
 export async function getAdminCustomers(params: CustomersListParams = {}): Promise<CustomersListResponse> {
   const searchParams = new URLSearchParams()
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined) searchParams.append(key, value.toString())
-  })
+  const page = params.page ? Math.max(params.page - 1, 0) : 0
+  const size = params.limit ?? 20
 
-  return api.get<CustomersListResponse>(`/admin/customers?${searchParams.toString()}`)
+  searchParams.set('page', page.toString())
+  searchParams.set('size', size.toString())
+  if (params.search) searchParams.set('search', params.search)
+  if (params.status) searchParams.set('status', params.status)
+
+  const response = await api.get<any>(`/api/owner/customers?${searchParams.toString()}`)
+
+  const customers: AdminCustomer[] = (response.content || []).map((c: any) => ({
+    id: String(c.id),
+    name: c.name || c.email,
+    email: c.email,
+    phone: undefined,
+    role: 'customer',
+    totalOrders: Number(c.totalOrders ?? 0),
+    totalSpent: Number(c.totalSpent ?? 0),
+    createdAt: c.createdAt || new Date().toISOString(),
+    lastOrderAt: c.lastOrderAt || undefined,
+    status: c.status === 'blocked' ? 'blocked' : 'active',
+  }))
+
+  return {
+    customers,
+    total: response.totalElements ?? customers.length,
+    page: (response.number ?? 0) + 1,
+    limit: response.size ?? size,
+    totalPages: response.totalPages ?? 1,
+  }
 }
 
 /**
  * Get single customer
  */
 export async function getAdminCustomer(id: string): Promise<AdminCustomer> {
-  return api.get<AdminCustomer>(`/admin/customers/${id}`)
+  const c = await api.get<any>(`/api/owner/customers/${id}`)
+  return {
+    id: String(c.id),
+    name: c.name || c.email,
+    email: c.email,
+    phone: undefined,
+    role: 'customer',
+    totalOrders: Number(c.totalOrders ?? 0),
+    totalSpent: Number(c.totalSpent ?? 0),
+    createdAt: c.createdAt || new Date().toISOString(),
+    lastOrderAt: c.lastOrderAt || undefined,
+    status: c.status === 'blocked' ? 'blocked' : 'active',
+  }
 }
 
 /**
@@ -457,7 +673,19 @@ export async function updateCustomerStatus(
   id: string,
   status: 'active' | 'blocked'
 ): Promise<AdminCustomer> {
-  return api.patch<AdminCustomer>(`/admin/customers/${id}/status`, { status })
+  const c = await api.patch<any>(`/api/owner/customers/${id}/status`, { status })
+  return {
+    id: String(c.id),
+    name: c.name || c.email,
+    email: c.email,
+    phone: undefined,
+    role: 'customer',
+    totalOrders: Number(c.totalOrders ?? 0),
+    totalSpent: Number(c.totalSpent ?? 0),
+    createdAt: c.createdAt || new Date().toISOString(),
+    lastOrderAt: c.lastOrderAt || undefined,
+    status: c.status === 'blocked' ? 'blocked' : 'active',
+  }
 }
 
 // ============================================================================
@@ -484,8 +712,75 @@ export interface DashboardStats {
  */
 export async function getDashboardStats(): Promise<DashboardStats> {
   try {
-    // Try the admin endpoint first
-    return await api.get<DashboardStats>('/api/admin/dashboard/stats')
+    const data = await api.get<any>('/api/admin/dashboard/stats')
+
+    const recentOrders: AdminOrder[] = (data.recentOrders || []).map((order: any) => ({
+      id: String(order.id),
+      orderNumber: order.orderNumber,
+      customer: {
+        id: String(order.userId ?? ''),
+        name: order.username || 'Customer',
+        email: order.username || '',
+      },
+      items: (order.orderItems || []).map((item: any) => ({
+        id: String(item.id),
+        productId: String(item.productId),
+        productName: item.productName,
+        quantity: item.quantity,
+        price: Number(item.unitPrice),
+      })),
+      total: Number(order.totalAmount ?? 0),
+      currency: (order.currency || 'eur').toUpperCase(),
+      status: String(order.status || 'pending').toLowerCase(),
+      paymentStatus: order.paymentIntentId ? 'paid' : 'pending',
+      shippingAddress: {
+        street: order.shippingAddress || '',
+        city: order.shippingCity || '',
+        state: '',
+        country: order.shippingCountry || '',
+        postalCode: order.shippingPostalCode || '',
+      },
+      createdAt: order.createdDate || order.orderDate || new Date().toISOString(),
+      updatedAt: order.updatedDate || order.createdDate || new Date().toISOString(),
+    }))
+
+    const lowStockProducts: AdminProduct[] = (data.lowStockProducts || []).map((p: any) => ({
+      id: String(p.id),
+      slug: '',
+      name: p.name,
+      description: '',
+      shortDescription: undefined,
+      price: 0,
+      currency: 'GBP',
+      availability: 'in_stock',
+      availabilityText: undefined,
+      images: [],
+      category: '',
+      categoryName: undefined,
+      partNumber: undefined,
+      manufacturer: undefined,
+      specifications: undefined,
+      compatibleVehicles: undefined,
+      leadTime: undefined,
+      minQuantity: undefined,
+      stockLevel: p.stockLevel ?? 0,
+      createdAt: undefined,
+      updatedAt: undefined,
+      costPrice: undefined,
+      profitMargin: undefined,
+      sku: p.sku,
+      status: 'active',
+    }))
+
+    return {
+      totalRevenue: Number(data.totalRevenue ?? 0),
+      totalOrders: Number(data.totalOrders ?? 0),
+      totalCustomers: Number(data.totalCustomers ?? 0),
+      totalProducts: Number(data.totalProducts ?? 0),
+      recentOrders,
+      lowStockProducts,
+      revenueByMonth: data.revenueByMonth ?? [],
+    }
   } catch (error: any) {
     // If endpoint doesn't exist, return default stats
     if (error.status === 404 || error.message?.includes('No static resource')) {

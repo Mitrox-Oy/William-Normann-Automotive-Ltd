@@ -42,7 +42,7 @@ function AdminDashboardContent() {
   }, [])
 
   const statCards = stats ? [
-    { title: "Total Revenue", value: formatCurrency(stats.totalRevenue, "GBP"), icon: DollarSign, color: "text-green-500" },
+    { title: "Total Revenue", value: formatCurrency(stats.totalRevenue, "EUR"), icon: DollarSign, color: "text-green-500" },
     { title: "Total Orders", value: stats.totalOrders.toString(), icon: ShoppingBag, color: "text-blue-500" },
     { title: "Customers", value: stats.totalCustomers.toString(), icon: Users, color: "text-purple-500" },
     { title: "Products", value: stats.totalProducts.toString(), icon: Package, color: "text-orange-500" },
