@@ -195,7 +195,7 @@ export async function fetchProducts(params: SearchParams = {}): Promise<Products
  * Fetch a single product by slug
  */
 export async function fetchProductBySlug(slug: string): Promise<Product | null> {
-  const url = `${API_BASE_URL}/products/${slug}`
+  const url = `${API_BASE_URL}/api/products/${slug}`
 
   try {
     const response = await fetch(url, {
@@ -238,7 +238,7 @@ export async function fetchCategories(): Promise<Category[]> {
     }
   }
 
-  const url = `${API_BASE_URL}/categories`
+  const url = `${API_BASE_URL}/api/categories`
 
   try {
     const response = await fetch(url, {
