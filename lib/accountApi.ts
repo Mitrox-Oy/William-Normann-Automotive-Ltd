@@ -199,42 +199,42 @@ export interface AddressCreateInput {
  * Get all addresses
  */
 export async function getAddresses(): Promise<Address[]> {
-  return api.get<Address[]>('/api/account/addresses')
+  return api.get<Address[]>('/api/shipping/addresses')
 }
 
 /**
  * Get single address
  */
 export async function getAddress(id: string): Promise<Address> {
-  return api.get<Address>(`/api/account/addresses/${id}`)
+  return api.get<Address>(`/api/shipping/addresses/${id}`)
 }
 
 /**
  * Create address
  */
 export async function createAddress(data: AddressCreateInput): Promise<Address> {
-  return api.post<Address>('/api/account/addresses', data)
+  return api.post<Address>('/api/shipping/addresses', data)
 }
 
 /**
  * Update address
  */
 export async function updateAddress(id: string, data: Partial<AddressCreateInput>): Promise<Address> {
-  return api.put<Address>(`/api/account/addresses/${id}`, data)
+  return api.put<Address>(`/api/shipping/addresses/${id}`, data)
 }
 
 /**
  * Delete address
  */
 export async function deleteAddress(id: string): Promise<void> {
-  return api.delete<void>(`/api/account/addresses/${id}`)
+  return api.delete<void>(`/api/shipping/addresses/${id}`)
 }
 
 /**
  * Set default address
  */
 export async function setDefaultAddress(id: string): Promise<Address> {
-  return api.post<Address>(`/api/account/addresses/${id}/set-default`, {})
+  return api.post<Address>(`/api/shipping/addresses/${id}/set-default`, {})
 }
 
 // ============================================================================
