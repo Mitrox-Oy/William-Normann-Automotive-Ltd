@@ -32,21 +32,21 @@ export interface PasswordChangeInput {
  * Get user profile
  */
 export async function getProfile(): Promise<User> {
-  return api.get<User>('/account/profile')
+  return api.get<User>('/api/account/profile')
 }
 
 /**
  * Update user profile
  */
 export async function updateProfile(data: ProfileUpdateInput): Promise<User> {
-  return api.put<User>('/account/profile', data)
+  return api.put<User>('/api/account/profile', data)
 }
 
 /**
  * Change password
  */
 export async function changePassword(data: PasswordChangeInput): Promise<void> {
-  return api.post<void>('/account/password', data)
+  return api.post<void>('/api/account/password', data)
 }
 
 // ============================================================================
@@ -104,21 +104,21 @@ export async function getOrders(params: OrdersListParams = {}): Promise<OrdersLi
     if (value !== undefined) searchParams.append(key, value.toString())
   })
   
-  return api.get<OrdersListResponse>(`/account/orders?${searchParams.toString()}`)
+  return api.get<OrdersListResponse>(`/api/account/orders?${searchParams.toString()}`)
 }
 
 /**
  * Get single order
  */
 export async function getOrder(id: string): Promise<CustomerOrder> {
-  return api.get<CustomerOrder>(`/account/orders/${id}`)
+  return api.get<CustomerOrder>(`/api/account/orders/${id}`)
 }
 
 /**
  * Cancel order
  */
 export async function cancelOrder(id: string): Promise<CustomerOrder> {
-  return api.post<CustomerOrder>(`/account/orders/${id}/cancel`, {})
+  return api.post<CustomerOrder>(`/api/account/orders/${id}/cancel`, {})
 }
 
 // ============================================================================
@@ -135,21 +135,21 @@ export interface WishlistItem {
  * Get wishlist
  */
 export async function getWishlist(): Promise<WishlistItem[]> {
-  return api.get<WishlistItem[]>('/account/wishlist')
+  return api.get<WishlistItem[]>('/api/account/wishlist')
 }
 
 /**
  * Add to wishlist
  */
 export async function addToWishlist(productId: string): Promise<WishlistItem> {
-  return api.post<WishlistItem>('/account/wishlist', { productId })
+  return api.post<WishlistItem>('/api/account/wishlist', { productId })
 }
 
 /**
  * Remove from wishlist
  */
 export async function removeFromWishlist(id: string): Promise<void> {
-  return api.delete<void>(`/account/wishlist/${id}`)
+  return api.delete<void>(`/api/account/wishlist/${id}`)
 }
 
 /**
@@ -199,42 +199,42 @@ export interface AddressCreateInput {
  * Get all addresses
  */
 export async function getAddresses(): Promise<Address[]> {
-  return api.get<Address[]>('/account/addresses')
+  return api.get<Address[]>('/api/account/addresses')
 }
 
 /**
  * Get single address
  */
 export async function getAddress(id: string): Promise<Address> {
-  return api.get<Address>(`/account/addresses/${id}`)
+  return api.get<Address>(`/api/account/addresses/${id}`)
 }
 
 /**
  * Create address
  */
 export async function createAddress(data: AddressCreateInput): Promise<Address> {
-  return api.post<Address>('/account/addresses', data)
+  return api.post<Address>('/api/account/addresses', data)
 }
 
 /**
  * Update address
  */
 export async function updateAddress(id: string, data: Partial<AddressCreateInput>): Promise<Address> {
-  return api.put<Address>(`/account/addresses/${id}`, data)
+  return api.put<Address>(`/api/account/addresses/${id}`, data)
 }
 
 /**
  * Delete address
  */
 export async function deleteAddress(id: string): Promise<void> {
-  return api.delete<void>(`/account/addresses/${id}`)
+  return api.delete<void>(`/api/account/addresses/${id}`)
 }
 
 /**
  * Set default address
  */
 export async function setDefaultAddress(id: string): Promise<Address> {
-  return api.post<Address>(`/account/addresses/${id}/set-default`, {})
+  return api.post<Address>(`/api/account/addresses/${id}/set-default`, {})
 }
 
 // ============================================================================
@@ -254,20 +254,20 @@ export interface Notification {
  * Get notifications
  */
 export async function getNotifications(): Promise<Notification[]> {
-  return api.get<Notification[]>('/account/notifications')
+  return api.get<Notification[]>('/api/account/notifications')
 }
 
 /**
  * Mark notification as read
  */
 export async function markNotificationRead(id: string): Promise<void> {
-  return api.post<void>(`/account/notifications/${id}/read`, {})
+  return api.post<void>(`/api/account/notifications/${id}/read`, {})
 }
 
 /**
  * Mark all notifications as read
  */
 export async function markAllNotificationsRead(): Promise<void> {
-  return api.post<void>('/account/notifications/read-all', {})
+  return api.post<void>('/api/account/notifications/read-all', {})
 }
 
