@@ -287,8 +287,8 @@ export async function fetchCategories(): Promise<Category[]> {
 /**
  * Format currency for display
  */
-export function formatCurrency(amount: number, currency: string = 'GBP'): string {
-  return new Intl.NumberFormat('en-GB', {
+export function formatCurrency(amount: number, currency: string = 'USD'): string {
+  return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: currency,
   }).format(amount)

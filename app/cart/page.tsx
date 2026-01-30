@@ -30,7 +30,7 @@ export default function CartPage() {
 
   const totalItems = getTotalItems()
   const totalPrice = getTotalPrice()
-  const currency = items[0]?.product.currency || 'GBP'
+  const currency = items[0]?.product.currency || 'USD'
 
   const handleRequestQuote = () => {
     const cartSummary = items

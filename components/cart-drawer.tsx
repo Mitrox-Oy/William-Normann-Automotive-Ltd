@@ -109,7 +109,7 @@ export function CartDrawer() {
             <div className="space-y-4 border-t pt-4">
               <div className="flex justify-between text-lg font-bold">
                 <span>Total</span>
-                <span>{formatCurrency(getTotalPrice(), items[0]?.product.currency || 'GBP')}</span>
+                <span>{formatCurrency(getTotalPrice(), items[0]?.product.currency || 'USD')}</span>
               </div>
               <div className="space-y-2">
                 <Button asChild className="w-full" size="lg">

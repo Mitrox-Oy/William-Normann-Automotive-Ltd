@@ -751,7 +751,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       description: '',
       shortDescription: undefined,
       price: 0,
-      currency: 'GBP',
+      currency: 'USD',
       availability: 'in_stock',
       availabilityText: undefined,
       images: [],
