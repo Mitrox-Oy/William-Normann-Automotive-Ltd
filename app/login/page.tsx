@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Container } from "@/components/container"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,12 +12,12 @@ import { useAuth } from "@/components/AuthProvider"
 import { AlertCircle, Loader2 } from "lucide-react"
 import Link from "next/link"
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
+
   const { login, user, loading } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -152,6 +152,21 @@ export default function LoginPage() {
         </div>
       </Container>
     </section>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <section className="flex min-h-screen items-center justify-center py-24">
+        <div className="text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </section>
+    }>
+      <LoginForm />
+    </Suspense>
   )
 }
 

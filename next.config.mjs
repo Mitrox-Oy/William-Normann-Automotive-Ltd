@@ -25,11 +25,11 @@ const nextConfig = {
       },
     ],
   },
-  // Use 'export' for GitHub Pages, remove for Netlify
+  // Use 'export' for GitHub Pages only
+  // For Netlify/production, we need server-side features
   output: process.env.NEXT_PUBLIC_BASE_PATH ? 'export' : undefined,
   basePath: process.env.NEXT_PUBLIC_BASE_PATH || '',
   assetPrefix: process.env.NEXT_PUBLIC_BASE_PATH || '',
-  trailingSlash: true,
 }
 
 export default nextConfig
