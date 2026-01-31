@@ -3,7 +3,7 @@ import { SectionHeading } from "@/components/section-heading"
 import { LeadForm } from "@/components/lead-form"
 import { siteConfig } from "@/content/site"
 import { Card, CardContent } from "@/components/ui/card"
-import { Mail, Phone, MapPin } from "lucide-react"
+import { Mail, Phone, MapPin, Package, Shield, Star, Zap, Globe, Instagram, MessageCircle, User } from "lucide-react"
 
 export const metadata = {
   title: "About & Contact",
@@ -28,13 +28,41 @@ export default function AboutPage() {
       {/* Story */}
       <section className="py-20 lg:py-28">
         <Container size="narrow">
-          <div className="prose prose-lg mx-auto">
-            {siteConfig.about.story.split("\n\n").map((paragraph, index) => (
-              <p key={index} className="text-muted-foreground leading-relaxed">
-                {paragraph}
-              </p>
-            ))}
+          <h2 className="text-3xl font-bold mb-8 text-center">Our Story: From Passion for Cars to International Trade</h2>
+          <div className="prose prose-lg mx-auto mb-16">
+            <p className="text-muted-foreground leading-relaxed mb-6">
+              Our company was born from a genuine passion for cars combined with the excitement of international trade. As car industry experts and enthusiasts ourselves, we quickly realized that Dubai offers an exceptionally high-quality selection of vehicles and parts – but exporting them to Europe is challenging without the right connections and know-how.
+            </p>
+            <p className="text-muted-foreground leading-relaxed">
+              We've built direct relationships with trusted sellers and service providers in Dubai, ensuring every product's origin and condition are thoroughly verified. We work only with reliable shipping partners and maintain close cooperation with customs authorities to make the process smooth.
+            </p>
           </div>
+
+          <h3 className="text-2xl font-bold mb-8 text-center">We operate flexibly – our customers include:</h3>
+          <div className="grid gap-6 sm:grid-cols-3 mb-12">
+            <Card>
+              <CardContent className="p-6">
+                <User className="mb-4 h-6 w-6 text-primary" />
+                <p className="text-sm text-muted-foreground">Car enthusiasts looking for something special and unique</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                <Star className="mb-4 h-6 w-6 text-primary" />
+                <p className="text-sm text-muted-foreground">Car dealerships wanting to stand out with a distinctive selection</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                <Package className="mb-4 h-6 w-6 text-primary" />
+                <p className="text-sm text-muted-foreground">Businesses seeking cost-effective spare parts solutions</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <p className="text-center text-lg text-muted-foreground leading-relaxed">
+            Customer satisfaction is our most important measure of success. The idea was born in Finland – but our focus is on the global car market.
+          </p>
         </Container>
       </section>
 
@@ -43,19 +71,34 @@ export default function AboutPage() {
         <Container>
           <SectionHeading
             title="Our Values"
-            subtitle="The principles that guide everything we do"
             centered
             className="mb-16"
           />
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {siteConfig.about.values.map((value, index) => (
-              <Card key={index}>
-                <CardContent className="p-6">
-                  <h3 className="mb-2 font-semibold">{value.title}</h3>
-                  <p className="text-sm text-muted-foreground">{value.description}</p>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
+            {siteConfig.about.values.map((value, index) => {
+              const icons = [Shield, Star, Zap, Globe]
+              const Icon = icons[index]
+              return (
+                <Card key={index}>
+                  <CardContent className="p-6">
+                    <Icon className="mb-4 h-6 w-6 text-primary" />
+                    <h3 className="mb-2 font-semibold">{value.title}</h3>
+                    <p className="text-sm text-muted-foreground">{value.description}</p>
+                  </CardContent>
+                </Card>
+              )
+            })}
+            {siteConfig.services
+              .filter((s) => s.slug === "warranty")
+              .map((service) => (
+                <Card key={service.slug}>
+                  <CardContent className="p-6">
+                    <Package className="mb-4 h-6 w-6 text-primary" />
+                    <h3 className="mb-2 font-semibold">{service.title}</h3>
+                    <p className="text-sm text-muted-foreground">{service.description}</p>
+                  </CardContent>
+                </Card>
+              ))}
           </div>
         </Container>
       </section>
@@ -70,7 +113,7 @@ export default function AboutPage() {
             className="mb-16"
           />
 
-          <div className="mx-auto grid max-w-4xl gap-8 lg:grid-cols-3">
+          <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-5">
             <Card>
               <CardContent className="flex flex-col items-center p-6 text-center">
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
@@ -91,12 +134,44 @@ export default function AboutPage() {
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
                   <Phone className="h-6 w-6 text-primary" />
                 </div>
-                <h3 className="mb-2 font-semibold">Phone</h3>
+                <h3 className="mb-2 font-semibold">UAE / Arthur</h3>
                 <a
-                  href={`tel:${siteConfig.contact.phone}`}
+                  href="tel:+971585347970"
                   className="text-sm text-muted-foreground hover:text-primary"
                 >
-                  {siteConfig.contact.phone}
+                  +971585347970
+                </a>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="flex flex-col items-center p-6 text-center">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                  <Phone className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="mb-2 font-semibold">FIN / Arthur</h3>
+                <a
+                  href="tel:+358440127970"
+                  className="text-sm text-muted-foreground hover:text-primary"
+                >
+                  +358440127970
+                </a>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="flex flex-col items-center p-6 text-center">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                  <MessageCircle className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="mb-2 font-semibold">WhatsApp</h3>
+                <a
+                  href="https://wa.me/971585347970"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-muted-foreground hover:text-primary"
+                >
+                  Chat with us
                 </a>
               </CardContent>
             </Card>
@@ -116,12 +191,17 @@ export default function AboutPage() {
             </Card>
           </div>
 
-          {/* Map Placeholder */}
-          <div className="mx-auto mt-12 max-w-4xl">
-            <div className="aspect-video w-full overflow-hidden rounded-lg bg-muted">
-              <div className="flex h-full items-center justify-center text-muted-foreground">
-                Google Maps embed placeholder
-              </div>
+          {/* Map */}
+          <div className="mx-auto mt-12 max-w-3xl">
+            <div className="w-full overflow-hidden rounded-lg" style={{ height: '450px' }}>
+              <iframe
+                width="100%"
+                height="100%"
+                frameBorder="0"
+                style={{ border: 0 }}
+                src="https://www.google.com/maps/embed/v1/place?key=AIzaSyB2NIWI3Tv9iDPrlnowr_0ZqZWoAQydKJU&q=Dubai%20Investment%20Park%20-%20Dubai%20-%20United%20Arab%20Emirates&maptype=roadmap"
+                allowFullScreen
+              ></iframe>
             </div>
           </div>
         </Container>

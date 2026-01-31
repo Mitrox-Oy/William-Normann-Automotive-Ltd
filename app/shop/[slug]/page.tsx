@@ -168,6 +168,8 @@ export default function ProductDetailPage() {
   const displayName = selectedVariant ? `${product.name} — ${selectedVariant.name}` : product.name
   const displaySku = selectedVariant?.sku
   const quoteProductName = selectedVariant ? `${product.name} - ${selectedVariant.name}` : product.name
+  const infoSections = product.infoSections || []
+  const hasInfoSections = infoSections.length > 0
 
   return (
     <section className="py-24 lg:py-32">
@@ -425,15 +427,32 @@ export default function ProductDetailPage() {
         {/* Product Details Tabs */}
         <div className="mt-16">
           <Tabs defaultValue="description" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
+            <TabsList className="inline-flex w-fit flex-wrap gap-2">
               <TabsTrigger value="description">Description</TabsTrigger>
-              <TabsTrigger value="specifications">Specifications</TabsTrigger>
-              <TabsTrigger value="compatibility">Compatibility</TabsTrigger>
+              {infoSections.map((section, index) => (
+                <TabsTrigger key={`${section.title}-${index}`} value={`info-${index}`}>
+                  {section.title}
+                </TabsTrigger>
+              ))}
             </TabsList>
 
             <TabsContent value="description" className="mt-6">
               <Card>
                 <CardContent className="p-6">
+                  {(product.brand || product.weight !== undefined) && (
+                    <div className="mb-4 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
+                      {product.brand && (
+                        <div>
+                          <span className="font-medium text-foreground">Brand:</span> {product.brand}
+                        </div>
+                      )}
+                      {product.weight !== undefined && (
+                        <div>
+                          <span className="font-medium text-foreground">Weight:</span> {product.weight} kg
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <div className="prose prose-sm max-w-none dark:prose-invert">
                     {product.description ? (
                       <p className="leading-relaxed whitespace-pre-line">{product.description}</p>
@@ -445,55 +464,18 @@ export default function ProductDetailPage() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="specifications" className="mt-6">
-              <Card>
-                <CardContent className="p-6">
-                  {product.specifications && Object.keys(product.specifications).length > 0 ? (
-                    <dl className="grid gap-4 sm:grid-cols-2">
-                      {Object.entries(product.specifications).map(([key, value]) => (
-                        <div key={key} className="border-b pb-3">
-                          <dt className="text-sm font-medium text-muted-foreground">{key}</dt>
-                          <dd className="mt-1 text-sm font-semibold">{value}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                  ) : (
-                    <p className="text-muted-foreground">No specifications available.</p>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
 
-            <TabsContent value="compatibility" className="mt-6">
-              <Card>
-                <CardContent className="p-6">
-                  {product.compatibleVehicles && product.compatibleVehicles.length > 0 ? (
-                    <div>
-                      <p className="mb-4 text-sm text-muted-foreground">
-                        This part is compatible with the following vehicles:
-                      </p>
-                      <ul className="grid gap-2 sm:grid-cols-2">
-                        {product.compatibleVehicles.map((vehicle, index) => (
-                          <li key={index} className="flex items-center gap-2 text-sm">
-                            <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                            {vehicle}
-                          </li>
-                        ))}
-                      </ul>
+            {infoSections.map((section, index) => (
+              <TabsContent key={`${section.title}-${index}`} value={`info-${index}`} className="mt-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="prose prose-sm max-w-none dark:prose-invert">
+                      <p className="leading-relaxed whitespace-pre-line">{section.content}</p>
                     </div>
-                  ) : (
-                    <div>
-                      <p className="mb-4 text-muted-foreground">
-                        Compatibility information not available.
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Please use the "Request Quote" button to verify fitment for your specific vehicle.
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            ))}
           </Tabs>
         </div>
 

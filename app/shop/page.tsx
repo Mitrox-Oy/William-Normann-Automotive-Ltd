@@ -14,6 +14,7 @@ import { useCart } from "@/components/CartContext"
 import {
   fetchProducts,
   fetchCategories,
+  fetchBrands,
   formatCurrency,
   getAvailabilityBadge,
   type Product,
@@ -27,6 +28,8 @@ import Link from "next/link"
 import { motion } from "framer-motion"
 
 export default function ShopPage() {
+  const DISPLAY_PAGE_SIZE = 12
+  const FILTER_FETCH_SIZE = 200
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
@@ -34,10 +37,14 @@ export default function ShopPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [selectedAvailability, setSelectedAvailability] = useState<string>("all")
+  const [selectedBrand, setSelectedBrand] = useState<string>("all")
+  const [minPrice, setMinPrice] = useState<string>("")
+  const [maxPrice, setMaxPrice] = useState<string>("")
   const [sortBy, setSortBy] = useState<SearchParams['sortBy']>("newest")
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [showMobileFilters, setShowMobileFilters] = useState(false)
+  const [brands, setBrands] = useState<string[]>([])
 
   const { addItem } = useCart()
 
@@ -48,20 +55,37 @@ export default function ShopPage() {
       .catch((err) => console.error('Failed to load categories:', err))
   }, [])
 
+  // Load all brands initially
+  useEffect(() => {
+    fetchBrands()
+      .then(setBrands)
+      .catch((err) => console.error('Failed to load brands:', err))
+  }, [])
+
+  const hasPriceBrandFilter = selectedBrand !== "all" || Boolean(minPrice) || Boolean(maxPrice)
+
   // Load products
   useEffect(() => {
     setLoading(true)
     setError(null)
 
+    const fetchPage = hasPriceBrandFilter ? 1 : page
+    const fetchLimit = hasPriceBrandFilter ? FILTER_FETCH_SIZE : DISPLAY_PAGE_SIZE
+
     const params: SearchParams = {
-      page,
-      limit: 12,
+      page: fetchPage,
+      limit: fetchLimit,
       sortBy,
     }
 
     if (searchQuery) params.query = searchQuery
     if (selectedCategory && selectedCategory !== "all") params.category = selectedCategory
     if (selectedAvailability && selectedAvailability !== "all") params.availability = selectedAvailability
+    if (selectedBrand && selectedBrand !== "all") params.brand = selectedBrand
+    const parsedMin = parseFloat(minPrice)
+    const parsedMax = parseFloat(maxPrice)
+    if (!Number.isNaN(parsedMin) && Number.isFinite(parsedMin)) params.minPrice = parsedMin
+    if (!Number.isNaN(parsedMax) && Number.isFinite(parsedMax)) params.maxPrice = parsedMax
 
     fetchProducts(params)
       .then((response) => {
@@ -73,22 +97,60 @@ export default function ShopPage() {
         setError(err.message)
         setLoading(false)
       })
-  }, [searchQuery, selectedCategory, selectedAvailability, sortBy, page])
+  }, [searchQuery, selectedCategory, selectedAvailability, selectedBrand, minPrice, maxPrice, sortBy, page, hasPriceBrandFilter])
 
   const handleSearch = (value: string) => {
     setSearchQuery(value)
     setPage(1)
   }
 
+  const handleMinPriceChange = (value: string) => {
+    setMinPrice(value)
+    setPage(1)
+  }
+
+  const handleMaxPriceChange = (value: string) => {
+    setMaxPrice(value)
+    setPage(1)
+  }
+
+  useEffect(() => {
+    setPage(1)
+  }, [selectedCategory, selectedAvailability, selectedBrand, sortBy])
+
+  const parsedMin = parseFloat(minPrice)
+  const parsedMax = parseFloat(maxPrice)
+  const validMin = !Number.isNaN(parsedMin) && Number.isFinite(parsedMin) ? parsedMin : undefined
+  const validMax = !Number.isNaN(parsedMax) && Number.isFinite(parsedMax) ? parsedMax : undefined
+
+  const filteredProducts = products.filter((product) => {
+    const productBrand = product.brand || product.manufacturer || ""
+    if (selectedBrand !== "all" && productBrand !== selectedBrand) return false
+    if (validMin !== undefined && product.price < validMin) return false
+    if (validMax !== undefined && product.price > validMax) return false
+    return true
+  })
+
+  const effectiveTotalPages = hasPriceBrandFilter
+    ? Math.max(1, Math.ceil(filteredProducts.length / DISPLAY_PAGE_SIZE))
+    : totalPages
+
+  const paginatedProducts = hasPriceBrandFilter
+    ? filteredProducts.slice((page - 1) * DISPLAY_PAGE_SIZE, page * DISPLAY_PAGE_SIZE)
+    : filteredProducts
+
   const clearFilters = () => {
     setSearchQuery("")
     setSelectedCategory("all")
     setSelectedAvailability("all")
+    setSelectedBrand("all")
+    setMinPrice("")
+    setMaxPrice("")
     setSortBy("newest")
     setPage(1)
   }
 
-  const hasActiveFilters = searchQuery || selectedCategory !== "all" || selectedAvailability !== "all" || sortBy !== "newest"
+  const hasActiveFilters = searchQuery || selectedCategory !== "all" || selectedAvailability !== "all" || selectedBrand !== "all" || minPrice || maxPrice || sortBy !== "newest"
 
   return (
     <section className="py-24 lg:py-32">
@@ -127,7 +189,7 @@ export default function ShopPage() {
                     <SelectContent>
                       <SelectItem value="all">All Categories</SelectItem>
                       {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.slug}>
+                        <SelectItem key={cat.id} value={cat.id.toString()}>
                           {cat.name}
                         </SelectItem>
                       ))}
@@ -151,10 +213,45 @@ export default function ShopPage() {
                   </Select>
                 </div>
 
-                {/* Price Range Placeholder */}
+                {/* Brand Filter */}
+                <div>
+                  <label className="mb-2 block text-sm font-medium">Brand</label>
+                  <Select value={selectedBrand} onValueChange={setSelectedBrand}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Brands" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Brands</SelectItem>
+                      {brands.map((brand) => (
+                        <SelectItem key={brand} value={brand}>
+                          {brand}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Price Range */}
                 <div>
                   <label className="mb-2 block text-sm font-medium">Price Range</label>
-                  <p className="text-xs text-muted-foreground">Coming soon</p>
+                  <div className="space-y-2">
+                    <Input
+                      type="number"
+                      placeholder="Min price"
+                      value={minPrice}
+                      onChange={(e) => handleMinPriceChange(e.target.value)}
+                      min="0"
+                      step="1"
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Max price"
+                      value={maxPrice}
+                      onChange={(e) => handleMaxPriceChange(e.target.value)}
+                      min="0"
+                      step="1"
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -222,7 +319,7 @@ export default function ShopPage() {
                       <SelectContent>
                         <SelectItem value="all">All Categories</SelectItem>
                         {categories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.slug}>
+                          <SelectItem key={cat.id} value={cat.id.toString()}>
                             {cat.name}
                           </SelectItem>
                         ))}
@@ -243,6 +340,45 @@ export default function ShopPage() {
                         <SelectItem value="pre_order">Pre-Order</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium">Brand</label>
+                    <Select value={selectedBrand} onValueChange={setSelectedBrand}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All Brands" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Brands</SelectItem>
+                        {brands.map((brand) => (
+                          <SelectItem key={brand} value={brand}>
+                            {brand}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium">Price Range</label>
+                    <div className="space-y-2">
+                      <Input
+                        type="number"
+                        placeholder="Min price"
+                        value={minPrice}
+                        onChange={(e) => handleMinPriceChange(e.target.value)}
+                        min="0"
+                        step="1"
+                      />
+                      <Input
+                        type="number"
+                        placeholder="Max price"
+                        value={maxPrice}
+                        onChange={(e) => handleMaxPriceChange(e.target.value)}
+                        min="0"
+                        step="1"
+                      />
+                    </div>
                   </div>
 
                   {hasActiveFilters && (
@@ -285,7 +421,7 @@ export default function ShopPage() {
             )}
 
             {/* Empty State */}
-            {!loading && !error && products.length === 0 && (
+            {!loading && !error && filteredProducts.length === 0 && (
               <Card>
                 <CardContent className="p-12 text-center">
                   <ShoppingCart className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
@@ -305,10 +441,10 @@ export default function ShopPage() {
             )}
 
             {/* Products Grid */}
-            {!loading && !error && products.length > 0 && (
+            {!loading && !error && filteredProducts.length > 0 && (
               <>
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {products.map((product, i) => {
+                <div className="space-y-4">
+                  {paginatedProducts.map((product, i) => {
                     const availabilityBadge = getAvailabilityBadge(product.availability)
 
                     return (
@@ -318,69 +454,81 @@ export default function ShopPage() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.05 }}
                       >
-                        <Card className="group h-full overflow-hidden transition-all hover:shadow-lg">
+                        <Card className="group overflow-hidden transition-all hover:shadow-lg relative">
                           <CardContent className="p-0">
-                            <Link href={`/shop/${product.slug}`} className="block">
-                              <div className="relative aspect-square overflow-hidden bg-muted">
-                                {product.images && product.images[0] ? (
-                                  <Image
-                                    src={getImageUrl(product.images[0])}
-                                    alt={product.name}
-                                    fill
-                                    className="object-cover transition-transform group-hover:scale-105"
-                                  />
-                                ) : (
-                                  <div className="flex h-full items-center justify-center">
-                                    <ShoppingCart className="h-16 w-16 text-muted-foreground" />
+                            <Link href={`/shop/${product.slug}`} className="flex flex-col md:flex-row md:cursor-pointer hover:opacity-90 transition-opacity">
+                              {/* Product Image */}
+                              <div className="block md:w-1/3 flex-shrink-0">
+                                <div className="relative aspect-square md:aspect-auto md:h-64 overflow-hidden bg-muted rounded-lg m-4 md:m-0 md:rounded-lg">
+                                  {product.images && product.images[0] ? (
+                                    <Image
+                                      src={getImageUrl(product.images[0])}
+                                      alt={product.name}
+                                      fill
+                                      className="object-cover transition-transform group-hover:scale-105 rounded-lg"
+                                    />
+                                  ) : (
+                                    <div className="flex h-full items-center justify-center">
+                                      <ShoppingCart className="h-16 w-16 text-muted-foreground" />
+                                    </div>
+                                  )}
+                                  <Badge
+                                    variant={availabilityBadge.variant}
+                                    className="absolute right-2 top-2"
+                                  >
+                                    {availabilityBadge.label}
+                                  </Badge>
+                                </div>
+                              </div>
+
+                              {/* Product Details */}
+                              <div className="flex-1 p-6 flex flex-col justify-between">
+                                <div className="space-y-3">
+                                  <h3 className="text-lg font-semibold line-clamp-2 hover:text-primary">
+                                    {product.name}
+                                  </h3>
+
+                                  {product.partNumber && (
+                                    <p className="text-sm text-muted-foreground">
+                                      Part #: {product.partNumber}
+                                    </p>
+                                  )}
+
+                                  {product.description && (
+                                    <p className="text-sm text-muted-foreground line-clamp-2">
+                                      {product.description}
+                                    </p>
+                                  )}
+
+                                  {product.leadTime && (
+                                    <p className="text-sm text-muted-foreground">
+                                      Lead Time: {product.leadTime}
+                                    </p>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center justify-between gap-4 mt-4">
+                                  <p className="text-2xl font-bold">
+                                    {formatCurrency(product.price, product.currency)}
+                                  </p>
+                                  <div className="flex gap-2">
+                                    <Button asChild variant="outline">
+                                      <span>View</span>
+                                    </Button>
+                                    <Button
+                                      onClick={(e) => {
+                                        e.preventDefault()
+                                        addItem(product)
+                                      }}
+                                      disabled={product.availability === 'out_of_stock'}
+                                    >
+                                      <ShoppingCart className="mr-2 h-4 w-4" />
+                                      Add
+                                    </Button>
                                   </div>
-                                )}
-                                <Badge
-                                  variant={availabilityBadge.variant}
-                                  className="absolute right-2 top-2"
-                                >
-                                  {availabilityBadge.label}
-                                </Badge>
+                                </div>
                               </div>
                             </Link>
-
-                            <div className="p-4 space-y-3">
-                              <Link href={`/shop/${product.slug}`}>
-                                <h3 className="font-semibold line-clamp-2 hover:text-primary">
-                                  {product.name}
-                                </h3>
-                              </Link>
-
-                              {product.partNumber && (
-                                <p className="text-xs text-muted-foreground">
-                                  Part #: {product.partNumber}
-                                </p>
-                              )}
-
-                              <div className="flex items-center justify-between">
-                                <p className="text-lg font-bold">
-                                  {formatCurrency(product.price, product.currency)}
-                                </p>
-                                {product.leadTime && (
-                                  <p className="text-xs text-muted-foreground">
-                                    {product.leadTime}
-                                  </p>
-                                )}
-                              </div>
-
-                              <div className="flex gap-2">
-                                <Button asChild variant="outline" className="flex-1">
-                                  <Link href={`/shop/${product.slug}`}>View</Link>
-                                </Button>
-                                <Button
-                                  onClick={() => addItem(product)}
-                                  disabled={product.availability === 'out_of_stock'}
-                                  className="flex-1"
-                                >
-                                  <ShoppingCart className="mr-2 h-4 w-4" />
-                                  Add
-                                </Button>
-                              </div>
-                            </div>
                           </CardContent>
                         </Card>
                       </motion.div>
@@ -389,7 +537,7 @@ export default function ShopPage() {
                 </div>
 
                 {/* Pagination */}
-                {totalPages > 1 && (
+                {effectiveTotalPages > 1 && (
                   <div className="mt-8 flex justify-center gap-2">
                     <Button
                       variant="outline"
@@ -400,13 +548,13 @@ export default function ShopPage() {
                     </Button>
                     <div className="flex items-center gap-2 px-4">
                       <span className="text-sm text-muted-foreground">
-                        Page {page} of {totalPages}
+                        Page {page} of {effectiveTotalPages}
                       </span>
                     </div>
                     <Button
                       variant="outline"
-                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                      disabled={page === totalPages}
+                      onClick={() => setPage((p) => Math.min(effectiveTotalPages, p + 1))}
+                      disabled={page === effectiveTotalPages}
                     >
                       Next
                     </Button>

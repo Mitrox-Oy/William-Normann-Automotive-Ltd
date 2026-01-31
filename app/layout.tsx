@@ -69,19 +69,15 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: withBasePath("/icon-light-32x32.png"),
+        url: withBasePath("/william-automotive-logo-white-background.png"),
         media: "(prefers-color-scheme: light)",
       },
       {
-        url: withBasePath("/icon-dark-32x32.png"),
+        url: withBasePath("/william-automotive-logo-black-background.png"),
         media: "(prefers-color-scheme: dark)",
       },
-      {
-        url: withBasePath("/icon.svg"),
-        type: "image/svg+xml",
-      },
     ],
-    apple: withBasePath("/apple-icon.png"),
+    apple: withBasePath("/william-automotive-logo-black-background.png"),
   },
 }
 

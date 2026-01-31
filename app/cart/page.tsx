@@ -217,7 +217,7 @@ export default function CartPage() {
                             variant="ghost"
                             size="icon"
                             onClick={() => removeItem(item.product.id)}
-                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            className="h-8 w-8 text-destructive hover:text-destructive bg-white hover:bg-white/90 rounded-full"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -345,68 +345,11 @@ export default function CartPage() {
 
                 {/* Info Cards */}
                 <div className="space-y-3">
-                  <div className="rounded-lg border p-3">
-                    <p className="text-sm font-medium">What happens next?</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      We'll review your quote request and respond within 24 hours with detailed pricing, lead times, and shipping options.
-                    </p>
-                  </div>
-
-                  <div className="rounded-lg bg-muted p-3">
-                    <p className="text-xs text-muted-foreground">
-                      <span className="font-medium">✓</span> Transparent pricing with no hidden fees
-                      <br />
-                      <span className="font-medium">✓</span> Multiple shipping options available
-                      <br />
-                      <span className="font-medium">✓</span> Customs & duties calculated upfront
-                    </p>
-                  </div>
                 </div>
               </CardContent>
             </Card>
           </div>
         </div>
-
-        {/* Trust Section */}
-        <Card className="mt-12 border-primary/20 bg-primary/5">
-          <CardContent className="grid gap-6 p-8 sm:grid-cols-3">
-            <div className="text-center">
-              <div className="mb-2 flex justify-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                  <FileText className="h-6 w-6 text-primary" />
-                </div>
-              </div>
-              <h4 className="mb-1 font-semibold">Transparent Quoting</h4>
-              <p className="text-sm text-muted-foreground">
-                Full breakdown of parts, shipping, and duties
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="mb-2 flex justify-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                  <ShoppingCart className="h-6 w-6 text-primary" />
-                </div>
-              </div>
-              <h4 className="mb-1 font-semibold">Quality Guaranteed</h4>
-              <p className="text-sm text-muted-foreground">
-                OEM and verified aftermarket suppliers only
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="mb-2 flex justify-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                  <Package className="h-6 w-6 text-primary" />
-                </div>
-              </div>
-              <h4 className="mb-1 font-semibold">Global Shipping</h4>
-              <p className="text-sm text-muted-foreground">
-                Tracked delivery to EU, UK, MENA, and Asia
-              </p>
-            </div>
-          </CardContent>
-        </Card>
       </Container>
     </section>
   )

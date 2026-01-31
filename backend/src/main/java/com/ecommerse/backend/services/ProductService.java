@@ -402,6 +402,14 @@ public class ProductService {
     }
 
     /**
+     * Get all distinct product brands
+     */
+    @Transactional(readOnly = true)
+    public List<String> getAllBrands() {
+        return productRepository.findAllBrands();
+    }
+
+    /**
      * Bulk update products
      */
     public List<ProductDTO> bulkUpdateProducts(List<ProductDTO> productDTOs) {

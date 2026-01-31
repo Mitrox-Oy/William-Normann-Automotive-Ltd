@@ -138,15 +138,6 @@ function LoginForm() {
                   </Link>
                 </p>
               </div>
-
-              {/* Demo Credentials (remove in production) */}
-              <div className="mt-6 rounded-lg border border-dashed p-4">
-                <p className="text-xs font-medium text-muted-foreground mb-2">Demo Accounts:</p>
-                <div className="space-y-1 text-xs text-muted-foreground">
-                  <p><strong>Customer:</strong> customer@example.com / password</p>
-                  <p><strong>Owner:</strong> owner@example.com / password</p>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </div>

@@ -43,12 +43,15 @@ export interface Product {
   categoryName?: string
   partNumber?: string
   manufacturer?: string
+  brand?: string
+  weight?: number
   specifications?: Record<string, string>
   compatibleVehicles?: string[]
   leadTime?: string
   minQuantity?: number
   stockLevel?: number
   variants?: ProductVariant[]
+  infoSections?: Array<{ title: string; content: string }>
   createdAt?: string
   updatedAt?: string
 }
@@ -77,8 +80,33 @@ export interface SearchParams {
   limit?: number
   minPrice?: number
   maxPrice?: number
+  brand?: string
   availability?: string
   sortBy?: 'price_asc' | 'price_desc' | 'name_asc' | 'name_desc' | 'newest'
+}
+
+export async function fetchBrands(): Promise<string[]> {
+  const url = `${API_BASE_URL}/api/products/brands`
+
+  try {
+    const response = await fetch(url, {
+      next: { revalidate: 60 },
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'omit',
+    })
+
+    if (!response.ok) {
+      console.warn(`Brands endpoint returned ${response.status}`)
+      return []
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.error('Failed to fetch brands:', error)
+    return []
+  }
 }
 
 /**
@@ -88,11 +116,8 @@ export async function fetchProducts(params: SearchParams = {}): Promise<Products
   const searchParams = new URLSearchParams()
 
   if (params.query) searchParams.append('query', params.query)
-  if (params.category) searchParams.append('category', params.category)
   if (params.page) searchParams.append('page', params.page.toString())
   if (params.limit) searchParams.append('limit', params.limit.toString())
-  if (params.minPrice) searchParams.append('minPrice', params.minPrice.toString())
-  if (params.maxPrice) searchParams.append('maxPrice', params.maxPrice.toString())
   if (params.availability) searchParams.append('availability', params.availability)
   if (params.sortBy) searchParams.append('sortBy', params.sortBy)
 
@@ -102,22 +127,38 @@ export async function fetchProducts(params: SearchParams = {}): Promise<Products
   searchParams.set('size', (params.limit || 12).toString())
 
   // Map frontend params to backend params
+  const sortMap: Record<string, string> = {
+    'price_asc': 'price',
+    'price_desc': 'price',
+    'name_asc': 'name',
+    'name_desc': 'name',
+    'newest': 'createdDate',
+  }
+  if (params.sortBy) {
+    searchParams.set('sortBy', sortMap[params.sortBy] || 'createdDate')
+    searchParams.set('sortDir', params.sortBy.includes('_desc') ? 'desc' : 'asc')
+  }
+
   if (params.category) {
     searchParams.set('category', params.category)
   }
   if (params.query) {
     searchParams.set('search', params.query)
   }
-  if (params.sortBy) {
-    const sortMap: Record<string, string> = {
-      'price_asc': 'price',
-      'price_desc': 'price',
-      'name_asc': 'name',
-      'name_desc': 'name',
-      'newest': 'createdDate',
-    }
-    searchParams.set('sortBy', sortMap[params.sortBy] || 'createdDate')
-    searchParams.set('sortDir', params.sortBy.includes('_desc') ? 'desc' : 'asc')
+
+  const hasMinPrice = params.minPrice !== undefined && Number.isFinite(params.minPrice)
+  const hasMaxPrice = params.maxPrice !== undefined && Number.isFinite(params.maxPrice)
+  if (hasMinPrice) {
+    searchParams.set('minPrice', params.minPrice!.toString())
+  }
+  if (hasMaxPrice) {
+    searchParams.set('maxPrice', params.maxPrice!.toString())
+  }
+  if (params.brand) {
+    searchParams.set('brand', params.brand)
+  }
+  if (params.availability === 'in_stock') {
+    searchParams.set('inStockOnly', 'true')
   }
 
   const url = `${API_BASE_URL}/api/products?${searchParams.toString()}`
@@ -181,6 +222,9 @@ export async function fetchProducts(params: SearchParams = {}): Promise<Products
         category: p.categoryId?.toString() || '',
         categoryName: p.categoryName || '',
         partNumber: p.sku || '',
+        manufacturer: p.brand || p.manufacturer || '',
+        brand: p.brand || p.manufacturer || '',
+        weight: typeof p.weight === 'number' ? p.weight : p.weight ? parseFloat(p.weight) : undefined,
         stockLevel: stockQty,
         createdAt: p.createdDate || new Date().toISOString(),
         updatedAt: p.updatedDate || new Date().toISOString(),
@@ -236,7 +280,59 @@ export async function fetchProductBySlug(slug: string): Promise<Product | null> 
     }
 
     const data = await response.json()
-    return data
+
+    const images: string[] = []
+    if (data.images && Array.isArray(data.images)) {
+      images.push(...data.images.map((img: any) => img.imageUrl || img.url || '').filter(Boolean))
+    }
+    if (data.imageUrl && !images.includes(data.imageUrl)) {
+      images.unshift(data.imageUrl)
+    }
+
+    const stockQty = data.stockQuantity || 0
+    let availability: 'in_stock' | 'low_stock' | 'out_of_stock' | 'pre_order' = 'out_of_stock'
+    if (stockQty > 10) {
+      availability = 'in_stock'
+    } else if (stockQty > 0) {
+      availability = 'low_stock'
+    }
+
+    const infoSections: Array<{ title: string; content: string }> = []
+    for (let i = 1; i <= 10; i += 1) {
+      const title = data[`infoSection${i}Title`]
+      const content = data[`infoSection${i}Content`]
+      const enabled = data[`infoSection${i}Enabled`]
+      if (enabled && title && content) {
+        infoSections.push({ title, content })
+      }
+    }
+
+    return {
+      id: data.id?.toString() || '',
+      slug: data.slug || data.sku?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || data.id?.toString() || '',
+      name: data.name || '',
+      description: data.description || '',
+      shortDescription: data.shortDescription || '',
+      price: typeof data.price === 'number' ? data.price : parseFloat(data.price) || 0,
+      currency: 'USD',
+      availability,
+      images: images.length > 0 ? images : [''],
+      category: data.categoryId?.toString() || '',
+      categoryName: data.categoryName || '',
+      partNumber: data.sku || '',
+      manufacturer: data.brand || data.manufacturer || '',
+      brand: data.brand || data.manufacturer || '',
+      weight: typeof data.weight === 'number' ? data.weight : data.weight ? parseFloat(data.weight) : undefined,
+      specifications: data.specifications || undefined,
+      compatibleVehicles: data.compatibleVehicles || undefined,
+      leadTime: data.leadTime || undefined,
+      minQuantity: data.minQuantity || undefined,
+      stockLevel: stockQty,
+      variants: data.variants || undefined,
+      infoSections,
+      createdAt: data.createdDate || new Date().toISOString(),
+      updatedAt: data.updatedDate || new Date().toISOString(),
+    }
   } catch (error) {
     console.error(`Error fetching product ${slug}:`, error)
     return null

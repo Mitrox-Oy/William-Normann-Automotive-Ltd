@@ -23,7 +23,7 @@ export function AnnouncementBar() {
     ]
 
     return (
-        <div className="relative overflow-hidden bg-gray-900/40 backdrop-blur-2xl border-b border-white/10 py-2.5">
+        <div className="sticky top-0 z-50 relative overflow-hidden bg-gray-900/40 backdrop-blur-2xl border-b border-white/10 py-2.5">
             <div className="flex animate-marquee-infinite">
                 {/* Triple the items for seamless loop */}
                 {[...announcements, ...announcements, ...announcements, ...announcements, ...announcements, ...announcements].map((item, index) => (

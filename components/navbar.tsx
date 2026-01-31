@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { Menu, X, User, Package, Heart, MapPin, Settings, LogOut, LayoutDashboard, ShoppingBag, Users, BarChart3 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -49,7 +50,7 @@ export function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-50 transition-all duration-300 pt-4">
+    <header className="sticky top-[42px] z-40 transition-all duration-300 pt-4">
       <Container>
         <nav
           className={cn(

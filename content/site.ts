@@ -8,11 +8,11 @@ export const siteConfig = {
   },
   contact: {
     email: "info@williamnormann.com",
-    phone: "+44 20 1234 5678",
+    phone: "+971585347970",
     address: {
-      line1: "123 Automotive Way",
-      line2: "London, UK",
-      postcode: "SW1A 1AA",
+      line1: "F1 561, DIP, Dubai Investment Park",
+      line2: "United Arab Emirates",
+      postcode: "",
     },
   },
   social: {
@@ -29,7 +29,7 @@ export const siteConfig = {
   hero: {
     headline: "Hard-to-Source Automotive Parts, Delivered Globally",
     subheadline:
-      "From OEM classics to performance upgrades and rare SKUs. We connect serious workshops, distributors, and builders with verified suppliers across Europe, Middle East, and Asia.",
+      "We connect private customers, workshops, distributors, builders with suppliers across Europe, the Middle East, and Asia.",
     primaryCTA: "Request a Quote",
     secondaryCTA: "Browse Shop",
     badges: ["First reply within 24 hours", "Cross-border sourcing: EU • UK • MENA • Asia"],
@@ -67,10 +67,10 @@ export const siteConfig = {
       turnaround: "Quote within 24h",
       featured: true,
       features: [
-        "XXXX Text - Work in progress",
-        "XXXX Text - Work in progress",
-        "XXXX Text - Work in progress",
-        "XXXX Text - Work in progress",
+        "We find the best deal of the desired car across all markets",
+        "We will request all details of the car needed on your behalf",
+        "Premium 8-step pre-purchase inspection",
+        "Full documentation and support to hassle-free process from the beginning",
       ],
     },
     {
@@ -82,10 +82,11 @@ export const siteConfig = {
       forWho: "Workshops • Distributors • Restoration shops",
       turnaround: "Quote within 24h",
       features: [
-        "XXXX Text - Work in progress",
-        "XXXX Text - Work in progress",
-        "XXXX Text - Work in progress",
-        "XXXX Text - Work in progress",
+        "We source the best deals for the exact parts you are looking for across various markets",
+        "We handle inquiries, negotiations, inspections and rebuilds on your behalf",
+        "Thorough inspection list, condition assessment and photos/videos",
+        "We take care of packaging, export preparation and shipping to your location",
+        "Only commission and service based pricing",
       ],
     },
     {
@@ -97,10 +98,10 @@ export const siteConfig = {
       forWho: "Businesses • Individual buyers • Workshops",
       turnaround: "Delivery 4-7 days",
       features: [
-        "XXXX Text - Work in progress",
-        "XXXX Text - Work in progress",
-        "XXXX Text - Work in progress",
-        "XXXX Text - Work in progress",
+        "Rebuilt and inspected popular engines",
+        "Brand new forged wheels",
+        "Open & pre inspected car inventory from trusted partners",
+        "Brand new performance, aftermarket parts & accessories",
       ],
     },
     {
@@ -128,7 +129,7 @@ export const siteConfig = {
     {
       step: 2,
       title: "We Source & Match",
-      description: "Our team searches our global network to find the best suppliers and pricing for your requirements.",
+      description: "Our team searches our extensive network to find the best suppliers and pricing for your requirements.",
     },
     {
       step: 3,
@@ -154,7 +155,7 @@ export const siteConfig = {
   },
   about: {
     story:
-      "William Automotive was founded with a simple mission: make global automotive sourcing accessible to everyone. Starting from a passion for classic cars and a frustration with limited local availability, we've grown into a trusted partner for workshops, enthusiasts, and distributors across three continents.\n\nToday, we leverage our extensive network and expertise to help clients find exactly what they need, wherever it comes from. Whether you're restoring a vintage classic, running a busy workshop, or managing wholesale distribution, we're here to make your automotive sourcing seamless and reliable.",
+      "Our company was born from a genuine passion for cars combined with the excitement of international trade. As car industry experts and enthusiasts ourselves, we quickly realized that Dubai offers an exceptionally high-quality selection of vehicles and parts – but exporting them to Europe is challenging without the right connections and know-how.\n\nWe've built direct relationships with trusted sellers and service providers in Dubai, ensuring every product's origin and condition are thoroughly verified. We work only with reliable shipping partners and maintain close cooperation with customs authorities to make the process smooth.\n\nWe operate flexibly – our customers include car enthusiasts looking for something special and unique, car dealerships wanting to stand out with a distinctive selection, and businesses seeking cost-effective spare parts solutions.\n\nCustomer satisfaction is our most important measure of success. The idea was born in Finland – but our focus is on the global car market.",
     values: [
       {
         title: "Trust & Transparency",
@@ -162,7 +163,7 @@ export const siteConfig = {
       },
       {
         title: "Quality First",
-        description: "We work only with verified suppliers and guarantee the quality of every part.",
+        description: "All products come with our global replacement guarantee: if your engine or part fails, proves defective or is incomplete, we will replace it with an equivalent item with no extra cost.",
       },
       {
         title: "Speed & Reliability",
@@ -170,7 +171,7 @@ export const siteConfig = {
       },
       {
         title: "Global Expertise",
-        description: "Deep knowledge of international markets, regulations, and logistics.",
+        description: "Our vast connections across international markets give us deep knowledge of regulations and logistics for seamless cross-border operations.",
       },
     ],
   },
@@ -180,10 +181,9 @@ export const siteConfig = {
       "Part numbers, vehicle details, quantities—whatever you've got. We'll respond within 24 hours with pricing, lead time, and shipping options.",
     responseTime: "Typical first reply: 24 hours on weekdays",
     interests: [
-      "Hard-to-source parts",
-      "Wholesale / bulk orders",
-      "Cross-border sourcing",
-      "Technical verification",
+      "Turnkey Car Import Service",
+      "Parts & Engines Import by Commission",
+      "Webshop Products",
       "Custom project",
       "Other",
     ],

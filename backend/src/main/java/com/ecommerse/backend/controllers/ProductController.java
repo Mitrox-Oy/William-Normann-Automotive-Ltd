@@ -64,7 +64,11 @@ public class ProductController {
             @Parameter(description = "Sort field", example = "createdDate") @RequestParam(defaultValue = "createdDate") String sortBy,
             @Parameter(description = "Sort direction", example = "desc") @RequestParam(defaultValue = "desc") String sortDir,
             @Parameter(description = "Category filter", example = "4") @RequestParam(name = "category", required = false) Long categoryId,
-            @Parameter(description = "Search keyword") @RequestParam(name = "search", required = false) String search) {
+            @Parameter(description = "Search keyword") @RequestParam(name = "search", required = false) String search,
+            @Parameter(description = "Minimum price") @RequestParam(required = false) BigDecimal minPrice,
+            @Parameter(description = "Maximum price") @RequestParam(required = false) BigDecimal maxPrice,
+            @Parameter(description = "Brand filter") @RequestParam(required = false) String brand,
+            @Parameter(description = "In stock only") @RequestParam(defaultValue = "false") Boolean inStockOnly) {
 
         int pageNumber = Math.max(page, 0);
         int pageSize = Math.min(Math.max(size, 1), 50);
@@ -80,8 +84,25 @@ public class ProductController {
 
         String normalizedSearch = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
 
+        boolean useAdvanced = minPrice != null || maxPrice != null || (brand != null && !brand.trim().isEmpty())
+                || Boolean.TRUE.equals(inStockOnly);
+        if (useAdvanced) {
+            Page<ProductDTO> products = productService.advancedSearch(normalizedSearch, categoryId, minPrice, maxPrice,
+                    brand, inStockOnly, false, pageable);
+            return ResponseEntity.ok(products);
+        }
+
         Page<ProductDTO> products = productService.getCatalogProducts(pageable, categoryId, normalizedSearch);
         return ResponseEntity.ok(products);
+    }
+
+    @Operation(summary = "Get all brands", description = "Retrieve a list of distinct product brands. Available to all users.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved brands")
+    })
+    @GetMapping("/brands")
+    public ResponseEntity<List<String>> getAllBrands() {
+        return ResponseEntity.ok(productService.getAllBrands());
     }
 
     @Operation(summary = "Get product by ID", description = "Retrieve a specific product by its ID. Available to all users.")

@@ -62,87 +62,20 @@ export default function HomePageClient() {
         </Container>
       </section>
 
-      {/* <CHANGE> Trust row with better spacing */}
-      <section className="py-20 lg:py-24">
-        <Container>
-          <div className="relative">
-            {/* Blurred gradient overlay behind text - extremely subtle */}
-            <div className="absolute inset-0 -inset-x-4 -inset-y-2 bg-gradient-to-b from-black/[0.001] via-black/[0.001] to-black/[0.001] backdrop-blur-[1px] rounded-2xl pointer-events-none" />
-            <div className="relative grid gap-6 sm:grid-cols-2 lg:grid-cols-5 py-4">
-              {siteConfig.trust.map((item, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                  className="text-center"
-                >
-                  <h3 className="mb-2 font-semibold">{item.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{item.description}</p>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </Container>
-      </section>
-
-      {/* <CHANGE> Featured service with visual distinction */}
+      {/* Services grid - all equal size */}
       <section className="py-28 lg:py-36">
         <Container>
           <SectionHeading
             title="What We Do Best"
-            subtitle="Specialized automotive sourcing across five core service areas"
+            subtitle="Specialized automotive sourcing from Dubai to Europe - with global reach to USA, MENA and Asia"
             centered
             className="mb-16"
           />
 
-          {/* Featured service */}
-          {siteConfig.services
-            .filter((s) => s.featured)
-            .map((service) => (
-              <GlassPanel key={service.slug} className="mb-8" hover>
-                <div className="grid gap-8 lg:grid-cols-3">
-                  <div className="lg:col-span-2">
-                    <Badge variant="secondary" className="mb-4">
-                      Featured Service
-                    </Badge>
-                    <h3 className="mb-3 text-3xl font-bold">{service.title}</h3>
-                    <p className="mb-6 text-muted-foreground leading-relaxed">{service.description}</p>
-                    <Accordion type="single" collapsible className="w-full">
-                      <AccordionItem value="features">
-                        <AccordionTrigger>What's included</AccordionTrigger>
-                        <AccordionContent>
-                          <ul className="grid gap-3 sm:grid-cols-2">
-                            {service.features.map((feature, i) => (
-                              <li key={i} className="flex items-start gap-2">
-                                <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                                <span className="text-sm">{feature}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </AccordionContent>
-                      </AccordionItem>
-                    </Accordion>
-                  </div>
-                  <div className="flex flex-col justify-between gap-4">
-                    <div>
-                      <p className="mb-2 text-sm font-medium text-muted-foreground">Best for</p>
-                      <p className="font-medium">{service.forWho}</p>
-                    </div>
-                    <div>
-                      <p className="mb-2 text-sm font-medium text-muted-foreground">Turnaround</p>
-                      <p className="font-medium">{service.turnaround}</p>
-                    </div>
-                  </div>
-                </div>
-              </GlassPanel>
-            ))}
-
-          {/* Other services grid */}
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {/* All services in equal grid */}
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 auto-rows-max">
             {siteConfig.services
-              .filter((s) => !s.featured)
+              .filter((s) => s.slug !== "warranty")
               .map((service, i) => (
                 <motion.div
                   key={service.slug}
@@ -150,18 +83,19 @@ export default function HomePageClient() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.1 }}
+                  className="w-full"
                 >
-                  <Card className="h-full transition-all">
-                    <CardContent className="flex h-full flex-col p-6">
+                  <Card className="h-full transition-all w-full">
+                    <CardContent className="flex flex-col p-6">
                       <Package className="mb-4 h-8 w-8 text-primary" />
                       <h3 className="mb-2 font-semibold">{service.title}</h3>
-                      <p className="mb-4 flex-1 text-sm text-muted-foreground leading-relaxed">{service.description}</p>
-                      <div className="mt-auto">
-                        <Accordion type="single" collapsible className="w-full mb-4">
+                      <p className="mb-4 text-sm text-muted-foreground leading-relaxed">{service.description}</p>
+                      <div className="mt-auto w-full space-y-4">
+                        <Accordion type="single" collapsible className="w-full">
                           <AccordionItem value="features" className="border-none">
-                            <AccordionTrigger className="text-sm py-2">What's included</AccordionTrigger>
-                            <AccordionContent>
-                              <ul className="space-y-2">
+                            <AccordionTrigger className="text-sm py-2 hover:no-underline">What's included</AccordionTrigger>
+                            <AccordionContent className="pb-0">
+                              <ul className="space-y-2 pt-4 pb-4">
                                 {service.features.map((feature, idx) => (
                                   <li key={idx} className="flex items-start gap-2">
                                     <Check className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
@@ -172,7 +106,7 @@ export default function HomePageClient() {
                             </AccordionContent>
                           </AccordionItem>
                         </Accordion>
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className="text-xs w-fit">
                           {service.turnaround}
                         </Badge>
                       </div>
@@ -199,70 +133,7 @@ export default function HomePageClient() {
         </Container>
       </section>
 
-      {/* Proof Points Strip - What You Get */}
-      <section className="py-20 lg:py-24">
-        <Container>
-          <SectionHeading
-            title={siteConfig.proofPoints.headline}
-            centered
-            className="mb-12"
-          />
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {siteConfig.proofPoints.items.map((item, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-              >
-                <Card className="h-full">
-                  <CardContent className="p-6">
-                    <CheckCircle2 className="mb-3 h-6 w-6 text-primary" />
-                    <h3 className="mb-2 font-semibold">{item.title}</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{item.description}</p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        </Container>
-      </section>
 
-      {/* <CHANGE> Compact teaser for global sourcing */}
-      <section className="py-28 lg:py-36">
-        <Container>
-          <GlassPanel>
-            <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
-              <div>
-                <Globe className="mb-6 h-12 w-12 text-primary" />
-                <h2 className="mb-4 text-balance text-3xl font-bold tracking-tight">
-                  {siteConfig.differentiator.headline}
-                </h2>
-                <p className="mb-6 text-pretty text-muted-foreground leading-relaxed">
-                  {siteConfig.differentiator.description}
-                </p>
-                <CTAButton href={siteConfig.differentiator.learnMoreLink} variant="outline">
-                  Learn More <ArrowRight className="ml-2 h-4 w-4" />
-                </CTAButton>
-              </div>
-              <div className="space-y-3">
-                {siteConfig.differentiator.benefits.map((benefit, index) => (
-                  <div
-                    key={index}
-                    className="flex items-start gap-3 rounded-lg p-4"
-                  >
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                      <CheckCircle2 className="h-4 w-4 text-white" />
-                    </div>
-                    <p className="font-medium leading-relaxed">{benefit}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </GlassPanel>
-        </Container>
-      </section>
 
       {/* <CHANGE> Quote form with premium layout */}
       <section id="contact" className="py-28 lg:py-36">
@@ -275,6 +146,34 @@ export default function HomePageClient() {
                 centered
                 className="mb-12"
               />
+
+              {/* What You Get in Every Quote */}
+              <div className="mb-16">
+                <h3 className="text-center text-2xl font-bold mb-12">What You Get in Every Quote</h3>
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-12">
+                  <div className="text-center">
+                    <CheckCircle2 className="mx-auto mb-4 h-8 w-8 text-primary" />
+                    <h4 className="mb-2 font-semibold">Part Numbers & Alternatives</h4>
+                    <p className="text-sm text-muted-foreground">OEM codes, cross-references, and verified aftermarket options</p>
+                  </div>
+                  <div className="text-center">
+                    <CheckCircle2 className="mx-auto mb-4 h-8 w-8 text-primary" />
+                    <h4 className="mb-2 font-semibold">Origin & Lead Time</h4>
+                    <p className="text-sm text-muted-foreground">Source location, availability status, and realistic delivery estimates</p>
+                  </div>
+                  <div className="text-center">
+                    <CheckCircle2 className="mx-auto mb-4 h-8 w-8 text-primary" />
+                    <h4 className="mb-2 font-semibold">Shipping Options & Costs</h4>
+                    <p className="text-sm text-muted-foreground">Multiple freight options with transparent pricing and tracking</p>
+                  </div>
+                  <div className="text-center">
+                    <CheckCircle2 className="mx-auto mb-4 h-8 w-8 text-primary" />
+                    <h4 className="mb-2 font-semibold">Duties & HS Codes Guidance</h4>
+                    <p className="text-sm text-muted-foreground">Import classification, estimated duties, and compliance documentation</p>
+                  </div>
+                </div>
+              </div>
+
               <QuoteForm source="home-page" />
             </div>
           </div>
