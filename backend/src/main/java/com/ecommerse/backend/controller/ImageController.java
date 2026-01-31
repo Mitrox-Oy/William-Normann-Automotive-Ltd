@@ -2,6 +2,7 @@ package com.ecommerse.backend.controller;
 
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -11,18 +12,23 @@ import org.springframework.web.bind.annotation.*;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/images")
 @CrossOrigin(origins = "*")
 public class ImageController {
 
-    private static final String UPLOAD_DIR = "/app/uploads/products/";
+    @Value("${app.upload.dir:uploads}")
+    private String uploadDir;
 
     @GetMapping("/{fileName}")
     public ResponseEntity<Resource> getImage(@PathVariable String fileName) {
         try {
-            Path filePath = Paths.get(UPLOAD_DIR).resolve(fileName);
+            Path filePath = resolveImagePath(fileName);
+            if (filePath == null) {
+                return ResponseEntity.notFound().build();
+            }
             File file = filePath.toFile();
 
             if (!file.exists() || !file.isFile()) {
@@ -59,5 +65,22 @@ public class ImageController {
             default:
                 return "application/octet-stream";
         }
+    }
+
+    private Path resolveImagePath(String fileName) {
+        List<Path> candidates = List.of(
+                Paths.get(uploadDir, "products", fileName),
+                Paths.get("uploads", "products", fileName),
+                Paths.get("backend", "uploads", "products", fileName),
+                Paths.get(System.getProperty("user.dir"), "uploads", "products", fileName),
+                Paths.get("/app/uploads/products", fileName));
+
+        for (Path candidate : candidates) {
+            if (candidate.toFile().exists()) {
+                return candidate;
+            }
+        }
+
+        return null;
     }
 }
