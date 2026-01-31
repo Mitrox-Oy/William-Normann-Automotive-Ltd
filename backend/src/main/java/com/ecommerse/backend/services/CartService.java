@@ -78,6 +78,15 @@ public class CartService {
         cartItem.refreshReservation(cartReservationMinutes);
     }
 
+    private void touchCart(Cart cart) {
+        if (cart == null) {
+            return;
+        }
+        cart.setIsActive(true);
+        cart.setExpiration(cartExpirationHours);
+        cart.updateActivity();
+    }
+
     private void refreshReservations(Cart cart) {
         removeExpiredItems(cart);
         cart.getItems().forEach(this::refreshReservation);
@@ -130,6 +139,7 @@ public class CartService {
         Cart cart = cartRepository.findByUserId(userId)
                 .orElseGet(() -> createNewCartForUser(userId));
         refreshReservations(cart);
+        touchCart(cart);
         cartRepository.save(cart);
         return convertToDTO(cart);
     }
@@ -199,6 +209,7 @@ public class CartService {
         // Update cart total
         cart.updateTotalAmount();
         cart.setUpdatedDate(LocalDateTime.now());
+        touchCart(cart);
 
         CartItem saved = cartItemRepository.save(cartItem);
         cartRepository.save(cart);
@@ -248,6 +259,7 @@ public class CartService {
         Cart cart = cartItem.getCart();
         cart.updateTotalAmount();
         cart.setUpdatedDate(LocalDateTime.now());
+        touchCart(cart);
 
         CartItem updated = cartItemRepository.save(cartItem);
         cartRepository.save(cart);
@@ -352,7 +364,17 @@ public class CartService {
 
         CartValidationResult result = new CartValidationResult();
         result.setValid(true);
-        result.setErrors(validateCart(userId));
+        List<String> errors = new ArrayList<>(validateCart(userId));
+        if (cart.isExpired()) {
+            errors.add("Cart has expired. Please refresh your cart.");
+        }
+        if (!Boolean.TRUE.equals(cart.getIsActive())) {
+            errors.add("Cart is inactive. Please refresh your cart.");
+        }
+        if (cart.getItems().isEmpty()) {
+            errors.add("Cart is empty.");
+        }
+        result.setErrors(errors);
         result.setCartExpired(cart.isExpired());
         result.setCartActive(cart.getIsActive());
         result.setTotalItems(cart.getTotalItems());
@@ -373,6 +395,7 @@ public class CartService {
                 .orElseThrow(() -> new IllegalArgumentException("Cart not found for user: " + userId));
 
         refreshReservations(cart);
+        touchCart(cart);
         cartRepository.save(cart);
     }
 
@@ -393,7 +416,7 @@ public class CartService {
 
         // Update cart totals
         cart.updateTotalAmount();
-        cart.updateActivity();
+        touchCart(cart);
 
         Cart updated = cartRepository.save(cart);
         return convertToDTO(updated);

@@ -227,12 +227,8 @@ public class ProductController {
         }
         System.out.println("==========================");
 
-        try {
-            ProductDTO createdProduct = productService.createProduct(productDTO);
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdProduct);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
-        }
+        ProductDTO createdProduct = productService.createProduct(productDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdProduct);
     }
 
     @Operation(summary = "Update product", description = "Update an existing product. Requires OWNER role.", security = @SecurityRequirement(name = "Bearer Authentication"))
@@ -249,13 +245,8 @@ public class ProductController {
     public ResponseEntity<ProductDTO> updateProduct(
             @Parameter(description = "Product ID", example = "1", required = true) @PathVariable Long id,
             @Parameter(description = "Updated product data", required = true) @Valid @RequestBody ProductDTO productDTO) {
-
-        try {
-            ProductDTO updatedProduct = productService.updateProduct(id, productDTO);
-            return ResponseEntity.ok(updatedProduct);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
-        }
+        ProductDTO updatedProduct = productService.updateProduct(id, productDTO);
+        return ResponseEntity.ok(updatedProduct);
     }
 
     @Operation(summary = "Delete product", description = "Soft delete a product (mark as inactive). Requires OWNER role.", security = @SecurityRequirement(name = "Bearer Authentication"))
