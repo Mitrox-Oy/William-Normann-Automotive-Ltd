@@ -12,7 +12,7 @@ import { useCart } from "@/components/CartContext"
 import { getWishlist, removeFromWishlist, type WishlistItem } from "@/lib/accountApi"
 import { formatCurrency, getAvailabilityBadge } from "@/lib/shopApi"
 import { getImageUrl } from "@/lib/utils"
-import { Heart, ShoppingCart, Trash2, ChevronLeft } from "lucide-react"
+import { Heart, ShoppingCart, Trash2, ChevronLeft, FileText } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -48,6 +48,9 @@ function WishlistPageContent() {
   }
 
   function handleAddToCart(item: WishlistItem) {
+    if (item.product.quoteOnly === true) {
+      return
+    }
     addItem(item.product)
   }
 
@@ -85,6 +88,7 @@ function WishlistPageContent() {
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {wishlist.map((item) => {
               const availabilityBadge = getAvailabilityBadge(item.product.availability)
+              const isQuoteOnly = item.product.quoteOnly === true
 
               return (
                 <Card key={item.id} className="group overflow-hidden">
@@ -119,15 +123,24 @@ function WishlistPageContent() {
                       </p>
 
                       <div className="flex gap-2">
-                        <Button
-                          onClick={() => handleAddToCart(item)}
-                          disabled={item.product.availability === "out_of_stock"}
-                          className="flex-1"
-                          size="sm"
-                        >
-                          <ShoppingCart className="mr-2 h-4 w-4" />
-                          Add to Cart
-                        </Button>
+                        {!isQuoteOnly ? (
+                          <Button
+                            onClick={() => handleAddToCart(item)}
+                            disabled={item.product.availability === "out_of_stock"}
+                            className="flex-1"
+                            size="sm"
+                          >
+                            <ShoppingCart className="mr-2 h-4 w-4" />
+                            Add to Cart
+                          </Button>
+                        ) : (
+                          <Button asChild className="flex-1" size="sm" variant="secondary">
+                            <Link href={`/shop/${item.product.slug}`}>
+                              <FileText className="mr-2 h-4 w-4" />
+                              Request Quote
+                            </Link>
+                          </Button>
+                        )}
                         <Button
                           onClick={() => handleRemove(item.id)}
                           variant="outline"

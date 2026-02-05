@@ -5,6 +5,7 @@ import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * Data Transfer Object for Product
@@ -47,6 +48,9 @@ public class ProductDTO {
     @Schema(description = "Whether the product is featured", example = "false")
     private Boolean featured;
 
+    @Schema(description = "If true, product cannot be directly added to cart and must be purchased via quote request", example = "false")
+    private Boolean quoteOnly;
+
     @DecimalMin(value = "0.0", message = "Weight cannot be negative")
     @Schema(description = "Product weight in kg", example = "0.221")
     private BigDecimal weight;
@@ -54,6 +58,120 @@ public class ProductDTO {
     @Size(max = 100, message = "Brand name cannot exceed 100 characters")
     @Schema(description = "Product brand", example = "Apple")
     private String brand;
+
+    @Schema(description = "Denormalized product type from root topic", example = "car")
+    private String productType;
+
+    @Schema(description = "Product condition", example = "used")
+    private String condition;
+
+    @Schema(description = "OEM classification for parts/custom", example = "oem")
+    private String oemType;
+
+    @Schema(description = "Compatibility mode", example = "vehicle_specific")
+    private String compatibilityMode;
+
+    @Schema(description = "Compatible vehicle makes")
+    private List<String> compatibleMakes;
+
+    @Schema(description = "Compatible vehicle models")
+    private List<String> compatibleModels;
+
+    @Schema(description = "Compatibility year range start", example = "2015")
+    private Integer compatibleYearStart;
+
+    @Schema(description = "Compatibility year range end", example = "2020")
+    private Integer compatibleYearEnd;
+
+    @Schema(description = "Whether VIN compatibility is supported", example = "true")
+    private Boolean vinCompatible;
+
+    @Schema(description = "Car make", example = "BMW")
+    private String make;
+
+    @Schema(description = "Car model", example = "330i")
+    private String model;
+
+    @Schema(description = "Model year", example = "2018")
+    private Integer year;
+
+    @Schema(description = "Mileage for cars", example = "110000")
+    private Integer mileage;
+
+    @Schema(description = "Fuel type", example = "diesel")
+    private String fuelType;
+
+    @Schema(description = "Transmission type", example = "automatic")
+    private String transmission;
+
+    @Schema(description = "Body type", example = "sedan")
+    private String bodyType;
+
+    @Schema(description = "Drive type", example = "awd")
+    private String driveType;
+
+    @Schema(description = "Power in kW", example = "165")
+    private Integer powerKw;
+
+    @Schema(description = "Vehicle color", example = "Black")
+    private String color;
+
+    @Schema(description = "Warranty included", example = "false")
+    private Boolean warrantyIncluded;
+
+    @Schema(description = "Part category", example = "brakes")
+    private String partCategory;
+
+    @Schema(description = "OEM part number", example = "34-11-6-789-101")
+    private String partNumber;
+
+    @Schema(description = "Part position tags")
+    private List<String> partPosition;
+
+    @Schema(description = "Part material", example = "aluminum")
+    private String material;
+
+    @Schema(description = "Part is reconditioned", example = "false")
+    private Boolean reconditioned;
+
+    @Schema(description = "Tool category", example = "torque_wrench")
+    private String toolCategory;
+
+    @Schema(description = "Tool power source", example = "battery")
+    private String powerSource;
+
+    @Schema(description = "Tool voltage", example = "18")
+    private Integer voltage;
+
+    @Schema(description = "Minimum torque (Nm)", example = "20")
+    private Integer torqueMinNm;
+
+    @Schema(description = "Maximum torque (Nm)", example = "200")
+    private Integer torqueMaxNm;
+
+    @Schema(description = "Drive size", example = "1/2\"")
+    private String driveSize;
+
+    @Schema(description = "Professional grade tool", example = "true")
+    private Boolean professionalGrade;
+
+    @Schema(description = "Tool sold as kit", example = "false")
+    private Boolean isKit;
+
+    @Schema(description = "Custom category", example = "body_kit")
+    private String customCategory;
+
+    @Schema(description = "Style tags for custom products")
+    private List<String> styleTags;
+
+    @Schema(description = "Finish type", example = "matte")
+    private String finish;
+
+    @Schema(description = "Street legal", example = "true")
+    private Boolean streetLegal;
+
+    @Schema(description = "Installation difficulty", example = "medium")
+    private String installationDifficulty;
 
     @Schema(description = "Optional info section 1 title", example = "Product Info")
     private String infoSection1Title;
@@ -254,6 +372,14 @@ public class ProductDTO {
         this.featured = featured;
     }
 
+    public Boolean getQuoteOnly() {
+        return quoteOnly;
+    }
+
+    public void setQuoteOnly(Boolean quoteOnly) {
+        this.quoteOnly = quoteOnly;
+    }
+
     public BigDecimal getWeight() {
         return weight;
     }
@@ -268,6 +394,310 @@ public class ProductDTO {
 
     public void setBrand(String brand) {
         this.brand = brand;
+    }
+
+    public String getProductType() {
+        return productType;
+    }
+
+    public void setProductType(String productType) {
+        this.productType = productType;
+    }
+
+    public String getCondition() {
+        return condition;
+    }
+
+    public void setCondition(String condition) {
+        this.condition = condition;
+    }
+
+    public String getOemType() {
+        return oemType;
+    }
+
+    public void setOemType(String oemType) {
+        this.oemType = oemType;
+    }
+
+    public String getCompatibilityMode() {
+        return compatibilityMode;
+    }
+
+    public void setCompatibilityMode(String compatibilityMode) {
+        this.compatibilityMode = compatibilityMode;
+    }
+
+    public List<String> getCompatibleMakes() {
+        return compatibleMakes;
+    }
+
+    public void setCompatibleMakes(List<String> compatibleMakes) {
+        this.compatibleMakes = compatibleMakes;
+    }
+
+    public List<String> getCompatibleModels() {
+        return compatibleModels;
+    }
+
+    public void setCompatibleModels(List<String> compatibleModels) {
+        this.compatibleModels = compatibleModels;
+    }
+
+    public Integer getCompatibleYearStart() {
+        return compatibleYearStart;
+    }
+
+    public void setCompatibleYearStart(Integer compatibleYearStart) {
+        this.compatibleYearStart = compatibleYearStart;
+    }
+
+    public Integer getCompatibleYearEnd() {
+        return compatibleYearEnd;
+    }
+
+    public void setCompatibleYearEnd(Integer compatibleYearEnd) {
+        this.compatibleYearEnd = compatibleYearEnd;
+    }
+
+    public Boolean getVinCompatible() {
+        return vinCompatible;
+    }
+
+    public void setVinCompatible(Boolean vinCompatible) {
+        this.vinCompatible = vinCompatible;
+    }
+
+    public String getMake() {
+        return make;
+    }
+
+    public void setMake(String make) {
+        this.make = make;
+    }
+
+    public String getModel() {
+        return model;
+    }
+
+    public void setModel(String model) {
+        this.model = model;
+    }
+
+    public Integer getYear() {
+        return year;
+    }
+
+    public void setYear(Integer year) {
+        this.year = year;
+    }
+
+    public Integer getMileage() {
+        return mileage;
+    }
+
+    public void setMileage(Integer mileage) {
+        this.mileage = mileage;
+    }
+
+    public String getFuelType() {
+        return fuelType;
+    }
+
+    public void setFuelType(String fuelType) {
+        this.fuelType = fuelType;
+    }
+
+    public String getTransmission() {
+        return transmission;
+    }
+
+    public void setTransmission(String transmission) {
+        this.transmission = transmission;
+    }
+
+    public String getBodyType() {
+        return bodyType;
+    }
+
+    public void setBodyType(String bodyType) {
+        this.bodyType = bodyType;
+    }
+
+    public String getDriveType() {
+        return driveType;
+    }
+
+    public void setDriveType(String driveType) {
+        this.driveType = driveType;
+    }
+
+    public Integer getPowerKw() {
+        return powerKw;
+    }
+
+    public void setPowerKw(Integer powerKw) {
+        this.powerKw = powerKw;
+    }
+
+    public String getColor() {
+        return color;
+    }
+
+    public void setColor(String color) {
+        this.color = color;
+    }
+
+    public Boolean getWarrantyIncluded() {
+        return warrantyIncluded;
+    }
+
+    public void setWarrantyIncluded(Boolean warrantyIncluded) {
+        this.warrantyIncluded = warrantyIncluded;
+    }
+
+    public String getPartCategory() {
+        return partCategory;
+    }
+
+    public void setPartCategory(String partCategory) {
+        this.partCategory = partCategory;
+    }
+
+    public String getPartNumber() {
+        return partNumber;
+    }
+
+    public void setPartNumber(String partNumber) {
+        this.partNumber = partNumber;
+    }
+
+    public List<String> getPartPosition() {
+        return partPosition;
+    }
+
+    public void setPartPosition(List<String> partPosition) {
+        this.partPosition = partPosition;
+    }
+
+    public String getMaterial() {
+        return material;
+    }
+
+    public void setMaterial(String material) {
+        this.material = material;
+    }
+
+    public Boolean getReconditioned() {
+        return reconditioned;
+    }
+
+    public void setReconditioned(Boolean reconditioned) {
+        this.reconditioned = reconditioned;
+    }
+
+    public String getToolCategory() {
+        return toolCategory;
+    }
+
+    public void setToolCategory(String toolCategory) {
+        this.toolCategory = toolCategory;
+    }
+
+    public String getPowerSource() {
+        return powerSource;
+    }
+
+    public void setPowerSource(String powerSource) {
+        this.powerSource = powerSource;
+    }
+
+    public Integer getVoltage() {
+        return voltage;
+    }
+
+    public void setVoltage(Integer voltage) {
+        this.voltage = voltage;
+    }
+
+    public Integer getTorqueMinNm() {
+        return torqueMinNm;
+    }
+
+    public void setTorqueMinNm(Integer torqueMinNm) {
+        this.torqueMinNm = torqueMinNm;
+    }
+
+    public Integer getTorqueMaxNm() {
+        return torqueMaxNm;
+    }
+
+    public void setTorqueMaxNm(Integer torqueMaxNm) {
+        this.torqueMaxNm = torqueMaxNm;
+    }
+
+    public String getDriveSize() {
+        return driveSize;
+    }
+
+    public void setDriveSize(String driveSize) {
+        this.driveSize = driveSize;
+    }
+
+    public Boolean getProfessionalGrade() {
+        return professionalGrade;
+    }
+
+    public void setProfessionalGrade(Boolean professionalGrade) {
+        this.professionalGrade = professionalGrade;
+    }
+
+    public Boolean getIsKit() {
+        return isKit;
+    }
+
+    public void setIsKit(Boolean isKit) {
+        this.isKit = isKit;
+    }
+
+    public String getCustomCategory() {
+        return customCategory;
+    }
+
+    public void setCustomCategory(String customCategory) {
+        this.customCategory = customCategory;
+    }
+
+    public List<String> getStyleTags() {
+        return styleTags;
+    }
+
+    public void setStyleTags(List<String> styleTags) {
+        this.styleTags = styleTags;
+    }
+
+    public String getFinish() {
+        return finish;
+    }
+
+    public void setFinish(String finish) {
+        this.finish = finish;
+    }
+
+    public Boolean getStreetLegal() {
+        return streetLegal;
+    }
+
+    public void setStreetLegal(Boolean streetLegal) {
+        this.streetLegal = streetLegal;
+    }
+
+    public String getInstallationDifficulty() {
+        return installationDifficulty;
+    }
+
+    public void setInstallationDifficulty(String installationDifficulty) {
+        this.installationDifficulty = installationDifficulty;
     }
 
     public String getInfoSection1Title() {
@@ -574,6 +1004,3 @@ public class ProductDTO {
         this.variants = variants;
     }
 }
-
-
-

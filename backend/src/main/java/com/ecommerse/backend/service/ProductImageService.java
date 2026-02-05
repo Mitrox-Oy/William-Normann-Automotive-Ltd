@@ -5,6 +5,7 @@ import com.ecommerse.backend.entities.Product;
 import com.ecommerse.backend.entities.ProductImage;
 import com.ecommerse.backend.repositories.ProductImageRepository;
 import com.ecommerse.backend.repositories.ProductRepository;
+import com.ecommerse.backend.services.UploadedImageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +34,9 @@ public class ProductImageService {
     @Autowired
     private ProductRepository productRepository;
 
+    @Autowired
+    private UploadedImageService uploadedImageService;
+
     public List<ProductImage> getProductImages(Long productId) {
         return productImageRepository.findByProductIdOrderByPositionAsc(productId);
     }
@@ -53,6 +57,7 @@ public class ProductImageService {
 
         // Save file
         String fileName = saveImageFile(file);
+        uploadedImageService.save(fileName, file);
         String imageUrl = "/api/images/" + fileName;
 
         // Calculate position
@@ -218,34 +223,37 @@ public class ProductImageService {
         }
     }
 
-    private String saveImageFile(MultipartFile file) throws IOException {
-        // Create upload directory if it doesn't exist
-        Path uploadPath = Paths.get(UPLOAD_DIR);
-        if (!Files.exists(uploadPath)) {
-            Files.createDirectories(uploadPath);
-        }
-
+    private String saveImageFile(MultipartFile file) {
         // Generate unique filename
         String originalFileName = file.getOriginalFilename();
         String extension = originalFileName.substring(originalFileName.lastIndexOf('.'));
         String fileName = UUID.randomUUID().toString() + extension;
 
-        // Save file
-        Path filePath = uploadPath.resolve(fileName);
-        Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+        // Keep a filesystem copy as a best-effort cache.
+        try {
+            Path uploadPath = Paths.get(UPLOAD_DIR);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+            Path filePath = uploadPath.resolve(fileName);
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            System.err.println("File-system cache write failed for product image " + fileName + ": " + e.getMessage());
+        }
 
         return fileName;
     }
 
     private void deleteImageFile(String imageUrl) {
+        String fileName = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
         try {
-            // Extract filename from URL
-            String fileName = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
             Path filePath = Paths.get(UPLOAD_DIR, fileName);
             Files.deleteIfExists(filePath);
         } catch (IOException e) {
             // Log error but don't throw exception
             System.err.println("Failed to delete image file: " + imageUrl);
+        } finally {
+            uploadedImageService.deleteByFileName(fileName);
         }
     }
 }

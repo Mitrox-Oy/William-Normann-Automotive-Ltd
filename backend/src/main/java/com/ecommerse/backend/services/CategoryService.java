@@ -74,6 +74,29 @@ public class CategoryService {
     }
 
     /**
+     * Get all descendant category IDs including the root category itself
+     * Used for topic-scoped product filtering
+     */
+    @Transactional(readOnly = true)
+    public List<Long> getAllDescendantCategoryIds(Long rootCategoryId) {
+        List<Long> result = new java.util.ArrayList<>();
+        result.add(rootCategoryId);
+        collectDescendantIds(rootCategoryId, result);
+        return result;
+    }
+
+    /**
+     * Recursively collect all descendant category IDs
+     */
+    private void collectDescendantIds(Long parentId, List<Long> result) {
+        List<Category> children = categoryRepository.findByParentIdAndActiveTrue(parentId);
+        for (Category child : children) {
+            result.add(child.getId());
+            collectDescendantIds(child.getId(), result);
+        }
+    }
+
+    /**
      * Get complete category tree starting from root
      */
     @Transactional(readOnly = true)

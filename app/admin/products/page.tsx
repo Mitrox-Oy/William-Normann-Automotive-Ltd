@@ -11,17 +11,30 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { RequireAuth } from "@/components/AuthProvider"
-import { getAdminProducts, deleteProduct, getAllCategories, createCategory, updateCategory, deleteCategory, type AdminProduct, type AdminCategory } from "@/lib/adminApi"
-import { formatCurrency } from "@/lib/shopApi"
-import { Plus, Search, Edit, Trash2, ChevronLeft, ChevronRight, Package, FolderTree } from "lucide-react"
+import { getAdminProducts, deleteProduct, getAllCategories, getCategoriesByTopic, getCategoryBySlug, createCategory, updateCategory, deleteCategory, type AdminProduct, type AdminCategory } from "@/lib/adminApi"
+import { formatCurrency, SHOP_TOPICS, TOPIC_INFO, type ShopTopic } from "@/lib/shopApi"
+import { Plus, Search, Edit, Trash2, ChevronLeft, ChevronRight, Package, FolderTree, Car, Wrench, Settings, Sparkles } from "lucide-react"
 import Link from "next/link"
+import type { Category } from "@/lib/shopApi"
+
+// Topic icons mapping
+const TOPIC_ICONS: Record<ShopTopic, React.ReactNode> = {
+  cars: <Car className="h-5 w-5" />,
+  parts: <Settings className="h-5 w-5" />,
+  tools: <Wrench className="h-5 w-5" />,
+  custom: <Sparkles className="h-5 w-5" />,
+}
 
 function AdminProductsContent() {
   const [activeTab, setActiveTab] = useState("products")
+  
+  // Topic state - default to 'parts'
+  const [selectedTopic, setSelectedTopic] = useState<ShopTopic>("parts")
+  const [topicRootCategoryId, setTopicRootCategoryId] = useState<number | null>(null)
   
   // Products state
   const [products, setProducts] = useState<AdminProduct[]>([])
@@ -32,10 +45,11 @@ function AdminProductsContent() {
   const [totalPages, setTotalPages] = useState(1)
   
   // Categories state
-  const [categories, setCategories] = useState<AdminCategory[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [allTopicCategories, setAllTopicCategories] = useState<Category[]>([])  // For parent dropdown
   const [categoriesLoading, setCategoriesLoading] = useState(true)
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false)
-  const [editingCategory, setEditingCategory] = useState<AdminCategory | null>(null)
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null)
   const [categoryForm, setCategoryForm] = useState({
     name: "",
     slug: "",
@@ -44,16 +58,30 @@ function AdminProductsContent() {
     parentId: "",
   })
 
+  // Load topic root category ID when topic changes
   useEffect(() => {
-    if (activeTab === "products") {
+    async function loadTopicRoot() {
+      const rootCat = await getCategoryBySlug(selectedTopic)
+      if (rootCat) {
+        setTopicRootCategoryId(rootCat.id)
+      }
+    }
+    loadTopicRoot()
+  }, [selectedTopic])
+
+  // Reload data when topic or tab changes
+  useEffect(() => {
+    if (activeTab === "products" && topicRootCategoryId) {
       loadProducts()
     } else if (activeTab === "categories") {
       loadCategories()
     }
-  }, [activeTab, page, statusFilter])
+  }, [activeTab, page, statusFilter, topicRootCategoryId, selectedTopic])
 
   // Products functions
   async function loadProducts() {
+    if (!topicRootCategoryId) return
+    
     try {
       setProductsLoading(true)
       const response = await getAdminProducts({
@@ -61,6 +89,7 @@ function AdminProductsContent() {
         limit: 20,
         status: statusFilter !== "all" ? (statusFilter as any) : undefined,
         search: searchQuery || undefined,
+        rootCategoryId: topicRootCategoryId,  // Filter by topic
       })
       setProducts(response?.products || [])
       setTotalPages(response?.totalPages || 1)
@@ -83,38 +112,44 @@ function AdminProductsContent() {
     }
   }
 
-  // Categories functions
+  // Categories functions - now topic-aware
   async function loadCategories() {
     try {
       setCategoriesLoading(true)
-      const data = await getAllCategories()
-      setCategories(data || [])
+      // Get categories filtered by selected topic
+      const data = await getCategoriesByTopic(selectedTopic)
+      // Exclude the root category itself, only show subcategories
+      const subcategories = data.filter(c => c.slug !== selectedTopic)
+      setCategories(subcategories || [])
+      setAllTopicCategories(data || [])  // Keep all for parent dropdown
     } catch (error) {
       console.error("Failed to load categories:", error)
       setCategories([])
+      setAllTopicCategories([])
     } finally {
       setCategoriesLoading(false)
     }
   }
 
-  function openCategoryDialog(category?: AdminCategory) {
+  function openCategoryDialog(category?: Category) {
     if (category) {
       setEditingCategory(category)
       setCategoryForm({
         name: category.name,
         slug: category.slug,
         description: category.description || "",
-        status: category.status === "active" ? "active" : "inactive",
-        parentId: "",
+        status: "active",
+        parentId: category.parentId?.toString() || "",
       })
     } else {
       setEditingCategory(null)
+      // Default parent to topic root when creating new category
       setCategoryForm({
         name: "",
         slug: "",
         description: "",
         status: "active",
-        parentId: "",
+        parentId: topicRootCategoryId?.toString() || "",
       })
     }
     setCategoryDialogOpen(true)
@@ -180,10 +215,13 @@ function AdminProductsContent() {
         </div>
 
         <div className="mb-8 flex items-center justify-between">
-          <SectionHeading title="Products & Categories" subtitle="Manage your product catalog and categories" />
+          <SectionHeading 
+            title={`Products & Categories — ${TOPIC_INFO[selectedTopic].label}`} 
+            subtitle={`Manage ${TOPIC_INFO[selectedTopic].label.toLowerCase()} catalog and categories`} 
+          />
           {activeTab === "products" && (
             <Button asChild>
-              <Link href="/admin/products/new">
+              <Link href={`/admin/products/new?topic=${selectedTopic}`}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add Product
               </Link>
@@ -195,6 +233,26 @@ function AdminProductsContent() {
               Add Category
             </Button>
           )}
+        </div>
+
+        {/* Topic Selector */}
+        <div className="mb-6">
+          <div className="flex flex-wrap gap-2">
+            {SHOP_TOPICS.map((topic) => (
+              <Button
+                key={topic}
+                variant={selectedTopic === topic ? "default" : "outline"}
+                onClick={() => {
+                  setSelectedTopic(topic)
+                  setPage(1)  // Reset pagination when switching topics
+                }}
+                className="flex items-center gap-2"
+              >
+                {TOPIC_ICONS[topic]}
+                {TOPIC_INFO[topic].label}
+              </Button>
+            ))}
+          </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -413,9 +471,11 @@ function AdminProductsContent() {
         <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{editingCategory ? "Edit Category" : "Create Category"}</DialogTitle>
+              <DialogTitle>{editingCategory ? "Edit Category" : `Create Category — ${TOPIC_INFO[selectedTopic].label}`}</DialogTitle>
               <DialogDescription>
-                {editingCategory ? "Update category information" : "Add a new product category"}
+                {editingCategory 
+                  ? "Update category information" 
+                  : `Add a new category under ${TOPIC_INFO[selectedTopic].label.toLowerCase()} topic`}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -431,7 +491,7 @@ function AdminProductsContent() {
                       slug: categoryForm.slug || generateSlug(e.target.value),
                     })
                   }}
-                  placeholder="e.g., Electronics"
+                  placeholder="e.g., Engine Parts"
                   required
                 />
               </div>
@@ -441,9 +501,39 @@ function AdminProductsContent() {
                   id="category-slug"
                   value={categoryForm.slug}
                   onChange={(e) => setCategoryForm({ ...categoryForm, slug: e.target.value })}
-                  placeholder="e.g., electronics"
+                  placeholder="e.g., engine-parts"
                   required
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="category-parent">Parent Category</Label>
+                <Select
+                  value={categoryForm.parentId || topicRootCategoryId?.toString() || ""}
+                  onValueChange={(value) => setCategoryForm({ ...categoryForm, parentId: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select parent category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {/* Topic root as default parent */}
+                    {topicRootCategoryId && (
+                      <SelectItem value={topicRootCategoryId.toString()}>
+                        {TOPIC_INFO[selectedTopic].label} (Root)
+                      </SelectItem>
+                    )}
+                    {/* Subcategories within this topic */}
+                    {allTopicCategories
+                      .filter(c => c.slug !== selectedTopic && c.id !== editingCategory?.id)
+                      .map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id.toString()}>
+                          └ {cat.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Categories are organized under the {TOPIC_INFO[selectedTopic].label} topic
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="category-description">Description</Label>

@@ -56,6 +56,20 @@ public class CategoryController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @Operation(summary = "Get category by slug", description = "Retrieve a specific category by slug. Available to all users.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved category"),
+            @ApiResponse(responseCode = "404", description = "Category not found")
+    })
+    @GetMapping("/slug/{slug}")
+    public ResponseEntity<CategoryDTO> getCategoryBySlug(
+            @Parameter(description = "Category slug", example = "parts", required = true) @PathVariable String slug) {
+
+        Optional<CategoryDTO> category = categoryService.getCategoryBySlug(slug);
+        return category.map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @Operation(summary = "Get root categories", description = "Retrieve top-level categories only. Available to all users.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved root categories")

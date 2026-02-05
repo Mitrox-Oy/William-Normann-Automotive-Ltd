@@ -32,8 +32,47 @@ export interface ProductCreateInput {
   imageUrl?: string // Optional
   active?: boolean // Optional, default true
   featured?: boolean // Optional, default false
+  quoteOnly?: boolean // Optional, default false (true for new CARS products)
   weight?: number // Optional, BigDecimal
   brand?: string // Optional, max 100 chars
+  productType?: string
+  condition?: string
+  oemType?: string
+  compatibilityMode?: string
+  compatibleMakes?: string[]
+  compatibleModels?: string[]
+  compatibleYearStart?: number
+  compatibleYearEnd?: number
+  vinCompatible?: boolean
+  make?: string
+  model?: string
+  year?: number
+  mileage?: number
+  fuelType?: string
+  transmission?: string
+  bodyType?: string
+  driveType?: string
+  powerKw?: number
+  color?: string
+  warrantyIncluded?: boolean
+  partCategory?: string
+  partNumber?: string
+  partPosition?: string[]
+  material?: string
+  reconditioned?: boolean
+  toolCategory?: string
+  powerSource?: string
+  voltage?: number
+  torqueMinNm?: number
+  torqueMaxNm?: number
+  driveSize?: string
+  professionalGrade?: boolean
+  isKit?: boolean
+  customCategory?: string
+  styleTags?: string[]
+  finish?: string
+  streetLegal?: boolean
+  installationDifficulty?: string
   categoryId: number // Required, Long
   // Info sections (1-7)
   infoSection1Title?: string
@@ -83,6 +122,14 @@ export interface ProductsListParams {
   search?: string
   sortBy?: 'name' | 'price' | 'stock' | 'createdAt'
   sortOrder?: 'asc' | 'desc'
+  rootCategoryId?: number  // Filter products by topic (root category)
+  topic?: string           // Topic slug (cars, parts, tools, custom)
+  condition?: string
+  productType?: string
+  make?: string
+  model?: string
+  yearMin?: number
+  yearMax?: number
 }
 
 export interface ProductsListResponse {
@@ -91,6 +138,120 @@ export interface ProductsListResponse {
   page: number
   limit: number
   totalPages: number
+}
+
+function parseBooleanFlag(value: unknown): boolean {
+  if (typeof value === 'boolean') return value
+  if (typeof value === 'number') return value === 1
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase()
+    return normalized === 'true' || normalized === '1' || normalized === 'yes'
+  }
+  return false
+}
+
+function mapBackendProductToAdminProduct(p: any): AdminProduct {
+  const stockQuantity = p.stockQuantity ?? p.stock_level ?? 0
+  const availability = stockQuantity > 0 ? 'in_stock' : 'out_of_stock'
+  const images = p.images?.map((img: any) => img.imageUrl || img.url || '') || [p.imageUrl].filter(Boolean)
+  const quoteOnly = parseBooleanFlag(p.quoteOnly ?? p.quote_only)
+
+  return {
+    id: p.id?.toString() || '',
+    name: p.name || '',
+    description: p.description || '',
+    price: typeof p.price === 'number' ? p.price : parseFloat(p.price) || 0,
+    currency: 'USD',
+    availability,
+    quoteOnly,
+    images,
+    category: p.categoryId?.toString() || p.category?.toString() || '',
+    categoryName: p.categoryName || '',
+    sku: p.sku || '',
+    stockLevel: stockQuantity,
+    status: p.active ? 'active' : 'draft',
+    slug: p.slug || p.sku?.toLowerCase().replace(/\s+/g, '-') || '',
+    partNumber: p.sku || '',
+    brand: p.brand || '',
+    manufacturer: p.brand || p.manufacturer || '',
+    productType: p.productType,
+    condition: p.condition,
+    oemType: p.oemType,
+    compatibilityMode: p.compatibilityMode,
+    compatibleMakes: p.compatibleMakes,
+    compatibleModels: p.compatibleModels,
+    compatibleYearStart: p.compatibleYearStart,
+    compatibleYearEnd: p.compatibleYearEnd,
+    vinCompatible: p.vinCompatible,
+    make: p.make,
+    model: p.model,
+    year: p.year,
+    mileage: p.mileage,
+    fuelType: p.fuelType,
+    transmission: p.transmission,
+    bodyType: p.bodyType,
+    driveType: p.driveType,
+    powerKw: p.powerKw,
+    color: p.color,
+    warrantyIncluded: p.warrantyIncluded,
+    partCategory: p.partCategory,
+    partNumber: p.partNumber,
+    partPosition: p.partPosition,
+    material: p.material,
+    reconditioned: p.reconditioned,
+    toolCategory: p.toolCategory,
+    powerSource: p.powerSource,
+    voltage: p.voltage,
+    torqueMinNm: p.torqueMinNm,
+    torqueMaxNm: p.torqueMaxNm,
+    driveSize: p.driveSize,
+    professionalGrade: p.professionalGrade,
+    isKit: p.isKit,
+    customCategory: p.customCategory,
+    styleTags: p.styleTags,
+    finish: p.finish,
+    streetLegal: p.streetLegal,
+    installationDifficulty: p.installationDifficulty,
+    weight: typeof p.weight === 'number' ? p.weight : p.weight ? parseFloat(p.weight) : undefined,
+    createdAt: p.createdDate || new Date().toISOString(),
+    updatedAt: p.updatedDate || new Date().toISOString(),
+    // Keep backend fields used by admin edit pages
+    active: p.active ?? true,
+    featured: p.featured ?? false,
+    categoryId: p.categoryId,
+    imageUrl: p.imageUrl,
+    variants: p.variants || [],
+    infoSection1Title: p.infoSection1Title,
+    infoSection1Content: p.infoSection1Content,
+    infoSection1Enabled: p.infoSection1Enabled,
+    infoSection2Title: p.infoSection2Title,
+    infoSection2Content: p.infoSection2Content,
+    infoSection2Enabled: p.infoSection2Enabled,
+    infoSection3Title: p.infoSection3Title,
+    infoSection3Content: p.infoSection3Content,
+    infoSection3Enabled: p.infoSection3Enabled,
+    infoSection4Title: p.infoSection4Title,
+    infoSection4Content: p.infoSection4Content,
+    infoSection4Enabled: p.infoSection4Enabled,
+    infoSection5Title: p.infoSection5Title,
+    infoSection5Content: p.infoSection5Content,
+    infoSection5Enabled: p.infoSection5Enabled,
+    infoSection6Title: p.infoSection6Title,
+    infoSection6Content: p.infoSection6Content,
+    infoSection6Enabled: p.infoSection6Enabled,
+    infoSection7Title: p.infoSection7Title,
+    infoSection7Content: p.infoSection7Content,
+    infoSection7Enabled: p.infoSection7Enabled,
+    infoSection8Title: p.infoSection8Title,
+    infoSection8Content: p.infoSection8Content,
+    infoSection8Enabled: p.infoSection8Enabled,
+    infoSection9Title: p.infoSection9Title,
+    infoSection9Content: p.infoSection9Content,
+    infoSection9Enabled: p.infoSection9Enabled,
+    infoSection10Title: p.infoSection10Title,
+    infoSection10Content: p.infoSection10Content,
+    infoSection10Enabled: p.infoSection10Enabled,
+  } as AdminProduct
 }
 
 /**
@@ -118,6 +279,16 @@ export async function getAdminProducts(params: ProductsListParams = {}): Promise
   if (params.sortOrder) {
     searchParams.append('sortDir', params.sortOrder)
   }
+  if (params.condition) searchParams.append('condition', params.condition)
+  if (params.productType) searchParams.append('productType', params.productType)
+  if (params.make) searchParams.append('make', params.make)
+  if (params.model) searchParams.append('model', params.model)
+  if (params.yearMin !== undefined) searchParams.append('yearMin', params.yearMin.toString())
+  if (params.yearMax !== undefined) searchParams.append('yearMax', params.yearMax.toString())
+  // Topic filtering: pass rootCategoryId to filter products by topic
+  if (params.rootCategoryId) {
+    searchParams.append('rootCategoryId', params.rootCategoryId.toString())
+  }
 
   // Backend uses /api/products, not /admin/products
   // Backend returns Spring Page format, we need to transform it
@@ -130,24 +301,7 @@ export async function getAdminProducts(params: ProductsListParams = {}): Promise
   }>(`/api/products?${searchParams.toString()}`)
 
   // Transform backend ProductDTO to AdminProduct format
-  const products: AdminProduct[] = (backendResponse.content || []).map((p: any) => ({
-    id: p.id?.toString() || '',
-    name: p.name || '',
-    description: p.description || '',
-    price: typeof p.price === 'number' ? p.price : parseFloat(p.price) || 0,
-    currency: 'USD', // Default, adjust if backend provides currency
-    availability: p.stockQuantity > 0 ? 'in_stock' : 'out_of_stock',
-    images: p.images?.map((img: any) => img.imageUrl || img.url || '') || [p.imageUrl].filter(Boolean),
-    category: p.categoryId?.toString() || '',
-    categoryName: p.categoryName || '',
-    sku: p.sku || '',
-    stockLevel: p.stockQuantity || 0,
-    status: p.active ? 'active' : 'draft',
-    slug: p.slug || p.sku?.toLowerCase().replace(/\s+/g, '-') || '',
-    partNumber: p.sku || '',
-    createdAt: p.createdDate || new Date().toISOString(),
-    updatedAt: p.updatedDate || new Date().toISOString(),
-  }))
+  const products: AdminProduct[] = (backendResponse.content || []).map(mapBackendProductToAdminProduct)
 
   // Transform Spring Page format to frontend format
   return {
@@ -183,7 +337,8 @@ export async function getAllCategories(): Promise<Category[]> {
  * Get single product (admin view)
  */
 export async function getAdminProduct(id: string): Promise<AdminProduct> {
-  return api.get<AdminProduct>(`/api/products/${id}`)
+  const product = await api.get<any>(`/api/products/${id}`)
+  return mapBackendProductToAdminProduct(product)
 }
 
 /**
@@ -336,6 +491,7 @@ export interface CategoryCreateInput {
   slug: string
   description?: string
   status: 'active' | 'inactive'
+  parentId?: string | number | null  // Parent category ID for topic hierarchy
 }
 
 /**
@@ -344,6 +500,86 @@ export interface CategoryCreateInput {
  */
 export async function getAdminCategories(): Promise<AdminCategory[]> {
   return api.get<AdminCategory[]>('/api/categories')
+}
+
+/**
+ * Get root categories (topics: cars, parts, tools, custom)
+ * Backend endpoint: GET /api/categories/root
+ */
+export async function getRootCategories(): Promise<Category[]> {
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_SHOP_API_BASE_URL || 'http://localhost:8080'
+  const response = await fetch(`${API_BASE_URL}/api/categories/root`, {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    console.warn(`Root categories endpoint returned ${response.status}, falling back to slug filter`)
+    // Fallback: get all categories and filter root ones by slug
+    const allCategories = await getAllCategories()
+    return allCategories.filter(c => ['cars', 'parts', 'tools', 'custom'].includes(c.slug))
+  }
+
+  return response.json()
+}
+
+/**
+ * Get category by slug
+ * Backend endpoint: GET /api/categories/slug/{slug}
+ */
+export async function getCategoryBySlug(slug: string): Promise<Category | null> {
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_SHOP_API_BASE_URL || 'http://localhost:8080'
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/categories/slug/${slug}`, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    })
+
+    if (!response.ok) {
+      return null
+    }
+
+    return response.json()
+  } catch (error) {
+    console.error(`Failed to fetch category by slug ${slug}:`, error)
+    return null
+  }
+}
+
+/**
+ * Get categories filtered by topic (root category)
+ * Returns all categories that are descendants of the specified root category
+ */
+export async function getCategoriesByTopic(topicSlug: string): Promise<Category[]> {
+  // First get the root category ID for the topic
+  const rootCategory = await getCategoryBySlug(topicSlug)
+  if (!rootCategory) {
+    console.warn(`Topic category not found: ${topicSlug}`)
+    return []
+  }
+
+  // Get all categories and filter to only those in this topic's subtree
+  const allCategories = await getAllCategories()
+
+  // Build a map of category IDs to their parent IDs
+  const categoryMap = new Map<number, Category>()
+  allCategories.forEach(c => categoryMap.set(c.id, c))
+
+  // Check if a category is a descendant of the root
+  function isDescendantOf(category: Category, rootId: number): boolean {
+    if (category.id === rootId) return true
+    if (!category.parentId) return false
+    const parent = categoryMap.get(category.parentId)
+    if (!parent) return false
+    return isDescendantOf(parent, rootId)
+  }
+
+  // Filter categories that belong to this topic
+  return allCategories.filter(c => isDescendantOf(c, rootCategory.id))
 }
 
 /**

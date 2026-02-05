@@ -16,9 +16,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Service class for managing products
@@ -29,11 +32,14 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final CategoryService categoryService;
 
     @Autowired
-    public ProductService(ProductRepository productRepository, CategoryRepository categoryRepository) {
+    public ProductService(ProductRepository productRepository, CategoryRepository categoryRepository,
+            CategoryService categoryService) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
+        this.categoryService = categoryService;
     }
 
     /**
@@ -49,13 +55,11 @@ public class ProductService {
      */
     @Transactional(readOnly = true)
     public Page<ProductDTO> getCatalogProducts(Pageable pageable, Long categoryId, String searchTerm) {
-        String normalizedSearch = (searchTerm != null && !searchTerm.trim().isEmpty())
-                ? searchTerm.trim().toLowerCase()
-                : null;
+        String searchPattern = toContainsPattern(searchTerm);
 
         Page<Product> page;
-        if (categoryId != null || normalizedSearch != null) {
-            page = productRepository.findActiveForCatalog(categoryId, normalizedSearch, pageable);
+        if (categoryId != null || searchPattern != null) {
+            page = productRepository.findActiveForCatalog(categoryId, searchPattern, pageable);
         } else {
             page = productRepository.findAllByActiveTrue(pageable);
         }
@@ -132,6 +136,7 @@ public class ProductService {
 
         Product product = convertToEntity(productDTO);
         product.setCategory(category);
+        product.setProductType(resolveProductType(category));
 
         Product savedProduct = productRepository.save(product);
         return convertToDTO(savedProduct);
@@ -158,6 +163,7 @@ public class ProductService {
 
         updateProductEntity(existingProduct, productDTO);
         existingProduct.setCategory(category);
+        existingProduct.setProductType(resolveProductType(category));
 
         Product savedProduct = productRepository.save(existingProduct);
         return convertToDTO(savedProduct);
@@ -216,8 +222,47 @@ public class ProductService {
         product.setImageUrl(dto.getImageUrl());
         product.setActive(dto.getActive() != null ? dto.getActive() : true);
         product.setFeatured(dto.getFeatured() != null ? dto.getFeatured() : false);
+        product.setQuoteOnly(dto.getQuoteOnly() != null ? dto.getQuoteOnly() : false);
         product.setWeight(dto.getWeight());
         product.setBrand(dto.getBrand());
+        product.setProductType(normalizeExact(dto.getProductType()));
+        product.setCondition(normalizeExact(dto.getCondition()));
+        product.setOemType(normalizeExact(dto.getOemType()));
+        product.setCompatibilityMode(normalizeExact(dto.getCompatibilityMode()));
+        product.setCompatibleMakes(listToCsv(dto.getCompatibleMakes()));
+        product.setCompatibleModels(listToCsv(dto.getCompatibleModels()));
+        product.setCompatibleYearStart(dto.getCompatibleYearStart());
+        product.setCompatibleYearEnd(dto.getCompatibleYearEnd());
+        product.setVinCompatible(dto.getVinCompatible());
+        product.setMake(dto.getMake());
+        product.setModel(dto.getModel());
+        product.setYear(dto.getYear());
+        product.setMileage(dto.getMileage());
+        product.setFuelType(normalizeExact(dto.getFuelType()));
+        product.setTransmission(normalizeExact(dto.getTransmission()));
+        product.setBodyType(normalizeExact(dto.getBodyType()));
+        product.setDriveType(normalizeExact(dto.getDriveType()));
+        product.setPowerKw(dto.getPowerKw());
+        product.setColor(dto.getColor());
+        product.setWarrantyIncluded(dto.getWarrantyIncluded());
+        product.setPartCategory(dto.getPartCategory());
+        product.setPartNumber(dto.getPartNumber());
+        product.setPartPosition(listToCsv(dto.getPartPosition()));
+        product.setMaterial(dto.getMaterial());
+        product.setReconditioned(dto.getReconditioned());
+        product.setToolCategory(dto.getToolCategory());
+        product.setPowerSource(normalizeExact(dto.getPowerSource()));
+        product.setVoltage(dto.getVoltage());
+        product.setTorqueMinNm(dto.getTorqueMinNm());
+        product.setTorqueMaxNm(dto.getTorqueMaxNm());
+        product.setDriveSize(normalizeExact(dto.getDriveSize()));
+        product.setProfessionalGrade(dto.getProfessionalGrade());
+        product.setIsKit(dto.getIsKit());
+        product.setCustomCategory(dto.getCustomCategory());
+        product.setStyleTags(listToCsv(dto.getStyleTags()));
+        product.setFinish(normalizeExact(dto.getFinish()));
+        product.setStreetLegal(dto.getStreetLegal());
+        product.setInstallationDifficulty(normalizeExact(dto.getInstallationDifficulty()));
         product.setInfoSection1Title(dto.getInfoSection1Title());
         product.setInfoSection1Content(dto.getInfoSection1Content());
         product.setInfoSection1Enabled(
@@ -270,8 +315,47 @@ public class ProductService {
         product.setImageUrl(dto.getImageUrl());
         product.setActive(dto.getActive() != null ? dto.getActive() : true);
         product.setFeatured(dto.getFeatured() != null ? dto.getFeatured() : false);
+        product.setQuoteOnly(dto.getQuoteOnly() != null ? dto.getQuoteOnly() : false);
         product.setWeight(dto.getWeight());
         product.setBrand(dto.getBrand());
+        product.setProductType(normalizeExact(dto.getProductType()));
+        product.setCondition(normalizeExact(dto.getCondition()));
+        product.setOemType(normalizeExact(dto.getOemType()));
+        product.setCompatibilityMode(normalizeExact(dto.getCompatibilityMode()));
+        product.setCompatibleMakes(listToCsv(dto.getCompatibleMakes()));
+        product.setCompatibleModels(listToCsv(dto.getCompatibleModels()));
+        product.setCompatibleYearStart(dto.getCompatibleYearStart());
+        product.setCompatibleYearEnd(dto.getCompatibleYearEnd());
+        product.setVinCompatible(dto.getVinCompatible());
+        product.setMake(dto.getMake());
+        product.setModel(dto.getModel());
+        product.setYear(dto.getYear());
+        product.setMileage(dto.getMileage());
+        product.setFuelType(normalizeExact(dto.getFuelType()));
+        product.setTransmission(normalizeExact(dto.getTransmission()));
+        product.setBodyType(normalizeExact(dto.getBodyType()));
+        product.setDriveType(normalizeExact(dto.getDriveType()));
+        product.setPowerKw(dto.getPowerKw());
+        product.setColor(dto.getColor());
+        product.setWarrantyIncluded(dto.getWarrantyIncluded());
+        product.setPartCategory(dto.getPartCategory());
+        product.setPartNumber(dto.getPartNumber());
+        product.setPartPosition(listToCsv(dto.getPartPosition()));
+        product.setMaterial(dto.getMaterial());
+        product.setReconditioned(dto.getReconditioned());
+        product.setToolCategory(dto.getToolCategory());
+        product.setPowerSource(normalizeExact(dto.getPowerSource()));
+        product.setVoltage(dto.getVoltage());
+        product.setTorqueMinNm(dto.getTorqueMinNm());
+        product.setTorqueMaxNm(dto.getTorqueMaxNm());
+        product.setDriveSize(normalizeExact(dto.getDriveSize()));
+        product.setProfessionalGrade(dto.getProfessionalGrade());
+        product.setIsKit(dto.getIsKit());
+        product.setCustomCategory(dto.getCustomCategory());
+        product.setStyleTags(listToCsv(dto.getStyleTags()));
+        product.setFinish(normalizeExact(dto.getFinish()));
+        product.setStreetLegal(dto.getStreetLegal());
+        product.setInstallationDifficulty(normalizeExact(dto.getInstallationDifficulty()));
         product.setInfoSection1Title(dto.getInfoSection1Title());
         product.setInfoSection1Content(dto.getInfoSection1Content());
         product.setInfoSection1Enabled(
@@ -325,8 +409,47 @@ public class ProductService {
         dto.setImageUrl(product.getImageUrl());
         dto.setActive(product.getActive());
         dto.setFeatured(product.getFeatured());
+        dto.setQuoteOnly(product.getQuoteOnly());
         dto.setWeight(product.getWeight());
         dto.setBrand(product.getBrand());
+        dto.setProductType(product.getProductType());
+        dto.setCondition(product.getCondition());
+        dto.setOemType(product.getOemType());
+        dto.setCompatibilityMode(product.getCompatibilityMode());
+        dto.setCompatibleMakes(csvToList(product.getCompatibleMakes()));
+        dto.setCompatibleModels(csvToList(product.getCompatibleModels()));
+        dto.setCompatibleYearStart(product.getCompatibleYearStart());
+        dto.setCompatibleYearEnd(product.getCompatibleYearEnd());
+        dto.setVinCompatible(product.getVinCompatible());
+        dto.setMake(product.getMake());
+        dto.setModel(product.getModel());
+        dto.setYear(product.getYear());
+        dto.setMileage(product.getMileage());
+        dto.setFuelType(product.getFuelType());
+        dto.setTransmission(product.getTransmission());
+        dto.setBodyType(product.getBodyType());
+        dto.setDriveType(product.getDriveType());
+        dto.setPowerKw(product.getPowerKw());
+        dto.setColor(product.getColor());
+        dto.setWarrantyIncluded(product.getWarrantyIncluded());
+        dto.setPartCategory(product.getPartCategory());
+        dto.setPartNumber(product.getPartNumber());
+        dto.setPartPosition(csvToList(product.getPartPosition()));
+        dto.setMaterial(product.getMaterial());
+        dto.setReconditioned(product.getReconditioned());
+        dto.setToolCategory(product.getToolCategory());
+        dto.setPowerSource(product.getPowerSource());
+        dto.setVoltage(product.getVoltage());
+        dto.setTorqueMinNm(product.getTorqueMinNm());
+        dto.setTorqueMaxNm(product.getTorqueMaxNm());
+        dto.setDriveSize(product.getDriveSize());
+        dto.setProfessionalGrade(product.getProfessionalGrade());
+        dto.setIsKit(product.getIsKit());
+        dto.setCustomCategory(product.getCustomCategory());
+        dto.setStyleTags(csvToList(product.getStyleTags()));
+        dto.setFinish(product.getFinish());
+        dto.setStreetLegal(product.getStreetLegal());
+        dto.setInstallationDifficulty(product.getInstallationDifficulty());
         dto.setInfoSection1Title(product.getInfoSection1Title());
         dto.setInfoSection1Content(product.getInfoSection1Content());
         dto.setInfoSection1Enabled(product.getInfoSection1Enabled());
@@ -396,9 +519,123 @@ public class ProductService {
     public Page<ProductDTO> advancedSearch(String query, Long categoryId, BigDecimal minPrice,
             BigDecimal maxPrice, String brand, Boolean inStockOnly,
             Boolean featuredOnly, Pageable pageable) {
-        return productRepository.findWithFilters(query, categoryId, minPrice, maxPrice,
-                brand, inStockOnly, featuredOnly, pageable)
+        ProductFilterCriteria criteria = new ProductFilterCriteria();
+        criteria.setMinPrice(minPrice);
+        criteria.setMaxPrice(maxPrice);
+        criteria.setBrand(brand);
+        criteria.setInStockOnly(inStockOnly);
+        return searchWithFilters(null, query, categoryId, criteria, featuredOnly, pageable);
+    }
+
+    /**
+     * Get products scoped to a root category (topic) and all its descendants
+     */
+    @Transactional(readOnly = true)
+    public Page<ProductDTO> getProductsByRootCategory(Long rootCategoryId, String searchTerm, Pageable pageable) {
+        List<Long> categoryIds = categoryService.getAllDescendantCategoryIds(rootCategoryId);
+        String searchPattern = toContainsPattern(searchTerm);
+        return productRepository.findByCategoryIdsAndSearch(categoryIds, searchPattern, pageable)
                 .map(this::convertToDTO);
+    }
+
+    /**
+     * Advanced search scoped to a root category (topic) and all its descendants
+     */
+    @Transactional(readOnly = true)
+    public Page<ProductDTO> advancedSearchByRootCategory(Long rootCategoryId, String query, Long categoryId,
+            BigDecimal minPrice, BigDecimal maxPrice, String brand, Boolean inStockOnly,
+            Boolean featuredOnly, Pageable pageable) {
+        ProductFilterCriteria criteria = new ProductFilterCriteria();
+        criteria.setMinPrice(minPrice);
+        criteria.setMaxPrice(maxPrice);
+        criteria.setBrand(brand);
+        criteria.setInStockOnly(inStockOnly);
+        return searchWithFilters(rootCategoryId, query, categoryId, criteria, featuredOnly, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ProductDTO> searchWithFilters(Long rootCategoryId, String query, Long categoryId,
+            ProductFilterCriteria criteria, Boolean featuredOnly, Pageable pageable) {
+        ProductFilterCriteria resolved = criteria != null ? criteria : new ProductFilterCriteria();
+
+        String queryPattern = toContainsPattern(query);
+        String brandPattern = toContainsPattern(resolved.getBrand());
+        String conditionValue = normalizeExact(resolved.getCondition());
+        String productTypeValue = normalizeExact(resolved.getProductType());
+
+        String makePattern = toContainsPattern(resolved.getMake());
+        String modelPattern = toContainsPattern(resolved.getModel());
+
+        String fuelTypeValue = normalizeExact(resolved.getFuelType());
+        String transmissionValue = normalizeExact(resolved.getTransmission());
+        String bodyTypeValue = normalizeExact(resolved.getBodyType());
+        String driveTypeValue = normalizeExact(resolved.getDriveType());
+
+        String compatibilityModeValue = normalizeExact(resolved.getCompatibilityMode());
+        String compatibleMakePattern = toCsvTokenPattern(resolved.getCompatibleMake());
+        String compatibleModelPattern = toCsvTokenPattern(resolved.getCompatibleModel());
+        String oemTypeValue = normalizeExact(resolved.getOemType());
+
+        String partCategoryPattern = toContainsPattern(resolved.getPartCategory());
+        String partNumberPattern = toContainsPattern(resolved.getPartNumber());
+        String partPositionPattern = toCsvTokenPattern(firstValue(resolved.getPartPosition()));
+
+        String toolCategoryPattern = toContainsPattern(resolved.getToolCategory());
+        String powerSourceValue = normalizeExact(resolved.getPowerSource());
+        String driveSizeValue = normalizeExact(resolved.getDriveSize());
+
+        String styleTagPattern = toCsvTokenPattern(firstValue(resolved.getStyleTags()));
+        String finishValue = normalizeExact(resolved.getFinish());
+        String installationDifficultyValue = normalizeExact(resolved.getInstallationDifficulty());
+        String customCategoryPattern = toContainsPattern(resolved.getCustomCategory());
+
+        boolean inStockOnly = Boolean.TRUE.equals(resolved.getInStockOnly());
+        boolean featuredOnlyResolved = Boolean.TRUE.equals(featuredOnly);
+
+        Page<Product> products;
+        if (rootCategoryId != null) {
+            List<Long> categoryIds = categoryService.getAllDescendantCategoryIds(rootCategoryId);
+            products = productRepository.findWithFiltersAndRootScope(categoryIds, queryPattern, categoryId,
+                    resolved.getMinPrice(), resolved.getMaxPrice(), brandPattern,
+                    conditionValue, productTypeValue, makePattern, modelPattern,
+                    resolved.getYearMin(), resolved.getYearMax(), resolved.getMileageMin(), resolved.getMileageMax(),
+                    fuelTypeValue, transmissionValue, bodyTypeValue, driveTypeValue,
+                    resolved.getPowerMin(), resolved.getPowerMax(), resolved.getWarrantyIncluded(),
+                    compatibilityModeValue, compatibleMakePattern, compatibleModelPattern, resolved.getCompatibleYear(),
+                    oemTypeValue, partCategoryPattern, partNumberPattern, partPositionPattern,
+                    toolCategoryPattern, powerSourceValue, resolved.getVoltageMin(), resolved.getVoltageMax(),
+                    resolved.getTorqueMin(), resolved.getTorqueMax(), driveSizeValue,
+                    resolved.getProfessionalGrade(), resolved.getIsKit(),
+                    styleTagPattern, finishValue, resolved.getStreetLegal(),
+                    installationDifficultyValue, customCategoryPattern,
+                    inStockOnly, featuredOnlyResolved, pageable);
+        } else {
+            products = productRepository.findWithFilters(queryPattern, categoryId,
+                    resolved.getMinPrice(), resolved.getMaxPrice(), brandPattern,
+                    conditionValue, productTypeValue, makePattern, modelPattern,
+                    resolved.getYearMin(), resolved.getYearMax(), resolved.getMileageMin(), resolved.getMileageMax(),
+                    fuelTypeValue, transmissionValue, bodyTypeValue, driveTypeValue,
+                    resolved.getPowerMin(), resolved.getPowerMax(), resolved.getWarrantyIncluded(),
+                    compatibilityModeValue, compatibleMakePattern, compatibleModelPattern, resolved.getCompatibleYear(),
+                    oemTypeValue, partCategoryPattern, partNumberPattern, partPositionPattern,
+                    toolCategoryPattern, powerSourceValue, resolved.getVoltageMin(), resolved.getVoltageMax(),
+                    resolved.getTorqueMin(), resolved.getTorqueMax(), driveSizeValue,
+                    resolved.getProfessionalGrade(), resolved.getIsKit(),
+                    styleTagPattern, finishValue, resolved.getStreetLegal(),
+                    installationDifficultyValue, customCategoryPattern,
+                    inStockOnly, featuredOnlyResolved, pageable);
+        }
+
+        return products.map(this::convertToDTO);
+    }
+
+    /**
+     * Get brands scoped to a root category (topic) and all its descendants
+     */
+    @Transactional(readOnly = true)
+    public List<String> getBrandsByRootCategory(Long rootCategoryId) {
+        List<Long> categoryIds = categoryService.getAllDescendantCategoryIds(rootCategoryId);
+        return productRepository.findBrandsByCategoryIds(categoryIds);
     }
 
     /**
@@ -449,5 +686,79 @@ public class ProductService {
 
             updateStock(productId, newQuantity);
         }
+    }
+
+    private String toContainsPattern(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        return "%" + value.trim().toLowerCase() + "%";
+    }
+
+    private String toCsvTokenPattern(String value) {
+        String normalized = normalizeExact(value);
+        if (normalized == null) {
+            return null;
+        }
+        return "%," + normalized + ",%";
+    }
+
+    private String normalizeExact(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        return value.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private List<String> csvToList(String csv) {
+        if (csv == null || csv.trim().isEmpty()) {
+            return List.of();
+        }
+        return Arrays.stream(csv.split(","))
+                .map(String::trim)
+                .filter(value -> !value.isEmpty())
+                .collect(Collectors.toList());
+    }
+
+    private String listToCsv(List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return null;
+        }
+        List<String> normalized = values.stream()
+                .map(value -> value == null ? "" : value.trim())
+                .filter(value -> !value.isEmpty())
+                .collect(Collectors.toList());
+        return normalized.isEmpty() ? null : String.join(",", normalized);
+    }
+
+    private String firstValue(List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return null;
+        }
+        return values.get(0);
+    }
+
+    private String resolveProductType(Category category) {
+        if (category == null) {
+            return null;
+        }
+
+        Category current = category;
+        while (current.getParent() != null) {
+            current = current.getParent();
+        }
+
+        String slug = current.getSlug();
+        if (slug == null) {
+            return null;
+        }
+
+        return switch (slug.toLowerCase(Locale.ROOT)) {
+            case "cars" -> "car";
+            case "parts" -> "part";
+            case "tools" -> "tool";
+            case "custom" -> "custom";
+            default -> null;
+        };
     }
 }

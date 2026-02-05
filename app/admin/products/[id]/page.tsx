@@ -29,6 +29,19 @@ import {
 } from "@/lib/adminApi"
 import type { ProductVariant } from "@/lib/shopApi"
 import { getImageUrl } from "@/lib/utils"
+import {
+    BODY_TYPES,
+    COMPATIBILITY_MODES,
+    DRIVE_TYPES,
+    FUEL_TYPES,
+    INSTALLATION_DIFFICULTIES,
+    OEM_TYPES,
+    POWER_SOURCES,
+    PRODUCT_CONDITIONS,
+    TRANSMISSION_TYPES,
+    resolveProductTypeFromCategory,
+    type ProductType,
+} from "@/lib/filterAttributes"
 
 function showToast(message: string, type: 'success' | 'error' | 'warning' = 'success') {
     console.log(`[${type.toUpperCase()}] ${message}`)
@@ -74,6 +87,49 @@ export default function EditProductPage() {
     const [brand, setBrand] = useState("")
     const [active, setActive] = useState(true)
     const [featured, setFeatured] = useState(false)
+    const [quoteOnly, setQuoteOnly] = useState(false)
+    const [productType, setProductType] = useState<ProductType | undefined>(undefined)
+    const [condition, setCondition] = useState<string>("all")
+    const [oemType, setOemType] = useState<string>("all")
+    const [compatibilityMode, setCompatibilityMode] = useState<string>("universal")
+    const [compatibleMakesInput, setCompatibleMakesInput] = useState("")
+    const [compatibleModelsInput, setCompatibleModelsInput] = useState("")
+    const [compatibleYearStart, setCompatibleYearStart] = useState("")
+    const [compatibleYearEnd, setCompatibleYearEnd] = useState("")
+    const [vinCompatible, setVinCompatible] = useState(false)
+
+    const [carMake, setCarMake] = useState("")
+    const [carModel, setCarModel] = useState("")
+    const [carYear, setCarYear] = useState("")
+    const [mileage, setMileage] = useState("")
+    const [fuelType, setFuelType] = useState("all")
+    const [transmission, setTransmission] = useState("all")
+    const [bodyType, setBodyType] = useState("all")
+    const [driveType, setDriveType] = useState("all")
+    const [powerKw, setPowerKw] = useState("")
+    const [vehicleColor, setVehicleColor] = useState("")
+    const [warrantyIncluded, setWarrantyIncluded] = useState(false)
+
+    const [partCategory, setPartCategory] = useState("")
+    const [partNumber, setPartNumber] = useState("")
+    const [partPositionInput, setPartPositionInput] = useState("")
+    const [partMaterial, setPartMaterial] = useState("")
+    const [reconditioned, setReconditioned] = useState(false)
+
+    const [toolCategory, setToolCategory] = useState("")
+    const [powerSource, setPowerSource] = useState("all")
+    const [voltage, setVoltage] = useState("")
+    const [torqueMinNm, setTorqueMinNm] = useState("")
+    const [torqueMaxNm, setTorqueMaxNm] = useState("")
+    const [driveSize, setDriveSize] = useState("")
+    const [professionalGrade, setProfessionalGrade] = useState(false)
+    const [isKit, setIsKit] = useState(false)
+
+    const [customCategory, setCustomCategory] = useState("")
+    const [styleTagsInput, setStyleTagsInput] = useState("")
+    const [customFinish, setCustomFinish] = useState("")
+    const [streetLegal, setStreetLegal] = useState(true)
+    const [installationDifficulty, setInstallationDifficulty] = useState("all")
 
     // Info sections (1-7)
     const [infoSections, setInfoSections] = useState<InfoSection[]>([
@@ -116,6 +172,13 @@ export default function EditProductPage() {
         loadCategories()
     }, [])
 
+    useEffect(() => {
+        const resolvedType = resolveProductTypeFromCategory(categoryId, categories)
+        if (resolvedType) {
+            setProductType(resolvedType)
+        }
+    }, [categoryId, categories])
+
     async function loadCategories() {
         try {
             setLoadingCategories(true)
@@ -147,6 +210,44 @@ export default function EditProductPage() {
                 setBrand(product.brand || "")
                 setActive(product.active ?? true)
                 setFeatured(product.featured ?? false)
+                setQuoteOnly(product.quoteOnly ?? false)
+                setCondition((product as any).condition || "all")
+                setOemType((product as any).oemType || "all")
+                setCompatibilityMode((product as any).compatibilityMode || "universal")
+                setCompatibleMakesInput(((product as any).compatibleMakes || []).join(", "))
+                setCompatibleModelsInput(((product as any).compatibleModels || []).join(", "))
+                setCompatibleYearStart((product as any).compatibleYearStart?.toString() || "")
+                setCompatibleYearEnd((product as any).compatibleYearEnd?.toString() || "")
+                setVinCompatible(Boolean((product as any).vinCompatible))
+                setCarMake((product as any).make || "")
+                setCarModel((product as any).model || "")
+                setCarYear((product as any).year?.toString() || "")
+                setMileage((product as any).mileage?.toString() || "")
+                setFuelType((product as any).fuelType || "all")
+                setTransmission((product as any).transmission || "all")
+                setBodyType((product as any).bodyType || "all")
+                setDriveType((product as any).driveType || "all")
+                setPowerKw((product as any).powerKw?.toString() || "")
+                setVehicleColor((product as any).color || "")
+                setWarrantyIncluded(Boolean((product as any).warrantyIncluded))
+                setPartCategory((product as any).partCategory || "")
+                setPartNumber((product as any).partNumber || "")
+                setPartPositionInput(((product as any).partPosition || []).join(", "))
+                setPartMaterial((product as any).material || "")
+                setReconditioned(Boolean((product as any).reconditioned))
+                setToolCategory((product as any).toolCategory || "")
+                setPowerSource((product as any).powerSource || "all")
+                setVoltage((product as any).voltage?.toString() || "")
+                setTorqueMinNm((product as any).torqueMinNm?.toString() || "")
+                setTorqueMaxNm((product as any).torqueMaxNm?.toString() || "")
+                setDriveSize((product as any).driveSize || "")
+                setProfessionalGrade(Boolean((product as any).professionalGrade))
+                setIsKit(Boolean((product as any).isKit))
+                setCustomCategory((product as any).customCategory || "")
+                setStyleTagsInput(((product as any).styleTags || []).join(", "))
+                setCustomFinish((product as any).finish || "")
+                setStreetLegal((product as any).streetLegal ?? true)
+                setInstallationDifficulty((product as any).installationDifficulty || "all")
 
                 // Populate existing images
                 if (product.images && product.images.length > 0) {
@@ -371,10 +472,41 @@ export default function EditProductPage() {
         }
     }
 
+    function csvToArray(value: string): string[] {
+        return value
+            .split(",")
+            .map((entry) => entry.trim())
+            .filter(Boolean)
+    }
+
+    function validatePublishAttributes(): string | null {
+        if (!active) return null
+
+        if (!condition || condition === "all") {
+            return "Condition is required for active products"
+        }
+
+        if (productType === "car" && (!carMake || !carModel || !carYear)) {
+            return "Cars require make, model and year when active"
+        }
+
+        if (compatibilityMode === "vehicle_specific" && (!compatibleMakesInput || !compatibleModelsInput || !compatibleYearStart || !compatibleYearEnd)) {
+            return "Vehicle-specific compatibility requires make/model and year range when active"
+        }
+
+        return null
+    }
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
 
         if (!product) return
+
+        const publishValidationError = validatePublishAttributes()
+        if (publishValidationError) {
+            showToast(publishValidationError, "error")
+            return
+        }
 
         try {
             setSaving(true)
@@ -389,6 +521,45 @@ export default function EditProductPage() {
                 brand: brand || undefined,
                 active,
                 featured,
+                quoteOnly,
+                productType,
+                condition: condition !== "all" ? condition : undefined,
+                oemType: oemType !== "all" ? oemType : undefined,
+                compatibilityMode: compatibilityMode || undefined,
+                compatibleMakes: compatibleMakesInput ? csvToArray(compatibleMakesInput) : undefined,
+                compatibleModels: compatibleModelsInput ? csvToArray(compatibleModelsInput) : undefined,
+                compatibleYearStart: compatibleYearStart ? parseInt(compatibleYearStart, 10) : undefined,
+                compatibleYearEnd: compatibleYearEnd ? parseInt(compatibleYearEnd, 10) : undefined,
+                vinCompatible: compatibilityMode === "vehicle_specific" ? vinCompatible : undefined,
+                make: carMake || undefined,
+                model: carModel || undefined,
+                year: carYear ? parseInt(carYear, 10) : undefined,
+                mileage: mileage ? parseInt(mileage, 10) : undefined,
+                fuelType: fuelType !== "all" ? fuelType : undefined,
+                transmission: transmission !== "all" ? transmission : undefined,
+                bodyType: bodyType !== "all" ? bodyType : undefined,
+                driveType: driveType !== "all" ? driveType : undefined,
+                powerKw: powerKw ? parseInt(powerKw, 10) : undefined,
+                color: vehicleColor || undefined,
+                warrantyIncluded: productType === "car" ? warrantyIncluded : undefined,
+                partCategory: partCategory || undefined,
+                partNumber: partNumber || undefined,
+                partPosition: partPositionInput ? csvToArray(partPositionInput) : undefined,
+                material: partMaterial || undefined,
+                reconditioned: reconditioned || undefined,
+                toolCategory: toolCategory || undefined,
+                powerSource: powerSource !== "all" ? powerSource : undefined,
+                voltage: voltage ? parseInt(voltage, 10) : undefined,
+                torqueMinNm: torqueMinNm ? parseInt(torqueMinNm, 10) : undefined,
+                torqueMaxNm: torqueMaxNm ? parseInt(torqueMaxNm, 10) : undefined,
+                driveSize: driveSize || undefined,
+                professionalGrade: professionalGrade || undefined,
+                isKit: isKit || undefined,
+                customCategory: customCategory || undefined,
+                styleTags: styleTagsInput ? csvToArray(styleTagsInput) : undefined,
+                finish: customFinish || undefined,
+                streetLegal: productType === "custom" ? streetLegal : undefined,
+                installationDifficulty: installationDifficulty !== "all" ? installationDifficulty : undefined,
             }
 
             if (categoryId) {
@@ -516,6 +687,11 @@ export default function EditProductPage() {
                         <TabsList>
                             <TabsTrigger value="basic">Basic Info</TabsTrigger>
                             <TabsTrigger value="details">Details</TabsTrigger>
+                            <TabsTrigger value="vehicle">Vehicle</TabsTrigger>
+                            {productType === "car" && <TabsTrigger value="car-fields">Car Fields</TabsTrigger>}
+                            {productType === "part" && <TabsTrigger value="parts">Parts</TabsTrigger>}
+                            {productType === "tool" && <TabsTrigger value="tools">Tools</TabsTrigger>}
+                            {productType === "custom" && <TabsTrigger value="custom">Custom</TabsTrigger>}
                             <TabsTrigger value="images">Images</TabsTrigger>
                             <TabsTrigger value="variants">Variants</TabsTrigger>
                             <TabsTrigger value="info-sections">Info Sections</TabsTrigger>
@@ -583,6 +759,29 @@ export default function EditProductPage() {
                                                     ) : (
                                                         <SelectItem value="none" disabled>No categories available</SelectItem>
                                                     )}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        <div>
+                                            <Label>Product Type</Label>
+                                            <Input value={productType || ""} readOnly />
+                                        </div>
+                                        <div>
+                                            <Label>Condition *</Label>
+                                            <Select value={condition} onValueChange={setCondition}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select condition" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">Select condition</SelectItem>
+                                                    {PRODUCT_CONDITIONS.map((value) => (
+                                                        <SelectItem key={value} value={value}>
+                                                            {value.replace("_", " ")}
+                                                        </SelectItem>
+                                                    ))}
                                                 </SelectContent>
                                             </Select>
                                         </div>
@@ -671,6 +870,20 @@ export default function EditProductPage() {
                                             onCheckedChange={setFeatured}
                                         />
                                     </div>
+
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <Label htmlFor="quoteOnly">Request Quote Only</Label>
+                                            <p className="text-sm text-muted-foreground">
+                                                Show &quot;Request Quote&quot; instead of &quot;Add to Cart&quot;
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            id="quoteOnly"
+                                            checked={quoteOnly}
+                                            onCheckedChange={setQuoteOnly}
+                                        />
+                                    </div>
                                 </CardContent>
                             </Card>
                         </TabsContent>
@@ -683,19 +896,268 @@ export default function EditProductPage() {
                                     <CardDescription>Optional product information</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    <div>
-                                        <Label htmlFor="brand">Brand</Label>
-                                        <Input
-                                            id="brand"
-                                            value={brand}
-                                            onChange={(e) => setBrand(e.target.value)}
-                                            placeholder="e.g., Bosch"
-                                            maxLength={100}
-                                        />
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        <div>
+                                            <Label htmlFor="brand">Brand</Label>
+                                            <Input
+                                                id="brand"
+                                                value={brand}
+                                                onChange={(e) => setBrand(e.target.value)}
+                                                placeholder="e.g., Bosch"
+                                                maxLength={100}
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label>OEM Type</Label>
+                                            <Select value={oemType} onValueChange={setOemType}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select OEM type" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">Not specified</SelectItem>
+                                                    {OEM_TYPES.map((value) => (
+                                                        <SelectItem key={value} value={value}>
+                                                            {value.toUpperCase()}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
                                     </div>
                                 </CardContent>
                             </Card>
                         </TabsContent>
+
+                        <TabsContent value="vehicle" className="space-y-6">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Vehicle Compatibility</CardTitle>
+                                    <CardDescription>Use for parts/custom (optional for tools)</CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label>Compatibility Mode</Label>
+                                        <Select value={compatibilityMode} onValueChange={setCompatibilityMode}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select mode" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {COMPATIBILITY_MODES.map((value) => (
+                                                    <SelectItem key={value} value={value}>
+                                                        {value.replace("_", " ")}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {compatibilityMode === "vehicle_specific" && (
+                                        <>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <Label>Compatible Makes (comma-separated)</Label>
+                                                    <Input
+                                                        value={compatibleMakesInput}
+                                                        onChange={(e) => setCompatibleMakesInput(e.target.value)}
+                                                        placeholder="BMW, Mercedes-Benz"
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>Compatible Models (comma-separated)</Label>
+                                                    <Input
+                                                        value={compatibleModelsInput}
+                                                        onChange={(e) => setCompatibleModelsInput(e.target.value)}
+                                                        placeholder="330i, C250"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-4">
+                                                <div className="space-y-2">
+                                                    <Label>Year Start</Label>
+                                                    <Input
+                                                        type="number"
+                                                        value={compatibleYearStart}
+                                                        onChange={(e) => setCompatibleYearStart(e.target.value)}
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>Year End</Label>
+                                                    <Input
+                                                        type="number"
+                                                        value={compatibleYearEnd}
+                                                        onChange={(e) => setCompatibleYearEnd(e.target.value)}
+                                                    />
+                                                </div>
+                                                <div className="flex items-center space-x-2 pt-8">
+                                                    <Switch checked={vinCompatible} onCheckedChange={setVinCompatible} />
+                                                    <Label>VIN Compatible</Label>
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+
+                        {productType === "car" && (
+                            <TabsContent value="car-fields" className="space-y-6">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Car Attributes</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <div className="grid grid-cols-3 gap-4">
+                                            <Input value={carMake} onChange={(e) => setCarMake(e.target.value)} placeholder="Make" />
+                                            <Input value={carModel} onChange={(e) => setCarModel(e.target.value)} placeholder="Model" />
+                                            <Input type="number" value={carYear} onChange={(e) => setCarYear(e.target.value)} placeholder="Year" />
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-4">
+                                            <Input type="number" value={mileage} onChange={(e) => setMileage(e.target.value)} placeholder="Mileage" />
+                                            <Input type="number" value={powerKw} onChange={(e) => setPowerKw(e.target.value)} placeholder="Power (kW)" />
+                                            <Input value={vehicleColor} onChange={(e) => setVehicleColor(e.target.value)} placeholder="Color" />
+                                        </div>
+                                        <div className="grid grid-cols-4 gap-4">
+                                            <Select value={fuelType} onValueChange={setFuelType}>
+                                                <SelectTrigger><SelectValue placeholder="Fuel" /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">Fuel</SelectItem>
+                                                    {FUEL_TYPES.map((value) => (
+                                                        <SelectItem key={value} value={value}>{value.replace("_", " ")}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <Select value={transmission} onValueChange={setTransmission}>
+                                                <SelectTrigger><SelectValue placeholder="Transmission" /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">Transmission</SelectItem>
+                                                    {TRANSMISSION_TYPES.map((value) => (
+                                                        <SelectItem key={value} value={value}>{value.replace("_", " ")}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <Select value={bodyType} onValueChange={setBodyType}>
+                                                <SelectTrigger><SelectValue placeholder="Body" /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">Body</SelectItem>
+                                                    {BODY_TYPES.map((value) => (
+                                                        <SelectItem key={value} value={value}>{value.replace("_", " ")}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <Select value={driveType} onValueChange={setDriveType}>
+                                                <SelectTrigger><SelectValue placeholder="Drive" /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">Drive</SelectItem>
+                                                    {DRIVE_TYPES.map((value) => (
+                                                        <SelectItem key={value} value={value}>{value.replace("_", " ")}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <Switch checked={warrantyIncluded} onCheckedChange={setWarrantyIncluded} />
+                                            <Label>Warranty Included</Label>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+                        )}
+
+                        {productType === "part" && (
+                            <TabsContent value="parts" className="space-y-6">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Part Attributes</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <Input value={partCategory} onChange={(e) => setPartCategory(e.target.value)} placeholder="Part category" />
+                                            <Input value={partNumber} onChange={(e) => setPartNumber(e.target.value)} placeholder="Part number" />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <Input value={partPositionInput} onChange={(e) => setPartPositionInput(e.target.value)} placeholder="Position tags (front,left)" />
+                                            <Input value={partMaterial} onChange={(e) => setPartMaterial(e.target.value)} placeholder="Material" />
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <Switch checked={reconditioned} onCheckedChange={setReconditioned} />
+                                            <Label>Reconditioned</Label>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+                        )}
+
+                        {productType === "tool" && (
+                            <TabsContent value="tools" className="space-y-6">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Tool Attributes</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <div className="grid grid-cols-3 gap-4">
+                                            <Input value={toolCategory} onChange={(e) => setToolCategory(e.target.value)} placeholder="Tool category" />
+                                            <Input type="number" value={voltage} onChange={(e) => setVoltage(e.target.value)} placeholder="Voltage" />
+                                            <Input value={driveSize} onChange={(e) => setDriveSize(e.target.value)} placeholder='Drive size (e.g. 1/2")' />
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-4">
+                                            <Input type="number" value={torqueMinNm} onChange={(e) => setTorqueMinNm(e.target.value)} placeholder="Torque min (Nm)" />
+                                            <Input type="number" value={torqueMaxNm} onChange={(e) => setTorqueMaxNm(e.target.value)} placeholder="Torque max (Nm)" />
+                                            <Select value={powerSource} onValueChange={setPowerSource}>
+                                                <SelectTrigger><SelectValue placeholder="Power source" /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">Power source</SelectItem>
+                                                    {POWER_SOURCES.map((value) => (
+                                                        <SelectItem key={value} value={value}>{value.replace("_", " ")}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="flex items-center gap-6">
+                                            <div className="flex items-center space-x-2">
+                                                <Switch checked={professionalGrade} onCheckedChange={setProfessionalGrade} />
+                                                <Label>Professional Grade</Label>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                <Switch checked={isKit} onCheckedChange={setIsKit} />
+                                                <Label>Kit</Label>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+                        )}
+
+                        {productType === "custom" && (
+                            <TabsContent value="custom" className="space-y-6">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Custom Attributes</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <Input value={customCategory} onChange={(e) => setCustomCategory(e.target.value)} placeholder="Custom category" />
+                                            <Input value={styleTagsInput} onChange={(e) => setStyleTagsInput(e.target.value)} placeholder="Style tags (sport,luxury)" />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <Input value={customFinish} onChange={(e) => setCustomFinish(e.target.value)} placeholder="Finish" />
+                                            <Select value={installationDifficulty} onValueChange={setInstallationDifficulty}>
+                                                <SelectTrigger><SelectValue placeholder="Installation difficulty" /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">Not specified</SelectItem>
+                                                    {INSTALLATION_DIFFICULTIES.map((value) => (
+                                                        <SelectItem key={value} value={value}>{value.replace("_", " ")}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <Switch checked={streetLegal} onCheckedChange={setStreetLegal} />
+                                            <Label>Street Legal</Label>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+                        )}
 
                         {/* Images Tab */}
                         <TabsContent value="images" className="space-y-6">

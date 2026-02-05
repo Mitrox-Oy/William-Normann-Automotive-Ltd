@@ -107,4 +107,16 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
      */
     @Query("SELECT COUNT(p) FROM Product p WHERE p.category.id = :categoryId AND p.active = true")
     Long countProductsInCategory(@Param("categoryId") Long categoryId);
+
+    /**
+     * Find category by slug (case-insensitive, for topic routing)
+     */
+    Optional<Category> findBySlugIgnoreCaseAndActiveTrue(String slug);
+
+    /**
+     * Find all descendants of a category (recursive via service layer)
+     * This query gets immediate children; service layer handles recursion
+     */
+    @Query("SELECT c FROM Category c WHERE c.parent.id = :parentId AND c.active = true ORDER BY c.sortOrder")
+    List<Category> findActiveDescendants(@Param("parentId") Long parentId);
 }

@@ -25,6 +25,18 @@ const CartContext = createContext<CartContextType | undefined>(undefined)
 
 const CART_STORAGE_KEY = 'wna-cart'
 
+function isQuoteOnlyProduct(product: Product | null | undefined): boolean {
+  if (!product) return false
+  const flag = (product as any).quoteOnly ?? (product as any).quote_only
+  if (typeof flag === 'boolean') return flag
+  if (typeof flag === 'number') return flag === 1
+  if (typeof flag === 'string') {
+    const normalized = flag.trim().toLowerCase()
+    return normalized === 'true' || normalized === '1' || normalized === 'yes'
+  }
+  return false
+}
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
   const [isOpen, setIsOpen] = useState(false)
@@ -36,7 +48,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (storedCart) {
       try {
         const parsed = JSON.parse(storedCart)
-        setItems(parsed)
+        const sanitized = Array.isArray(parsed)
+          ? parsed.filter((item) => !isQuoteOnlyProduct(item?.product))
+          : []
+        setItems(sanitized)
       } catch (error) {
         console.error('Failed to parse cart from localStorage:', error)
       }
@@ -52,6 +67,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [items, isHydrated])
 
   const addItem = (product: Product, quantity: number = 1) => {
+    if (isQuoteOnlyProduct(product)) {
+      console.warn('Blocked add-to-cart for quote-only product:', product?.id)
+      return
+    }
+
     setItems((prevItems) => {
       const existingItem = prevItems.find((item) => item.product.id === product.id)
       

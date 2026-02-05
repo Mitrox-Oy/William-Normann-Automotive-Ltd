@@ -60,6 +60,9 @@ public class Product {
     @Column(nullable = false)
     private Boolean featured = false;
 
+    @Column(name = "quote_only", nullable = false)
+    private Boolean quoteOnly = false;
+
     @DecimalMin(value = "0.0", message = "Weight cannot be negative")
     @Digits(integer = 5, fraction = 2, message = "Weight must have at most 5 integer digits and 2 decimal places")
     @Column(precision = 7, scale = 2)
@@ -68,6 +71,120 @@ public class Product {
     @Size(max = 100, message = "Brand name cannot exceed 100 characters")
     @Column(length = 100)
     private String brand;
+
+    @Column(name = "product_type", length = 20)
+    private String productType;
+
+    @Column(name = "product_condition", length = 20)
+    private String condition;
+
+    @Column(name = "oem_type", length = 20)
+    private String oemType;
+
+    @Column(name = "compatibility_mode", length = 20)
+    private String compatibilityMode;
+
+    @Column(name = "compatible_makes", length = 2000)
+    private String compatibleMakes;
+
+    @Column(name = "compatible_models", length = 2000)
+    private String compatibleModels;
+
+    @Column(name = "compatible_year_start")
+    private Integer compatibleYearStart;
+
+    @Column(name = "compatible_year_end")
+    private Integer compatibleYearEnd;
+
+    @Column(name = "vin_compatible")
+    private Boolean vinCompatible;
+
+    @Column(length = 100)
+    private String make;
+
+    @Column(length = 100)
+    private String model;
+
+    @Column(name = "car_year")
+    private Integer year;
+
+    @Column
+    private Integer mileage;
+
+    @Column(name = "fuel_type", length = 40)
+    private String fuelType;
+
+    @Column(name = "transmission", length = 40)
+    private String transmission;
+
+    @Column(name = "body_type", length = 40)
+    private String bodyType;
+
+    @Column(name = "drive_type", length = 40)
+    private String driveType;
+
+    @Column(name = "power_kw")
+    private Integer powerKw;
+
+    @Column(length = 100)
+    private String color;
+
+    @Column(name = "warranty_included")
+    private Boolean warrantyIncluded;
+
+    @Column(name = "part_category", length = 120)
+    private String partCategory;
+
+    @Column(name = "part_number", length = 120)
+    private String partNumber;
+
+    @Column(name = "part_position", length = 500)
+    private String partPosition;
+
+    @Column(length = 120)
+    private String material;
+
+    @Column
+    private Boolean reconditioned;
+
+    @Column(name = "tool_category", length = 120)
+    private String toolCategory;
+
+    @Column(name = "power_source", length = 40)
+    private String powerSource;
+
+    @Column
+    private Integer voltage;
+
+    @Column(name = "torque_min_nm")
+    private Integer torqueMinNm;
+
+    @Column(name = "torque_max_nm")
+    private Integer torqueMaxNm;
+
+    @Column(name = "drive_size", length = 40)
+    private String driveSize;
+
+    @Column(name = "professional_grade")
+    private Boolean professionalGrade;
+
+    @Column(name = "is_kit")
+    private Boolean isKit;
+
+    @Column(name = "custom_category", length = 120)
+    private String customCategory;
+
+    @Column(name = "style_tags", length = 1000)
+    private String styleTags;
+
+    @Column(name = "finish", length = 80)
+    private String finish;
+
+    @Column(name = "street_legal")
+    private Boolean streetLegal;
+
+    @Column(name = "installation_difficulty", length = 40)
+    private String installationDifficulty;
 
     @Column(name = "info_section1_title", length = 120)
     private String infoSection1Title;
@@ -300,6 +417,14 @@ public class Product {
         this.featured = featured;
     }
 
+    public Boolean getQuoteOnly() {
+        return quoteOnly;
+    }
+
+    public void setQuoteOnly(Boolean quoteOnly) {
+        this.quoteOnly = quoteOnly;
+    }
+
     public BigDecimal getWeight() {
         return weight;
     }
@@ -314,6 +439,310 @@ public class Product {
 
     public void setBrand(String brand) {
         this.brand = brand;
+    }
+
+    public String getProductType() {
+        return productType;
+    }
+
+    public void setProductType(String productType) {
+        this.productType = productType;
+    }
+
+    public String getCondition() {
+        return condition;
+    }
+
+    public void setCondition(String condition) {
+        this.condition = condition;
+    }
+
+    public String getOemType() {
+        return oemType;
+    }
+
+    public void setOemType(String oemType) {
+        this.oemType = oemType;
+    }
+
+    public String getCompatibilityMode() {
+        return compatibilityMode;
+    }
+
+    public void setCompatibilityMode(String compatibilityMode) {
+        this.compatibilityMode = compatibilityMode;
+    }
+
+    public String getCompatibleMakes() {
+        return compatibleMakes;
+    }
+
+    public void setCompatibleMakes(String compatibleMakes) {
+        this.compatibleMakes = compatibleMakes;
+    }
+
+    public String getCompatibleModels() {
+        return compatibleModels;
+    }
+
+    public void setCompatibleModels(String compatibleModels) {
+        this.compatibleModels = compatibleModels;
+    }
+
+    public Integer getCompatibleYearStart() {
+        return compatibleYearStart;
+    }
+
+    public void setCompatibleYearStart(Integer compatibleYearStart) {
+        this.compatibleYearStart = compatibleYearStart;
+    }
+
+    public Integer getCompatibleYearEnd() {
+        return compatibleYearEnd;
+    }
+
+    public void setCompatibleYearEnd(Integer compatibleYearEnd) {
+        this.compatibleYearEnd = compatibleYearEnd;
+    }
+
+    public Boolean getVinCompatible() {
+        return vinCompatible;
+    }
+
+    public void setVinCompatible(Boolean vinCompatible) {
+        this.vinCompatible = vinCompatible;
+    }
+
+    public String getMake() {
+        return make;
+    }
+
+    public void setMake(String make) {
+        this.make = make;
+    }
+
+    public String getModel() {
+        return model;
+    }
+
+    public void setModel(String model) {
+        this.model = model;
+    }
+
+    public Integer getYear() {
+        return year;
+    }
+
+    public void setYear(Integer year) {
+        this.year = year;
+    }
+
+    public Integer getMileage() {
+        return mileage;
+    }
+
+    public void setMileage(Integer mileage) {
+        this.mileage = mileage;
+    }
+
+    public String getFuelType() {
+        return fuelType;
+    }
+
+    public void setFuelType(String fuelType) {
+        this.fuelType = fuelType;
+    }
+
+    public String getTransmission() {
+        return transmission;
+    }
+
+    public void setTransmission(String transmission) {
+        this.transmission = transmission;
+    }
+
+    public String getBodyType() {
+        return bodyType;
+    }
+
+    public void setBodyType(String bodyType) {
+        this.bodyType = bodyType;
+    }
+
+    public String getDriveType() {
+        return driveType;
+    }
+
+    public void setDriveType(String driveType) {
+        this.driveType = driveType;
+    }
+
+    public Integer getPowerKw() {
+        return powerKw;
+    }
+
+    public void setPowerKw(Integer powerKw) {
+        this.powerKw = powerKw;
+    }
+
+    public String getColor() {
+        return color;
+    }
+
+    public void setColor(String color) {
+        this.color = color;
+    }
+
+    public Boolean getWarrantyIncluded() {
+        return warrantyIncluded;
+    }
+
+    public void setWarrantyIncluded(Boolean warrantyIncluded) {
+        this.warrantyIncluded = warrantyIncluded;
+    }
+
+    public String getPartCategory() {
+        return partCategory;
+    }
+
+    public void setPartCategory(String partCategory) {
+        this.partCategory = partCategory;
+    }
+
+    public String getPartNumber() {
+        return partNumber;
+    }
+
+    public void setPartNumber(String partNumber) {
+        this.partNumber = partNumber;
+    }
+
+    public String getPartPosition() {
+        return partPosition;
+    }
+
+    public void setPartPosition(String partPosition) {
+        this.partPosition = partPosition;
+    }
+
+    public String getMaterial() {
+        return material;
+    }
+
+    public void setMaterial(String material) {
+        this.material = material;
+    }
+
+    public Boolean getReconditioned() {
+        return reconditioned;
+    }
+
+    public void setReconditioned(Boolean reconditioned) {
+        this.reconditioned = reconditioned;
+    }
+
+    public String getToolCategory() {
+        return toolCategory;
+    }
+
+    public void setToolCategory(String toolCategory) {
+        this.toolCategory = toolCategory;
+    }
+
+    public String getPowerSource() {
+        return powerSource;
+    }
+
+    public void setPowerSource(String powerSource) {
+        this.powerSource = powerSource;
+    }
+
+    public Integer getVoltage() {
+        return voltage;
+    }
+
+    public void setVoltage(Integer voltage) {
+        this.voltage = voltage;
+    }
+
+    public Integer getTorqueMinNm() {
+        return torqueMinNm;
+    }
+
+    public void setTorqueMinNm(Integer torqueMinNm) {
+        this.torqueMinNm = torqueMinNm;
+    }
+
+    public Integer getTorqueMaxNm() {
+        return torqueMaxNm;
+    }
+
+    public void setTorqueMaxNm(Integer torqueMaxNm) {
+        this.torqueMaxNm = torqueMaxNm;
+    }
+
+    public String getDriveSize() {
+        return driveSize;
+    }
+
+    public void setDriveSize(String driveSize) {
+        this.driveSize = driveSize;
+    }
+
+    public Boolean getProfessionalGrade() {
+        return professionalGrade;
+    }
+
+    public void setProfessionalGrade(Boolean professionalGrade) {
+        this.professionalGrade = professionalGrade;
+    }
+
+    public Boolean getIsKit() {
+        return isKit;
+    }
+
+    public void setIsKit(Boolean isKit) {
+        this.isKit = isKit;
+    }
+
+    public String getCustomCategory() {
+        return customCategory;
+    }
+
+    public void setCustomCategory(String customCategory) {
+        this.customCategory = customCategory;
+    }
+
+    public String getStyleTags() {
+        return styleTags;
+    }
+
+    public void setStyleTags(String styleTags) {
+        this.styleTags = styleTags;
+    }
+
+    public String getFinish() {
+        return finish;
+    }
+
+    public void setFinish(String finish) {
+        this.finish = finish;
+    }
+
+    public Boolean getStreetLegal() {
+        return streetLegal;
+    }
+
+    public void setStreetLegal(Boolean streetLegal) {
+        this.streetLegal = streetLegal;
+    }
+
+    public String getInstallationDifficulty() {
+        return installationDifficulty;
+    }
+
+    public void setInstallationDifficulty(String installationDifficulty) {
+        this.installationDifficulty = installationDifficulty;
     }
 
     public String getInfoSection1Title() {

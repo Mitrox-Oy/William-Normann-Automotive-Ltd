@@ -21,6 +21,12 @@ import java.util.UUID;
 @Service
 public class FileService {
 
+    private final UploadedImageService uploadedImageService;
+
+    public FileService(UploadedImageService uploadedImageService) {
+        this.uploadedImageService = uploadedImageService;
+    }
+
     @Value("${app.upload.dir:uploads}")
     private String uploadDir;
 
@@ -42,15 +48,20 @@ public class FileService {
     public String uploadProductImage(MultipartFile file) throws IOException {
         validateFile(file);
 
-        // Create upload directory if it doesn't exist
-        Path uploadPath = createUploadDirectory("products");
-
         // Generate unique filename
         String fileName = generateFileName(file);
-        Path filePath = uploadPath.resolve(fileName);
 
-        // Save file
-        Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+        // Persist to DB first so image survives dyno/container restarts.
+        uploadedImageService.save(fileName, file);
+
+        // Keep filesystem copy as a best-effort cache for direct static serving.
+        try {
+            Path uploadPath = createUploadDirectory("products");
+            Path filePath = uploadPath.resolve(fileName);
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            System.err.println("File-system cache write failed for product image " + fileName + ": " + e.getMessage());
+        }
 
         // Return relative path
         return "products/" + fileName;
@@ -79,11 +90,14 @@ public class FileService {
      * Delete a file
      */
     public boolean deleteFile(String relativePath) {
+        String fileName = uploadedImageService.extractFileName(relativePath);
         try {
             Path filePath = Paths.get(uploadDir, relativePath);
             return Files.deleteIfExists(filePath);
         } catch (IOException e) {
             return false;
+        } finally {
+            uploadedImageService.deleteByFileName(fileName);
         }
     }
 

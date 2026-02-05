@@ -5,6 +5,7 @@ import com.ecommerse.backend.dto.ProductVariantPositionRequest;
 import com.ecommerse.backend.dto.ProductVariantRequest;
 import com.ecommerse.backend.dto.ProductVariantResponse;
 import com.ecommerse.backend.services.FileService;
+import com.ecommerse.backend.services.ProductFilterCriteria;
 import com.ecommerse.backend.services.ProductService;
 import com.ecommerse.backend.services.ProductVariantService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,6 +29,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,7 +54,7 @@ public class ProductController {
         this.fileService = fileService;
     }
 
-    @Operation(summary = "Get all products", description = "Retrieve a paginated list of all active products. Available to all users.")
+    @Operation(summary = "Get all products", description = "Retrieve a paginated list of all active products. Available to all users. Use rootCategoryId to scope to a topic (cars, parts, tools, custom).")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved products"),
             @ApiResponse(responseCode = "400", description = "Invalid pagination parameters")
@@ -64,11 +66,49 @@ public class ProductController {
             @Parameter(description = "Sort field", example = "createdDate") @RequestParam(defaultValue = "createdDate") String sortBy,
             @Parameter(description = "Sort direction", example = "desc") @RequestParam(defaultValue = "desc") String sortDir,
             @Parameter(description = "Category filter", example = "4") @RequestParam(name = "category", required = false) Long categoryId,
+            @Parameter(description = "Root category ID for topic scoping (e.g., parts, cars)", example = "1") @RequestParam(required = false) Long rootCategoryId,
             @Parameter(description = "Search keyword") @RequestParam(name = "search", required = false) String search,
             @Parameter(description = "Minimum price") @RequestParam(required = false) BigDecimal minPrice,
             @Parameter(description = "Maximum price") @RequestParam(required = false) BigDecimal maxPrice,
             @Parameter(description = "Brand filter") @RequestParam(required = false) String brand,
-            @Parameter(description = "In stock only") @RequestParam(defaultValue = "false") Boolean inStockOnly) {
+            @Parameter(description = "In stock only") @RequestParam(defaultValue = "false") Boolean inStockOnly,
+            @Parameter(description = "Condition filter") @RequestParam(required = false) String condition,
+            @Parameter(description = "Product type filter") @RequestParam(required = false) String productType,
+            @Parameter(description = "Car make") @RequestParam(required = false) String make,
+            @Parameter(description = "Car model") @RequestParam(required = false) String model,
+            @Parameter(description = "Year min") @RequestParam(required = false) Integer yearMin,
+            @Parameter(description = "Year max") @RequestParam(required = false) Integer yearMax,
+            @Parameter(description = "Mileage min") @RequestParam(required = false) Integer mileageMin,
+            @Parameter(description = "Mileage max") @RequestParam(required = false) Integer mileageMax,
+            @Parameter(description = "Fuel type") @RequestParam(required = false) String fuelType,
+            @Parameter(description = "Transmission") @RequestParam(required = false) String transmission,
+            @Parameter(description = "Body type") @RequestParam(required = false) String bodyType,
+            @Parameter(description = "Drive type") @RequestParam(required = false) String driveType,
+            @Parameter(description = "Power min") @RequestParam(required = false) Integer powerMin,
+            @Parameter(description = "Power max") @RequestParam(required = false) Integer powerMax,
+            @Parameter(description = "Warranty included") @RequestParam(required = false) Boolean warrantyIncluded,
+            @Parameter(description = "Compatibility mode") @RequestParam(required = false) String compatibilityMode,
+            @Parameter(description = "Compatible make") @RequestParam(required = false) String compatibleMake,
+            @Parameter(description = "Compatible model") @RequestParam(required = false) String compatibleModel,
+            @Parameter(description = "Compatible year") @RequestParam(required = false) Integer compatibleYear,
+            @Parameter(description = "OEM type") @RequestParam(required = false) String oemType,
+            @Parameter(description = "Part category") @RequestParam(required = false) String partCategory,
+            @Parameter(description = "Part number") @RequestParam(required = false) String partNumber,
+            @Parameter(description = "Part position list (comma-separated)") @RequestParam(required = false) String partPosition,
+            @Parameter(description = "Tool category") @RequestParam(required = false) String toolCategory,
+            @Parameter(description = "Power source") @RequestParam(required = false) String powerSource,
+            @Parameter(description = "Voltage min") @RequestParam(required = false) Integer voltageMin,
+            @Parameter(description = "Voltage max") @RequestParam(required = false) Integer voltageMax,
+            @Parameter(description = "Torque min") @RequestParam(required = false) Integer torqueMin,
+            @Parameter(description = "Torque max") @RequestParam(required = false) Integer torqueMax,
+            @Parameter(description = "Drive size") @RequestParam(required = false) String driveSize,
+            @Parameter(description = "Professional grade") @RequestParam(required = false) Boolean professionalGrade,
+            @Parameter(description = "Is kit") @RequestParam(required = false) Boolean isKit,
+            @Parameter(description = "Style tags list (comma-separated)") @RequestParam(required = false) String styleTags,
+            @Parameter(description = "Finish") @RequestParam(required = false) String finish,
+            @Parameter(description = "Street legal") @RequestParam(required = false) Boolean streetLegal,
+            @Parameter(description = "Installation difficulty") @RequestParam(required = false) String installationDifficulty,
+            @Parameter(description = "Custom category") @RequestParam(required = false) String customCategory) {
 
         int pageNumber = Math.max(page, 0);
         int pageSize = Math.min(Math.max(size, 1), 50);
@@ -83,12 +123,63 @@ public class ProductController {
         Pageable pageable = PageRequest.of(pageNumber, pageSize, sort);
 
         String normalizedSearch = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
+        ProductFilterCriteria criteria = new ProductFilterCriteria();
+        criteria.setMinPrice(minPrice);
+        criteria.setMaxPrice(maxPrice);
+        criteria.setBrand(brand);
+        criteria.setInStockOnly(inStockOnly);
+        criteria.setCondition(condition);
+        criteria.setProductType(productType);
+        criteria.setMake(make);
+        criteria.setModel(model);
+        criteria.setYearMin(yearMin);
+        criteria.setYearMax(yearMax);
+        criteria.setMileageMin(mileageMin);
+        criteria.setMileageMax(mileageMax);
+        criteria.setFuelType(fuelType);
+        criteria.setTransmission(transmission);
+        criteria.setBodyType(bodyType);
+        criteria.setDriveType(driveType);
+        criteria.setPowerMin(powerMin);
+        criteria.setPowerMax(powerMax);
+        criteria.setWarrantyIncluded(warrantyIncluded);
+        criteria.setCompatibilityMode(compatibilityMode);
+        criteria.setCompatibleMake(compatibleMake);
+        criteria.setCompatibleModel(compatibleModel);
+        criteria.setCompatibleYear(compatibleYear);
+        criteria.setOemType(oemType);
+        criteria.setPartCategory(partCategory);
+        criteria.setPartNumber(partNumber);
+        criteria.setPartPosition(splitCsv(partPosition));
+        criteria.setToolCategory(toolCategory);
+        criteria.setPowerSource(powerSource);
+        criteria.setVoltageMin(voltageMin);
+        criteria.setVoltageMax(voltageMax);
+        criteria.setTorqueMin(torqueMin);
+        criteria.setTorqueMax(torqueMax);
+        criteria.setDriveSize(driveSize);
+        criteria.setProfessionalGrade(professionalGrade);
+        criteria.setIsKit(isKit);
+        criteria.setStyleTags(splitCsv(styleTags));
+        criteria.setFinish(finish);
+        criteria.setStreetLegal(streetLegal);
+        criteria.setInstallationDifficulty(installationDifficulty);
+        criteria.setCustomCategory(customCategory);
 
-        boolean useAdvanced = minPrice != null || maxPrice != null || (brand != null && !brand.trim().isEmpty())
-                || Boolean.TRUE.equals(inStockOnly);
+        // If rootCategoryId is provided, scope products to that topic's subtree
+        if (rootCategoryId != null) {
+            boolean useAdvanced = categoryId != null || criteria.hasAdvancedFilters();
+            if (useAdvanced) {
+                Page<ProductDTO> products = productService.searchWithFilters(rootCategoryId, normalizedSearch, categoryId, criteria, false, pageable);
+                return ResponseEntity.ok(products);
+            }
+            Page<ProductDTO> products = productService.getProductsByRootCategory(rootCategoryId, normalizedSearch, pageable);
+            return ResponseEntity.ok(products);
+        }
+
+        boolean useAdvanced = criteria.hasAdvancedFilters();
         if (useAdvanced) {
-            Page<ProductDTO> products = productService.advancedSearch(normalizedSearch, categoryId, minPrice, maxPrice,
-                    brand, inStockOnly, false, pageable);
+            Page<ProductDTO> products = productService.searchWithFilters(null, normalizedSearch, categoryId, criteria, false, pageable);
             return ResponseEntity.ok(products);
         }
 
@@ -96,12 +187,16 @@ public class ProductController {
         return ResponseEntity.ok(products);
     }
 
-    @Operation(summary = "Get all brands", description = "Retrieve a list of distinct product brands. Available to all users.")
+    @Operation(summary = "Get all brands", description = "Retrieve a list of distinct product brands. Available to all users. Use rootCategoryId to scope to a topic.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved brands")
     })
     @GetMapping("/brands")
-    public ResponseEntity<List<String>> getAllBrands() {
+    public ResponseEntity<List<String>> getAllBrands(
+            @Parameter(description = "Root category ID for topic scoping", example = "1") @RequestParam(required = false) Long rootCategoryId) {
+        if (rootCategoryId != null) {
+            return ResponseEntity.ok(productService.getBrandsByRootCategory(rootCategoryId));
+        }
         return ResponseEntity.ok(productService.getAllBrands());
     }
 
@@ -322,6 +417,7 @@ public class ProductController {
             @Parameter(description = "Minimum price") @RequestParam(required = false) BigDecimal minPrice,
             @Parameter(description = "Maximum price") @RequestParam(required = false) BigDecimal maxPrice,
             @Parameter(description = "Brand filter") @RequestParam(required = false) String brand,
+            @Parameter(description = "Condition filter") @RequestParam(required = false) String condition,
             @Parameter(description = "In stock only") @RequestParam(defaultValue = "false") Boolean inStockOnly,
             @Parameter(description = "Featured products only") @RequestParam(defaultValue = "false") Boolean featuredOnly,
             @Parameter(description = "Page number (0-based)", example = "0") @RequestParam(defaultValue = "0") int page,
@@ -331,9 +427,14 @@ public class ProductController {
 
         Sort.Direction direction = sortDir.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+        ProductFilterCriteria criteria = new ProductFilterCriteria();
+        criteria.setMinPrice(minPrice);
+        criteria.setMaxPrice(maxPrice);
+        criteria.setBrand(brand);
+        criteria.setCondition(condition);
+        criteria.setInStockOnly(inStockOnly);
 
-        Page<ProductDTO> products = productService.advancedSearch(query, categoryId, minPrice, maxPrice,
-                brand, inStockOnly, featuredOnly, pageable);
+        Page<ProductDTO> products = productService.searchWithFilters(null, query, categoryId, criteria, featuredOnly, pageable);
         return ResponseEntity.ok(products);
     }
 
@@ -567,5 +668,15 @@ public class ProductController {
     private boolean isNotFound(IllegalArgumentException exception) {
         String message = exception.getMessage();
         return message != null && message.toLowerCase().contains("not found");
+    }
+
+    private List<String> splitCsv(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return List.of();
+        }
+        return Arrays.stream(value.split(","))
+                .map(String::trim)
+                .filter(token -> !token.isEmpty())
+                .toList();
     }
 }

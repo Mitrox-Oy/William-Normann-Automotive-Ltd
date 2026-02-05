@@ -111,7 +111,8 @@ public class CartService {
                 logger.info("Releasing expired reservation for cartItem {} in cart {}", expired.getId(), cart.getId());
                 removeCartItemInternal(expired, true);
             } catch (Exception ex) {
-                logger.warn("Unable to remove expired reservation for cartItem {}: {}", expired.getId(), ex.getMessage());
+                logger.warn("Unable to remove expired reservation for cartItem {}: {}", expired.getId(),
+                        ex.getMessage());
             }
         }
     }
@@ -158,6 +159,12 @@ public class CartService {
 
         if (!product.isAvailable()) {
             throw new IllegalArgumentException("Product is not available: " + product.getName());
+        }
+
+        // Prevent adding quote-only products to cart
+        if (Boolean.TRUE.equals(product.getQuoteOnly())) {
+            throw new IllegalArgumentException(
+                    "This product is only available by request quote and cannot be added to cart");
         }
 
         // Get or create cart
@@ -555,5 +562,3 @@ public class CartService {
         return releasedCount;
     }
 }
-
-
