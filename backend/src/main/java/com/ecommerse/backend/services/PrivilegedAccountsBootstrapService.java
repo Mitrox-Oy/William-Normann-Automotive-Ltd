@@ -10,6 +10,8 @@ import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -39,17 +41,27 @@ public class PrivilegedAccountsBootstrapService implements CommandLineRunner {
     @Value("${privileged.bootstrap.admin.password:}")
     private String adminPassword;
 
+    // Allows setting secrets via base64 to avoid shell/quoting issues on some platforms.
+    @Value("${privileged.bootstrap.admin.password.b64:}")
+    private String adminPasswordB64;
+
     @Value("${privileged.bootstrap.owner1.email:}")
     private String owner1Email;
 
     @Value("${privileged.bootstrap.owner1.password:}")
     private String owner1Password;
 
+    @Value("${privileged.bootstrap.owner1.password.b64:}")
+    private String owner1PasswordB64;
+
     @Value("${privileged.bootstrap.owner2.email:}")
     private String owner2Email;
 
     @Value("${privileged.bootstrap.owner2.password:}")
     private String owner2Password;
+
+    @Value("${privileged.bootstrap.owner2.password.b64:}")
+    private String owner2PasswordB64;
 
     public PrivilegedAccountsBootstrapService(
             UserRepository userRepository,
@@ -67,10 +79,14 @@ public class PrivilegedAccountsBootstrapService implements CommandLineRunner {
             return;
         }
 
+        String resolvedAdminPassword = resolvePassword(adminPassword, adminPasswordB64, "admin");
+        String resolvedOwner1Password = resolvePassword(owner1Password, owner1PasswordB64, "owner1");
+        String resolvedOwner2Password = resolvePassword(owner2Password, owner2PasswordB64, "owner2");
+
         List<BootstrapUser> users = new ArrayList<>();
-        users.add(new BootstrapUser(adminEmail, adminPassword, User.Role.ADMIN, "Privileged admin bootstrap"));
-        users.add(new BootstrapUser(owner1Email, owner1Password, User.Role.OWNER, "Privileged owner bootstrap"));
-        users.add(new BootstrapUser(owner2Email, owner2Password, User.Role.OWNER, "Privileged owner bootstrap"));
+        users.add(new BootstrapUser(adminEmail, resolvedAdminPassword, User.Role.ADMIN, "Privileged admin bootstrap"));
+        users.add(new BootstrapUser(owner1Email, resolvedOwner1Password, User.Role.OWNER, "Privileged owner bootstrap"));
+        users.add(new BootstrapUser(owner2Email, resolvedOwner2Password, User.Role.OWNER, "Privileged owner bootstrap"));
 
         // Fail-fast if enabled but incomplete.
         for (BootstrapUser u : users) {
@@ -90,6 +106,19 @@ public class PrivilegedAccountsBootstrapService implements CommandLineRunner {
         }
 
         System.out.println("=== PRIVILEGED ACCOUNTS BOOTSTRAP COMPLETE ===");
+    }
+
+    private static String resolvePassword(String plain, String b64, String label) {
+        if (b64 != null && !b64.isBlank()) {
+            try {
+                byte[] decoded = Base64.getDecoder().decode(b64.trim());
+                return new String(decoded, StandardCharsets.UTF_8);
+            } catch (IllegalArgumentException e) {
+                throw new IllegalStateException("Privileged bootstrap enabled but " + label
+                        + " base64 password is invalid.", e);
+            }
+        }
+        return plain;
     }
 
     private void upsertWhitelist(String email, String notes) {
@@ -139,4 +168,3 @@ public class PrivilegedAccountsBootstrapService implements CommandLineRunner {
         }
     }
 }
-
