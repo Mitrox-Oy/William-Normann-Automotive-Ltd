@@ -98,13 +98,6 @@ public class AuthController {
         }
     }
 
-    @PostMapping(value = "/debug/test-json", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> testJson(@RequestBody String rawBody) {
-        System.out.println("=== RAW BODY TEST ===");
-        System.out.println("Raw body: " + rawBody);
-        return ResponseEntity.ok("Raw body received: " + rawBody);
-    }
-
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterRequest signUpRequest) {
         try {

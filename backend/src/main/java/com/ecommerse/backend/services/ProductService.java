@@ -203,8 +203,12 @@ public class ProductService {
     }
 
     private void validateProductData(ProductDTO productDTO) {
-        if (productDTO.getPrice() == null || productDTO.getPrice().compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("Product price must be at least 0");
+        if (productDTO.getPrice() == null) {
+            throw new IllegalArgumentException("Product price is required");
+        }
+
+        if (productDTO.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Product price must be greater than 0");
         }
 
         if (productDTO.getStockQuantity() != null && productDTO.getStockQuantity() < 0) {

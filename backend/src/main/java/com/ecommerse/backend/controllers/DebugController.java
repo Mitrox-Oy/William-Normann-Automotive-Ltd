@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.context.annotation.Profile;
 
 import java.util.HashMap;
 import java.util.List;
@@ -18,6 +19,7 @@ import java.util.Optional;
  * DEBUG CONTROLLER - REMOVE IN PRODUCTION
  * This controller helps debug authentication issues
  */
+@Profile("dev")
 @RestController
 @RequestMapping("/api/debug")
 public class DebugController {

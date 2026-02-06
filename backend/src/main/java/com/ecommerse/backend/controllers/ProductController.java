@@ -310,18 +310,6 @@ public class ProductController {
     public ResponseEntity<ProductDTO> createProduct(
             @Parameter(description = "Product data", required = true) @Valid @RequestBody ProductDTO productDTO) {
 
-        // DEBUG: Log authentication details
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        System.out.println("=== CREATE PRODUCT DEBUG ===");
-        System.out.println("Authentication: " + (auth != null ? "present" : "null"));
-        if (auth != null) {
-            System.out.println("Principal: " + auth.getPrincipal());
-            System.out.println("Name: " + auth.getName());
-            System.out.println("Authorities: " + auth.getAuthorities());
-            System.out.println("Is Authenticated: " + auth.isAuthenticated());
-        }
-        System.out.println("==========================");
-
         ProductDTO createdProduct = productService.createProduct(productDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdProduct);
     }

@@ -81,6 +81,11 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         boolean existsBySku(String sku);
 
         /**
+         * Find products whose SKU starts with a prefix (used by admin load-test tools).
+         */
+        List<Product> findBySkuStartingWith(String prefix);
+
+        /**
          * Search products by name or description
          */
         @Query("SELECT p FROM Product p WHERE p.active = true AND " +

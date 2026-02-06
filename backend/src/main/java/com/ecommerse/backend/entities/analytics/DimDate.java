@@ -19,19 +19,21 @@ public class DimDate {
     @Column(name = "date_key")
     private Integer dateKey;
 
-    @Column(nullable = false)
+    // Avoid reserved keywords across databases (e.g. H2).
+    @Column(name = "calendar_date", nullable = false)
     private LocalDate date;
 
-    @Column(nullable = false)
+    @Column(name = "year_num", nullable = false)
     private Integer year;
 
-    @Column(nullable = false)
+    @Column(name = "quarter_num", nullable = false)
     private Integer quarter;
 
     @Column(name = "quarter_name", length = 20)
     private String quarterName;
 
-    @Column(nullable = false)
+    // H2 treats MONTH as a reserved keyword; use an explicit safe column name.
+    @Column(name = "month_num", nullable = false)
     private Integer month;
 
     @Column(name = "month_name", length = 20)

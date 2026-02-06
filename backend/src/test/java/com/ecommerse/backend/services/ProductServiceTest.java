@@ -300,7 +300,8 @@ class ProductServiceTest {
         List<Product> products = Arrays.asList(testProduct);
         Page<Product> productPage = new PageImpl<>(products, pageable, 1);
 
-        when(productRepository.findActiveForCatalog(null, searchTerm.toLowerCase(), pageable))
+        // ProductService wraps search terms to a LIKE pattern: %term%
+        when(productRepository.findActiveForCatalog(null, "%iphone%", pageable))
                 .thenReturn(productPage);
 
         // When
@@ -310,7 +311,7 @@ class ProductServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().get(0).getName()).contains("iPhone");
-        verify(productRepository).findActiveForCatalog(null, searchTerm.toLowerCase(), pageable);
+        verify(productRepository).findActiveForCatalog(null, "%iphone%", pageable);
     }
 
     @Test

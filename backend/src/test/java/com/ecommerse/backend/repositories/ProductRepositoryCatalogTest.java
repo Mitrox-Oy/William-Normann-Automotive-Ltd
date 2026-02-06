@@ -64,7 +64,8 @@ class ProductRepositoryCatalogTest {
         productRepository.saveAndFlush(product);
 
         Pageable pageable = PageRequest.of(0, 12);
-        Page<Product> page = productRepository.findActiveForCatalog(savedCategory.getId(), "iphone", pageable);
+        // Repository expects a LIKE pattern (service layer wraps terms with %...%).
+        Page<Product> page = productRepository.findActiveForCatalog(savedCategory.getId(), "%iphone%", pageable);
 
         assertThat(page.getTotalElements()).isEqualTo(1);
         Product result = page.getContent().get(0);

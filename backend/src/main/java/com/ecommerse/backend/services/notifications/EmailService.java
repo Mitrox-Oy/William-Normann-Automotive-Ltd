@@ -11,6 +11,7 @@ import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -39,15 +40,17 @@ public class EmailService {
     @Value("${spring.mail.from:noreply@example.com}")
     private String mailFrom;
 
-    private final JavaMailSender mailSender;
+    private final ObjectProvider<JavaMailSender> mailSenderProvider;
     private final TemplateEngine templateEngine;
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
 
     @Autowired
-    public EmailService(JavaMailSender mailSender, TemplateEngine templateEngine,
-                       OrderRepository orderRepository, UserRepository userRepository) {
-        this.mailSender = mailSender;
+    public EmailService(ObjectProvider<JavaMailSender> mailSenderProvider,
+                        TemplateEngine templateEngine,
+                        OrderRepository orderRepository,
+                        UserRepository userRepository) {
+        this.mailSenderProvider = mailSenderProvider;
         this.templateEngine = templateEngine;
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
@@ -202,6 +205,12 @@ public class EmailService {
         }
 
         try {
+            JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
+            if (mailSender == null) {
+                logger.warn("Email is configured but JavaMailSender is not available; skipping send.");
+                return;
+            }
+
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 

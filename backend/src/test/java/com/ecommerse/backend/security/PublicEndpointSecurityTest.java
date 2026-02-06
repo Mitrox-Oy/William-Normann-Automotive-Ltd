@@ -3,6 +3,7 @@ package com.ecommerse.backend.security;
 import com.ecommerse.backend.controllers.CategoryController;
 import com.ecommerse.backend.controllers.ProductController;
 import com.ecommerse.backend.services.CategoryService;
+import com.ecommerse.backend.services.FileService;
 import com.ecommerse.backend.services.ProductService;
 import com.ecommerse.backend.services.UserDetailsServiceImpl;
 import jakarta.persistence.EntityManagerFactory;
@@ -59,6 +60,9 @@ class PublicEndpointSecurityTest {
 
     @MockBean
     private com.ecommerse.backend.services.ProductVariantService productVariantService;
+
+    @MockBean
+    private FileService fileService;
 
     @MockBean
     private AuthEntryPointJwt authEntryPointJwt;
