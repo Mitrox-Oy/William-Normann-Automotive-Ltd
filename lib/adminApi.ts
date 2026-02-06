@@ -1035,3 +1035,41 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   }
 }
 
+// ============================================================================
+// LOAD TEST TOOLS (Admin)
+// ============================================================================
+
+export interface LoadTestCreateProductsRequest {
+  count?: number
+}
+
+export interface LoadTestCreateProductsResponse {
+  runId: string
+  countRequested: number
+  countCreated: number
+  skuPrefix: string
+  sampleSkus: string[]
+}
+
+export interface LoadTestDeleteProductsResponse {
+  runId: string
+  hardDeleteRequested: boolean
+  matched: number
+  hardDeleted: number
+  softDeleted: number
+  failed: number
+}
+
+export async function loadTestCreateProducts(
+  request: LoadTestCreateProductsRequest = {}
+): Promise<LoadTestCreateProductsResponse> {
+  return api.post<LoadTestCreateProductsResponse>('/api/admin/tools/loadtest/products', request)
+}
+
+export async function loadTestDeleteProducts(
+  runId: string,
+  hardDelete: boolean = false
+): Promise<LoadTestDeleteProductsResponse> {
+  const params = new URLSearchParams({ runId, hardDelete: hardDelete ? 'true' : 'false' })
+  return api.delete<LoadTestDeleteProductsResponse>(`/api/admin/tools/loadtest/products?${params.toString()}`)
+}

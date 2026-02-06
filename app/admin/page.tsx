@@ -6,8 +6,9 @@ import { SectionHeading } from "@/components/section-heading"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 import { RequireAuth } from "@/components/AuthProvider"
-import { getDashboardStats, type DashboardStats } from "@/lib/adminApi"
+import { getDashboardStats, loadTestCreateProducts, loadTestDeleteProducts, type DashboardStats } from "@/lib/adminApi"
 import { formatCurrency } from "@/lib/shopApi"
 import { DollarSign, ShoppingBag, Users, Package, TrendingUp, AlertTriangle } from "lucide-react"
 import Link from "next/link"
@@ -15,6 +16,11 @@ import Link from "next/link"
 function AdminDashboardContent() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadTestCount, setLoadTestCount] = useState(300)
+  const [loadTestRunId, setLoadTestRunId] = useState<string | null>(null)
+  const [loadTestBusy, setLoadTestBusy] = useState(false)
+  const [loadTestHardDelete, setLoadTestHardDelete] = useState(false)
+  const [loadTestMessage, setLoadTestMessage] = useState<string | null>(null)
 
   useEffect(() => {
     async function loadStats() {
@@ -40,6 +46,58 @@ function AdminDashboardContent() {
 
     loadStats()
   }, [])
+
+  useEffect(() => {
+    try {
+      const persisted = typeof window !== 'undefined' ? localStorage.getItem('wna-loadtest-runid') : null
+      if (persisted) setLoadTestRunId(persisted)
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  async function handleCreateLoadTestProducts() {
+    setLoadTestBusy(true)
+    setLoadTestMessage(null)
+    try {
+      const res = await loadTestCreateProducts({ count: loadTestCount })
+      setLoadTestRunId(res.runId)
+      try {
+        localStorage.setItem('wna-loadtest-runid', res.runId)
+      } catch {
+        // ignore
+      }
+      setLoadTestMessage(`Created ${res.countCreated} products. runId=${res.runId}`)
+    } catch (e: any) {
+      setLoadTestMessage(e?.message || 'Failed to create load test products (is ADMIN_TOOLS_ENABLED enabled on backend?)')
+    } finally {
+      setLoadTestBusy(false)
+    }
+  }
+
+  async function handleDeleteLoadTestProducts() {
+    if (!loadTestRunId) {
+      setLoadTestMessage('No runId set. Create products first (or paste the runId).')
+      return
+    }
+
+    if (!confirm(`Delete load test products for runId=${loadTestRunId}?\n\nOnly products with SKU prefix LT-${loadTestRunId}- will be affected.`)) {
+      return
+    }
+
+    setLoadTestBusy(true)
+    setLoadTestMessage(null)
+    try {
+      const res = await loadTestDeleteProducts(loadTestRunId, loadTestHardDelete)
+      setLoadTestMessage(
+        `Matched ${res.matched}. Hard deleted ${res.hardDeleted}. Soft deleted ${res.softDeleted}. Failed ${res.failed}.`
+      )
+    } catch (e: any) {
+      setLoadTestMessage(e?.message || 'Failed to delete load test products (is ADMIN_TOOLS_ENABLED enabled on backend?)')
+    } finally {
+      setLoadTestBusy(false)
+    }
+  }
 
   const statCards = stats ? [
     { title: "Total Revenue", value: formatCurrency(stats.totalRevenue, "USD"), icon: DollarSign, color: "text-green-500" },
@@ -223,6 +281,74 @@ function AdminDashboardContent() {
               </CardContent>
             </Card>
           </Link>
+        </div>
+
+        {/* Load Test Tools */}
+        <div className="mt-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Load Test Tools</CardTitle>
+              <CardDescription>
+                Create and delete tagged test products on the deployed backend. Requires `ADMIN_TOOLS_ENABLED=true` on backend.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 lg:grid-cols-3">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Count</label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={5000}
+                    value={loadTestCount}
+                    onChange={(e) => setLoadTestCount(Number(e.target.value))}
+                    disabled={loadTestBusy}
+                  />
+                  <p className="text-xs text-muted-foreground">Creates products with SKU prefix `LT-&lt;runId&gt;-`.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Run ID</label>
+                  <Input
+                    type="text"
+                    value={loadTestRunId || ''}
+                    onChange={(e) => setLoadTestRunId(e.target.value || null)}
+                    placeholder="(auto after create)"
+                    disabled={loadTestBusy}
+                  />
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={loadTestHardDelete}
+                      onChange={(e) => setLoadTestHardDelete(e.target.checked)}
+                      disabled={loadTestBusy}
+                    />
+                    Hard delete (falls back to soft delete if constrained)
+                  </label>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={handleCreateLoadTestProducts}
+                    disabled={loadTestBusy}
+                    className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+                  >
+                    {loadTestBusy ? 'Working...' : 'Create Test Products'}
+                  </button>
+                  <button
+                    onClick={handleDeleteLoadTestProducts}
+                    disabled={loadTestBusy}
+                    className="rounded-md border px-4 py-2 text-sm font-medium disabled:opacity-50"
+                  >
+                    {loadTestBusy ? 'Working...' : 'Delete Test Products'}
+                  </button>
+                  {loadTestMessage ? (
+                    <p className="text-sm text-muted-foreground">{loadTestMessage}</p>
+                  ) : null}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </Container>
     </section>

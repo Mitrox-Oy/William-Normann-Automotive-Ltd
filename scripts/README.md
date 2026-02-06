@@ -13,7 +13,7 @@ Creates test users via the backend registration API.
 node scripts/create-test-user.js customer@example.com password123
 
 # Create an owner user
-node scripts/create-test-user.js owner@example.com password123 OWNER
+node scripts/create-test-user.js owner1@example.com password123 OWNER
 
 # Create an admin user with custom name
 node scripts/create-test-user.js admin@example.com password123 ADMIN "Admin" "User"
@@ -40,7 +40,7 @@ node scripts/create-test-user.js admin@example.com password123 ADMIN "Admin" "Us
 node scripts/create-test-user.js customer@example.com password123
 
 # Create test owner
-node scripts/create-test-user.js owner@example.com password123 OWNER
+node scripts/create-test-user.js owner1@example.com password123 OWNER
 
 # Create test admin
 node scripts/create-test-user.js admin@example.com password123 ADMIN
