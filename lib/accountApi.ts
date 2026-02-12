@@ -53,6 +53,18 @@ export async function changePassword(data: PasswordChangeInput): Promise<void> {
 // ORDERS
 // ============================================================================
 
+type CustomerOrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+
+function normalizeCustomerOrderStatus(value: unknown): CustomerOrderStatus {
+  const normalized = String(value ?? 'pending').toLowerCase()
+  if (normalized === 'pending') return 'pending'
+  if (normalized === 'processing') return 'processing'
+  if (normalized === 'shipped') return 'shipped'
+  if (normalized === 'delivered') return 'delivered'
+  if (normalized === 'cancelled' || normalized === 'canceled') return 'cancelled'
+  return 'pending'
+}
+
 export interface CustomerOrder {
   id: string
   orderNumber: string
@@ -66,7 +78,7 @@ export interface CustomerOrder {
   }[]
   total: number
   currency: string
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+  status: CustomerOrderStatus
   paymentStatus: 'pending' | 'paid' | 'refunded'
   shippingAddress: {
     street: string
@@ -122,7 +134,7 @@ export async function getOrders(params: OrdersListParams = {}): Promise<OrdersLi
     })),
     total: Number(order.totalAmount ?? 0),
     currency: (order.currency || 'eur').toUpperCase(),
-    status: String(order.status || 'pending').toLowerCase(),
+    status: normalizeCustomerOrderStatus(order.status),
     paymentStatus: order.paymentIntentId ? 'paid' : 'pending',
     shippingAddress: {
       street: order.shippingAddress || '',
@@ -164,7 +176,7 @@ export async function getOrder(id: string): Promise<CustomerOrder> {
     })),
     total: Number(order.totalAmount ?? 0),
     currency: (order.currency || 'eur').toUpperCase(),
-    status: String(order.status || 'pending').toLowerCase(),
+    status: normalizeCustomerOrderStatus(order.status),
     paymentStatus: order.paymentIntentId ? 'paid' : 'pending',
     shippingAddress: {
       street: order.shippingAddress || '',

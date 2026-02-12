@@ -1,9 +1,9 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState, type CSSProperties } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { ChevronLeft, Save, Plus, Trash2, Upload, X } from "lucide-react"
+import { ChevronLeft, ChevronRight, Save, Plus, Trash2, Upload, X, GripVertical, RefreshCcw } from "lucide-react"
 import { Container } from "@/components/container"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,7 +19,10 @@ import {
     createProductVariant,
     uploadProductImage,
     uploadVariantImage,
+    getProductImages,
     deleteProductImage,
+    reorderProductImages,
+    replaceProductImage,
     setMainProductImage,
     updateProductVariant,
     deleteProductVariant,
@@ -43,6 +46,22 @@ import {
     type ProductType,
 } from "@/lib/filterAttributes"
 
+import {
+    DndContext,
+    PointerSensor,
+    closestCenter,
+    useSensor,
+    useSensors,
+    type DragEndEvent,
+} from "@dnd-kit/core"
+import {
+    SortableContext,
+    useSortable,
+    arrayMove,
+    rectSortingStrategy,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
+
 function showToast(message: string, type: 'success' | 'error' | 'warning' = 'success') {
     console.log(`[${type.toUpperCase()}] ${message}`)
     if (type === 'error' || type === 'warning') {
@@ -61,6 +80,21 @@ interface InfoSection {
     title: string
     content: string
     enabled: boolean
+}
+
+function getProductNamePlaceholder(productType?: ProductType): string {
+    switch (productType) {
+        case "car":
+            return "e.g., BMW 330i M Sport"
+        case "part":
+            return "e.g., Brembo Front Brake Pads"
+        case "tool":
+            return "e.g., Digital Torque Wrench Set"
+        case "custom":
+            return "e.g., Custom Carbon Fiber Splitter"
+        default:
+            return "e.g., Product name"
+    }
 }
 
 
@@ -83,6 +117,8 @@ export default function EditProductPage() {
     const [sku, setSku] = useState("")
     const [stockQuantity, setStockQuantity] = useState("")
     const [categoryId, setCategoryId] = useState<string>("")
+    const [imageUrl, setImageUrl] = useState("")
+    const [initialImageUrl, setInitialImageUrl] = useState("")
     const [weight, setWeight] = useState("")
     const [brand, setBrand] = useState("")
     const [active, setActive] = useState(true)
@@ -162,7 +198,12 @@ export default function EditProductPage() {
     const [images, setImages] = useState<File[]>([])
     const [imageUrls, setImageUrls] = useState<string[]>([])
     const [mainImageIndex, setMainImageIndex] = useState<number | null>(null)
-    const [existingImages, setExistingImages] = useState<Array<{ id: string, url: string, isMain: boolean }>>([])
+    type ExistingImage = { id: string, imageUrl: string, isMain: boolean, position: number }
+    const [existingImages, setExistingImages] = useState<ExistingImage[]>([])
+    const [imagesBusy, setImagesBusy] = useState(false)
+    const [imageBatchProgress, setImageBatchProgress] = useState<{ current: number, total: number } | null>(null)
+    const replaceInputRef = useRef<HTMLInputElement | null>(null)
+    const [replaceTargetImageId, setReplaceTargetImageId] = useState<string | null>(null)
     const [editingVariant, setEditingVariant] = useState<ProductVariant | null>(null)
     const [showEditVariantForm, setShowEditVariantForm] = useState(false)
     const [editVariantImageFile, setEditVariantImageFile] = useState<File | null>(null)
@@ -171,6 +212,10 @@ export default function EditProductPage() {
     useEffect(() => {
         loadCategories()
     }, [])
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+    )
 
     useEffect(() => {
         const resolvedType = resolveProductTypeFromCategory(categoryId, categories)
@@ -192,6 +237,29 @@ export default function EditProductPage() {
         }
     }
 
+    async function refreshExistingImages() {
+        if (!productId) return
+        try {
+            setImagesBusy(true)
+            const imgs = await getProductImages(productId)
+            const mapped = (imgs || [])
+                .filter((img) => Boolean(img.id))
+                .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+                .map((img) => ({
+                    id: img.id,
+                    imageUrl: img.imageUrl,
+                    isMain: Boolean(img.isMain),
+                    position: img.position ?? 0,
+                }))
+            setExistingImages(mapped)
+        } catch (error) {
+            console.error("Failed to refresh product images:", error)
+            // Keep existing state as-is; image tab UI will still allow uploads.
+        } finally {
+            setImagesBusy(false)
+        }
+    }
+
     useEffect(() => {
         if (!productId) return
 
@@ -206,6 +274,8 @@ export default function EditProductPage() {
                 setSku(product.sku || "")
                 setStockQuantity(product.stockQuantity?.toString() || product.stockLevel?.toString() || "0")
                 setCategoryId(product.categoryId?.toString() || product.category || "")
+                setImageUrl(product.imageUrl || "")
+                setInitialImageUrl(product.imageUrl || "")
                 setWeight(product.weight?.toString() || "")
                 setBrand(product.brand || "")
                 setActive(product.active ?? true)
@@ -249,22 +319,11 @@ export default function EditProductPage() {
                 setStreetLegal((product as any).streetLegal ?? true)
                 setInstallationDifficulty((product as any).installationDifficulty || "all")
 
-                // Populate existing images
-                if (product.images && product.images.length > 0) {
-                    // Handle both array of strings and array of objects (ProductImageResponse)
-                    const imageList = product.images.map((img: any) => {
-                        if (typeof img === 'string') {
-                            return { id: '', url: img, isMain: false }
-                        }
-                        return {
-                            id: img.id?.toString() || '',
-                            url: img.imageUrl || img.url || img,
-                            isMain: img.isMain || false
-                        }
-                    })
-                    setExistingImages(imageList)
-                } else if (product.imageUrl) {
-                    setExistingImages([{ id: '', url: product.imageUrl, isMain: true }])
+                // Populate existing images (prefer the dedicated images endpoint for stable ids/positions).
+                refreshExistingImages()
+                // Fallback for legacy data if endpoint fails.
+                if ((!product.images || product.images.length === 0) && product.imageUrl) {
+                    setExistingImages([{ id: '', imageUrl: product.imageUrl, isMain: true, position: 0 }])
                 }
 
                 // Populate existing variants
@@ -361,30 +420,249 @@ export default function EditProductPage() {
     }
 
     async function handleDeleteExistingImage(imageId: string) {
+        // Legacy products can have only Product.imageUrl without ProductImage rows.
+        // Those legacy images don't have an id, so they cannot be deleted via the images API.
+        if (!imageId || Number.isNaN(Number.parseInt(imageId, 10))) {
+            showToast('This is a legacy image and cannot be deleted. Upload a new image to manage images.', 'error')
+            return
+        }
         if (!confirm('Are you sure you want to delete this image?')) return
 
         try {
             await deleteProductImage(productId, imageId)
-            setExistingImages(existingImages.filter(img => img.id !== imageId))
+            await refreshExistingImages()
             showToast('Image deleted successfully', 'success')
         } catch (error) {
             console.error('Failed to delete image:', error)
-            showToast('Failed to delete image', 'error')
+            const msg = error instanceof Error ? error.message : ''
+            showToast(msg ? `Failed to delete image: ${msg}` : 'Failed to delete image', 'error')
         }
     }
 
     async function handleSetMainImage(imageId: string) {
+        if (!imageId || Number.isNaN(Number.parseInt(imageId, 10))) {
+            showToast('This is a legacy image. Upload a new image to set a main image.', 'error')
+            return
+        }
         try {
+            const selectedImage = existingImages.find((img) => img.id === imageId)
             await setMainProductImage(productId, imageId)
-            setExistingImages(existingImages.map(img => ({
-                ...img,
-                isMain: img.id === imageId
-            })))
+            await refreshExistingImages()
+            if (selectedImage?.imageUrl) {
+                setImageUrl(selectedImage.imageUrl)
+                setInitialImageUrl(selectedImage.imageUrl)
+            }
             showToast('Main image updated', 'success')
         } catch (error) {
             console.error('Failed to set main image:', error)
             showToast('Failed to set main image', 'error')
         }
+    }
+
+    function startReplaceExistingImage(imageId: string) {
+        if (!imageId || Number.isNaN(Number.parseInt(imageId, 10))) {
+            showToast('This is a legacy image and cannot be replaced. Upload a new image instead.', 'error')
+            return
+        }
+        setReplaceTargetImageId(imageId)
+        // reset + open file picker
+        if (replaceInputRef.current) {
+            replaceInputRef.current.value = ""
+            replaceInputRef.current.click()
+        }
+    }
+
+    async function handleReplaceFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0]
+        const imageId = replaceTargetImageId
+        if (!file || !imageId) return
+
+        try {
+            setImagesBusy(true)
+            await replaceProductImage(productId, imageId, file)
+            await refreshExistingImages()
+            showToast("Image replaced successfully", "success")
+        } catch (error) {
+            console.error("Failed to replace image:", error)
+            showToast("Failed to replace image", "error")
+        } finally {
+            setImagesBusy(false)
+            setReplaceTargetImageId(null)
+        }
+    }
+
+    async function handleExistingImagesDragEnd(event: DragEndEvent) {
+        if (imagesBusy) return
+        const { active, over } = event
+        if (!over) return
+        const activeId = String(active.id)
+        const overId = String(over.id)
+        if (activeId === overId) return
+
+        const oldIndex = existingImages.findIndex((img) => img.id === activeId)
+        const newIndex = existingImages.findIndex((img) => img.id === overId)
+        if (oldIndex === -1 || newIndex === -1) return
+
+        const prev = existingImages
+        const moved = arrayMove(existingImages, oldIndex, newIndex).map((img, idx) => ({
+            ...img,
+            position: idx,
+        }))
+        setExistingImages(moved)
+
+        try {
+            setImagesBusy(true)
+            await reorderProductImages(
+                productId,
+                moved.map((img, idx) => ({ imageId: img.id, position: idx }))
+            )
+            await refreshExistingImages()
+            showToast("Image order updated", "success")
+        } catch (error) {
+            console.error("Failed to reorder images:", error)
+            setExistingImages(prev)
+            showToast("Failed to reorder images", "error")
+        } finally {
+            setImagesBusy(false)
+        }
+    }
+
+    async function moveExistingImage(imageId: string, direction: "left" | "right") {
+        if (imagesBusy) return
+
+        const currentIndex = existingImages.findIndex((img) => img.id === imageId)
+        if (currentIndex === -1) return
+
+        const targetIndex = direction === "left" ? currentIndex - 1 : currentIndex + 1
+        if (targetIndex < 0 || targetIndex >= existingImages.length) return
+
+        const previous = existingImages
+        const reordered = arrayMove(existingImages, currentIndex, targetIndex).map((img, idx) => ({
+            ...img,
+            position: idx,
+        }))
+
+        setExistingImages(reordered)
+
+        try {
+            setImagesBusy(true)
+            await reorderProductImages(
+                productId,
+                reordered.map((img, idx) => ({ imageId: img.id, position: idx }))
+            )
+            await refreshExistingImages()
+            showToast("Image order updated", "success")
+        } catch (error) {
+            console.error("Failed to reorder images:", error)
+            setExistingImages(previous)
+            showToast("Failed to reorder images", "error")
+        } finally {
+            setImagesBusy(false)
+        }
+    }
+
+    function SortableExistingImageTile({ img }: { img: ExistingImage }) {
+        const {
+            attributes,
+            listeners,
+            setNodeRef,
+            transform,
+            transition,
+            isDragging,
+        } = useSortable({ id: img.id })
+
+        const style: CSSProperties = {
+            transform: CSS.Transform.toString(transform),
+            transition,
+        }
+
+        return (
+            <div
+                ref={setNodeRef}
+                style={style}
+                className={`relative group ${isDragging ? "z-10 opacity-90" : ""}`}
+            >
+                <img
+                    src={getImageUrl(img.imageUrl)}
+                    alt={`Existing image ${img.position + 1}`}
+                    className="w-full h-32 object-cover rounded-lg border"
+                />
+
+                {img.isMain && (
+                    <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
+                        Main
+                    </div>
+                )}
+
+                {/* Drag handle (always visible so reorder is discoverable) */}
+                <div
+                    className="absolute top-2 right-2 bg-background/90 border rounded p-1 shadow-sm cursor-grab active:cursor-grabbing"
+                    {...attributes}
+                    {...listeners}
+                    title="Drag to reorder"
+                >
+                    <GripVertical className="h-4 w-4 text-muted-foreground" />
+                </div>
+
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="text-black hover:text-black"
+                        onClick={() => moveExistingImage(img.id, "left")}
+                        disabled={imagesBusy || img.position === 0}
+                        title="Move left"
+                    >
+                        <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="text-black hover:text-black"
+                        onClick={() => moveExistingImage(img.id, "right")}
+                        disabled={imagesBusy || img.position === existingImages.length - 1}
+                        title="Move right"
+                    >
+                        <ChevronRight className="h-4 w-4" />
+                    </Button>
+                    {!img.isMain && (
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            className="text-black hover:text-black"
+                            onClick={() => handleSetMainImage(img.id)}
+                            disabled={imagesBusy}
+                        >
+                            Set Main
+                        </Button>
+                    )}
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="text-black hover:text-black"
+                        onClick={() => startReplaceExistingImage(img.id)}
+                        disabled={imagesBusy}
+                        title="Replace file"
+                    >
+                        <RefreshCcw className="h-4 w-4" />
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteExistingImage(img.id)}
+                        disabled={imagesBusy}
+                        title="Delete image"
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                </div>
+            </div>
+        )
     }
 
     function handleEditVariant(variant: ProductVariant) {
@@ -446,20 +724,21 @@ export default function EditProductPage() {
 
     function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
         const files = Array.from(e.target.files || [])
-        setImages([...images, ...files])
+        if (files.length === 0) return
 
-        const newUrls: string[] = []
+        setImages((prev) => [...prev, ...files])
+
         files.forEach((file) => {
             const reader = new FileReader()
-            reader.onload = (e) => {
-                const url = e.target?.result as string
-                newUrls.push(url)
-                if (newUrls.length === files.length) {
-                    setImageUrls([...imageUrls, ...newUrls])
-                }
+            reader.onload = (event) => {
+                const imageDataUrl = event.target?.result as string
+                if (!imageDataUrl) return
+                setImageUrls((prev) => [...prev, imageDataUrl])
             }
             reader.readAsDataURL(file)
         })
+
+        e.target.value = ""
     }
 
     function removeImage(index: number) {
@@ -470,6 +749,30 @@ export default function EditProductPage() {
         } else if (mainImageIndex !== null && mainImageIndex > index) {
             setMainImageIndex(mainImageIndex - 1)
         }
+    }
+
+    function moveQueuedImage(index: number, direction: "left" | "right") {
+        const targetIndex = direction === "left" ? index - 1 : index + 1
+        if (targetIndex < 0 || targetIndex >= imageUrls.length) return
+
+        setImages((prev) => {
+            const next = [...prev]
+            ;[next[index], next[targetIndex]] = [next[targetIndex], next[index]]
+            return next
+        })
+
+        setImageUrls((prev) => {
+            const next = [...prev]
+            ;[next[index], next[targetIndex]] = [next[targetIndex], next[index]]
+            return next
+        })
+
+        setMainImageIndex((prev) => {
+            if (prev === null) return prev
+            if (prev === index) return targetIndex
+            if (prev === targetIndex) return index
+            return prev
+        })
     }
 
     function csvToArray(value: string): string[] {
@@ -562,6 +865,10 @@ export default function EditProductPage() {
                 installationDifficulty: installationDifficulty !== "all" ? installationDifficulty : undefined,
             }
 
+            if (imageUrl.trim() !== initialImageUrl.trim()) {
+                updateData.imageUrl = imageUrl || undefined
+            }
+
             if (categoryId) {
                 updateData.categoryId = parseInt(categoryId)
             }
@@ -586,15 +893,40 @@ export default function EditProductPage() {
 
             // Upload new images if any
             if (images.length > 0) {
+                setImageBatchProgress({ current: 0, total: images.length })
+                const uploadedImageIds: Array<string | null> = new Array(images.length).fill(null)
                 for (let i = 0; i < images.length; i++) {
                     const isMain = mainImageIndex === i
                     try {
-                        await uploadProductImage(productId, images[i], isMain)
+                        const uploaded = await uploadProductImage(productId, images[i], isMain)
+                        uploadedImageIds[i] = uploaded?.id?.toString?.() || null
                     } catch (error) {
                         console.error(`Failed to upload image ${i + 1}:`, error)
                         showToast(`Failed to upload image ${i + 1}`, "warning")
+                    } finally {
+                        setImageBatchProgress({ current: i + 1, total: images.length })
                     }
                 }
+                setImageBatchProgress(null)
+
+                if (mainImageIndex !== null) {
+                    const selectedMainUploadedId = uploadedImageIds[mainImageIndex]
+                    if (selectedMainUploadedId) {
+                        try {
+                            await setMainProductImage(productId, selectedMainUploadedId)
+                        } catch (error) {
+                            console.error("Failed to set selected uploaded image as main:", error)
+                        }
+                    }
+                }
+
+                // Refresh existing images so positions/ids stay consistent after upload.
+                await refreshExistingImages()
+
+                // Clear local queue to avoid duplicate uploads on subsequent saves.
+                setImages([])
+                setImageUrls([])
+                setMainImageIndex(null)
             }
 
             // Create new variants if any
@@ -666,6 +998,10 @@ export default function EditProductPage() {
         )
     }
 
+    const isCarProduct = productType === "car"
+    const showVehicleTab = productType === "part" || productType === "custom"
+    const namePlaceholder = getProductNamePlaceholder(productType)
+
 
     return (
         <section className="py-24 lg:py-32">
@@ -686,8 +1022,8 @@ export default function EditProductPage() {
                     <Tabs defaultValue="basic" className="space-y-6">
                         <TabsList>
                             <TabsTrigger value="basic">Basic Info</TabsTrigger>
-                            <TabsTrigger value="details">Details</TabsTrigger>
-                            <TabsTrigger value="vehicle">Vehicle</TabsTrigger>
+                            {!isCarProduct && <TabsTrigger value="details">Details</TabsTrigger>}
+                            {showVehicleTab && <TabsTrigger value="vehicle">Vehicle</TabsTrigger>}
                             {productType === "car" && <TabsTrigger value="car-fields">Car Fields</TabsTrigger>}
                             {productType === "part" && <TabsTrigger value="parts">Parts</TabsTrigger>}
                             {productType === "tool" && <TabsTrigger value="tools">Tools</TabsTrigger>}
@@ -712,7 +1048,7 @@ export default function EditProductPage() {
                                             value={name}
                                             onChange={(e) => setName(e.target.value)}
                                             required
-                                            placeholder="e.g., Premium Brake Pads"
+                                            placeholder={namePlaceholder}
                                         />
                                     </div>
 
@@ -822,18 +1158,20 @@ export default function EditProductPage() {
                                             />
                                         </div>
 
-                                        <div>
-                                            <Label htmlFor="weight">Weight (kg)</Label>
-                                            <Input
-                                                id="weight"
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                value={weight}
-                                                onChange={(e) => setWeight(e.target.value)}
-                                                placeholder="0.00"
-                                            />
-                                        </div>
+                                        {!isCarProduct && (
+                                            <div>
+                                                <Label htmlFor="weight">Weight (kg)</Label>
+                                                <Input
+                                                    id="weight"
+                                                    type="number"
+                                                    step="0.01"
+                                                    min="0"
+                                                    value={weight}
+                                                    onChange={(e) => setWeight(e.target.value)}
+                                                    placeholder="0.00"
+                                                />
+                                            </div>
+                                        )}
                                     </div>
                                 </CardContent>
                             </Card>
@@ -889,115 +1227,119 @@ export default function EditProductPage() {
                         </TabsContent>
 
                         {/* Details Tab */}
-                        <TabsContent value="details" className="space-y-6">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Additional Details</CardTitle>
-                                    <CardDescription>Optional product information</CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="grid gap-4 sm:grid-cols-2">
-                                        <div>
-                                            <Label htmlFor="brand">Brand</Label>
-                                            <Input
-                                                id="brand"
-                                                value={brand}
-                                                onChange={(e) => setBrand(e.target.value)}
-                                                placeholder="e.g., Bosch"
-                                                maxLength={100}
-                                            />
+                        {!isCarProduct && (
+                            <TabsContent value="details" className="space-y-6">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Additional Details</CardTitle>
+                                        <CardDescription>Optional product information</CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <div className="grid gap-4 sm:grid-cols-2">
+                                            <div>
+                                                <Label htmlFor="brand">Brand</Label>
+                                                <Input
+                                                    id="brand"
+                                                    value={brand}
+                                                    onChange={(e) => setBrand(e.target.value)}
+                                                    placeholder="e.g., Bosch"
+                                                    maxLength={100}
+                                                />
+                                            </div>
+                                            <div>
+                                                <Label>OEM Type</Label>
+                                                <Select value={oemType} onValueChange={setOemType}>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select OEM type" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="all">Not specified</SelectItem>
+                                                        {OEM_TYPES.map((value) => (
+                                                            <SelectItem key={value} value={value}>
+                                                                {value.toUpperCase()}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <Label>OEM Type</Label>
-                                            <Select value={oemType} onValueChange={setOemType}>
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+                        )}
+
+                        {showVehicleTab && (
+                            <TabsContent value="vehicle" className="space-y-6">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Vehicle Compatibility</CardTitle>
+                                        <CardDescription>Use for parts/custom</CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Label>Compatibility Mode</Label>
+                                            <Select value={compatibilityMode} onValueChange={setCompatibilityMode}>
                                                 <SelectTrigger>
-                                                    <SelectValue placeholder="Select OEM type" />
+                                                    <SelectValue placeholder="Select mode" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="all">Not specified</SelectItem>
-                                                    {OEM_TYPES.map((value) => (
+                                                    {COMPATIBILITY_MODES.map((value) => (
                                                         <SelectItem key={value} value={value}>
-                                                            {value.toUpperCase()}
+                                                            {value.replace("_", " ")}
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>
                                             </Select>
                                         </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
 
-                        <TabsContent value="vehicle" className="space-y-6">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Vehicle Compatibility</CardTitle>
-                                    <CardDescription>Use for parts/custom (optional for tools)</CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Label>Compatibility Mode</Label>
-                                        <Select value={compatibilityMode} onValueChange={setCompatibilityMode}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select mode" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {COMPATIBILITY_MODES.map((value) => (
-                                                    <SelectItem key={value} value={value}>
-                                                        {value.replace("_", " ")}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-
-                                    {compatibilityMode === "vehicle_specific" && (
-                                        <>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div className="space-y-2">
-                                                    <Label>Compatible Makes (comma-separated)</Label>
-                                                    <Input
-                                                        value={compatibleMakesInput}
-                                                        onChange={(e) => setCompatibleMakesInput(e.target.value)}
-                                                        placeholder="BMW, Mercedes-Benz"
-                                                    />
+                                        {compatibilityMode === "vehicle_specific" && (
+                                            <>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <Label>Compatible Makes (comma-separated)</Label>
+                                                        <Input
+                                                            value={compatibleMakesInput}
+                                                            onChange={(e) => setCompatibleMakesInput(e.target.value)}
+                                                            placeholder="BMW, Mercedes-Benz"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label>Compatible Models (comma-separated)</Label>
+                                                        <Input
+                                                            value={compatibleModelsInput}
+                                                            onChange={(e) => setCompatibleModelsInput(e.target.value)}
+                                                            placeholder="330i, C250"
+                                                        />
+                                                    </div>
                                                 </div>
-                                                <div className="space-y-2">
-                                                    <Label>Compatible Models (comma-separated)</Label>
-                                                    <Input
-                                                        value={compatibleModelsInput}
-                                                        onChange={(e) => setCompatibleModelsInput(e.target.value)}
-                                                        placeholder="330i, C250"
-                                                    />
+                                                <div className="grid grid-cols-3 gap-4">
+                                                    <div className="space-y-2">
+                                                        <Label>Year Start</Label>
+                                                        <Input
+                                                            type="number"
+                                                            value={compatibleYearStart}
+                                                            onChange={(e) => setCompatibleYearStart(e.target.value)}
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label>Year End</Label>
+                                                        <Input
+                                                            type="number"
+                                                            value={compatibleYearEnd}
+                                                            onChange={(e) => setCompatibleYearEnd(e.target.value)}
+                                                        />
+                                                    </div>
+                                                    <div className="flex items-center space-x-2 pt-8">
+                                                        <Switch checked={vinCompatible} onCheckedChange={setVinCompatible} />
+                                                        <Label>VIN Compatible</Label>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <div className="grid grid-cols-3 gap-4">
-                                                <div className="space-y-2">
-                                                    <Label>Year Start</Label>
-                                                    <Input
-                                                        type="number"
-                                                        value={compatibleYearStart}
-                                                        onChange={(e) => setCompatibleYearStart(e.target.value)}
-                                                    />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label>Year End</Label>
-                                                    <Input
-                                                        type="number"
-                                                        value={compatibleYearEnd}
-                                                        onChange={(e) => setCompatibleYearEnd(e.target.value)}
-                                                    />
-                                                </div>
-                                                <div className="flex items-center space-x-2 pt-8">
-                                                    <Switch checked={vinCompatible} onCheckedChange={setVinCompatible} />
-                                                    <Label>VIN Compatible</Label>
-                                                </div>
-                                            </div>
-                                        </>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
+                                            </>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+                        )}
 
                         {productType === "car" && (
                             <TabsContent value="car-fields" className="space-y-6">
@@ -1015,6 +1357,18 @@ export default function EditProductPage() {
                                             <Input type="number" value={mileage} onChange={(e) => setMileage(e.target.value)} placeholder="Mileage" />
                                             <Input type="number" value={powerKw} onChange={(e) => setPowerKw(e.target.value)} placeholder="Power (kW)" />
                                             <Input value={vehicleColor} onChange={(e) => setVehicleColor(e.target.value)} placeholder="Color" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="car-weight">Weight (kg)</Label>
+                                            <Input
+                                                id="car-weight"
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                value={weight}
+                                                onChange={(e) => setWeight(e.target.value)}
+                                                placeholder="0.00"
+                                            />
                                         </div>
                                         <div className="grid grid-cols-4 gap-4">
                                             <Select value={fuelType} onValueChange={setFuelType}>
@@ -1167,59 +1521,74 @@ export default function EditProductPage() {
                                     <CardDescription>Upload product images (max 10 images)</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="imageUrl">Main Image URL</Label>
+                                        <Input
+                                            id="imageUrl"
+                                            value={imageUrl}
+                                            onChange={(e) => setImageUrl(e.target.value)}
+                                            placeholder="https://example.com/image.jpg"
+                                        />
+                                        <p className="text-xs text-muted-foreground">Optional: use a direct image URL or upload files below</p>
+                                    </div>
+
                                     {/* Existing Images */}
                                     {existingImages.length > 0 && (
                                         <div>
                                             <Label className="mb-2 block">Current Images</Label>
-                                            <div className="grid grid-cols-4 gap-4 mb-4">
-                                                {existingImages.map((img, index) => (
-                                                    <div key={`existing-${index}`} className="relative group">
-                                                        <img
-                                                            src={img.url}
-                                                            alt={`Existing image ${index + 1}`}
-                                                            className="w-full h-32 object-cover rounded-lg border"
-                                                        />
-                                                        {img.isMain && (
-                                                            <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
-                                                                Main
-                                                            </div>
-                                                        )}
-                                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
-                                                            {!img.isMain && img.id && (
-                                                                <Button
-                                                                    type="button"
-                                                                    variant="secondary"
-                                                                    size="sm"
-                                                                    onClick={() => handleSetMainImage(img.id)}
-                                                                >
-                                                                    Set Main
-                                                                </Button>
-                                                            )}
-                                                            {img.id && (
-                                                                <Button
-                                                                    type="button"
-                                                                    variant="destructive"
-                                                                    size="sm"
-                                                                    onClick={() => handleDeleteExistingImage(img.id)}
-                                                                >
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                </Button>
-                                                            )}
-                                                        </div>
+                                            <p className="text-xs text-muted-foreground mb-3">
+                                                Use drag handle or left/right arrows to reorder. Changes save immediately.
+                                            </p>
+
+                                            {/* Hidden input used for "Replace" actions */}
+                                            <input
+                                                ref={replaceInputRef}
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={handleReplaceFileSelected}
+                                            />
+
+                                            <DndContext
+                                                sensors={sensors}
+                                                collisionDetection={closestCenter}
+                                                onDragEnd={handleExistingImagesDragEnd}
+                                            >
+                                                <SortableContext
+                                                    items={existingImages.filter((img) => Boolean(img.id)).map((img) => img.id)}
+                                                    strategy={rectSortingStrategy}
+                                                >
+                                                    <div className="grid grid-cols-4 gap-4 mb-4">
+                                                        {existingImages.map((img) => (
+                                                            img.id ? (
+                                                                <SortableExistingImageTile key={img.id} img={img} />
+                                                            ) : (
+                                                                <div key={`existing-fallback-${img.position}`} className="relative group">
+                                                                    <img
+                                                                        src={getImageUrl(img.imageUrl)}
+                                                                        alt={`Existing image ${img.position + 1}`}
+                                                                        className="w-full h-32 object-cover rounded-lg border"
+                                                                    />
+                                                                    {img.isMain && (
+                                                                        <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
+                                                                            Main
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )
+                                                        ))}
                                                     </div>
-                                                ))}
-                                            </div>
+                                                </SortableContext>
+                                            </DndContext>
                                         </div>
                                     )}
 
                                     {/* Upload New Images */}
-                                    <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6">
+                                    <Label htmlFor="image-upload" className="block cursor-pointer border-2 border-dashed border-muted-foreground/25 rounded-lg p-6">
                                         <div className="flex flex-col items-center justify-center space-y-4">
                                             <Upload className="h-12 w-12 text-muted-foreground" />
                                             <div className="text-center">
-                                                <Label htmlFor="image-upload" className="cursor-pointer">
-                                                    <span className="text-primary hover:underline">Click to upload</span> or drag and drop
-                                                </Label>
+                                                <span className="text-primary hover:underline">Click to upload</span> or drag and drop
                                                 <Input
                                                     id="image-upload"
                                                     type="file"
@@ -1231,7 +1600,7 @@ export default function EditProductPage() {
                                                 <p className="text-xs text-muted-foreground mt-2">PNG, JPG, GIF up to 5MB each</p>
                                             </div>
                                         </div>
-                                    </div>
+                                    </Label>
 
                                     {/* New Images Preview */}
                                     {imageUrls.length > 0 && (
@@ -1255,6 +1624,29 @@ export default function EditProductPage() {
                                                                 type="button"
                                                                 variant="secondary"
                                                                 size="sm"
+                                                                className="text-black hover:text-black"
+                                                                onClick={() => moveQueuedImage(index, "left")}
+                                                                disabled={index === 0}
+                                                                title="Move left"
+                                                            >
+                                                                <ChevronLeft className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button
+                                                                type="button"
+                                                                variant="secondary"
+                                                                size="sm"
+                                                                className="text-black hover:text-black"
+                                                                onClick={() => moveQueuedImage(index, "right")}
+                                                                disabled={index === imageUrls.length - 1}
+                                                                title="Move right"
+                                                            >
+                                                                <ChevronRight className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button
+                                                                type="button"
+                                                                variant="secondary"
+                                                                size="sm"
+                                                                className="text-black hover:text-black"
                                                                 onClick={() => setMainImageIndex(index)}
                                                             >
                                                                 Set Main
@@ -1700,7 +2092,11 @@ export default function EditProductPage() {
                     <div className="mt-6 flex gap-4">
                         <Button type="submit" disabled={saving} className="flex-1">
                             <Save className="mr-2 h-4 w-4" />
-                            {saving ? "Saving..." : "Save Changes"}
+                            {saving
+                                ? (imageBatchProgress
+                                    ? `Saving... (Uploading images ${imageBatchProgress.current}/${imageBatchProgress.total})`
+                                    : "Saving...")
+                                : "Save Changes"}
                         </Button>
                         <Button
                             type="button"

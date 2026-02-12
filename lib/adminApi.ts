@@ -16,10 +16,16 @@ import type { Product, Category } from './shopApi'
 
 export interface AdminProduct extends Product {
   stockLevel: number
+  stockQuantity?: number
   costPrice?: number
   profitMargin?: number
   sku: string
   status: 'active' | 'draft' | 'archived'
+  categoryId?: number
+  active?: boolean
+  featured?: boolean
+  imageUrl?: string
+  variants?: any[]
 }
 
 // Backend ProductDTO structure
@@ -28,7 +34,8 @@ export interface ProductCreateInput {
   description?: string // Optional, max 1000 chars
   price: number // Required, BigDecimal
   stockQuantity?: number // Optional, default 0
-  sku: string // Required, 3-50 chars, unique
+  // Optional on create: backend auto-generates a stable SKU if blank/omitted.
+  sku?: string // Optional, 3-50 chars if provided, unique
   imageUrl?: string // Optional
   active?: boolean // Optional, default true
   featured?: boolean // Optional, default false
@@ -171,7 +178,6 @@ function mapBackendProductToAdminProduct(p: any): AdminProduct {
     stockLevel: stockQuantity,
     status: p.active ? 'active' : 'draft',
     slug: p.slug || p.sku?.toLowerCase().replace(/\s+/g, '-') || '',
-    partNumber: p.sku || '',
     brand: p.brand || '',
     manufacturer: p.brand || p.manufacturer || '',
     productType: p.productType,
@@ -395,6 +401,90 @@ export async function uploadProductImage(productId: string, file: File, isMain: 
   return response.json()
 }
 
+export interface AdminProductImage {
+  id: string
+  imageUrl: string
+  position: number
+  isMain: boolean
+  createdDate?: string
+  updatedDate?: string
+}
+
+export interface ImagePositionInput {
+  imageId: string
+  position: number
+}
+
+/**
+ * Get product images (admin view)
+ * Backend endpoint: GET /api/products/{productId}/images
+ */
+export async function getProductImages(productId: string): Promise<AdminProductImage[]> {
+  const images = await api.get<any[]>(`/api/products/${productId}/images`)
+  return (images || []).map((img: any) => ({
+    id: img.id?.toString() || '',
+    imageUrl: img.imageUrl || img.url || '',
+    position: typeof img.position === 'number' ? img.position : Number.parseInt(img.position, 10) || 0,
+    isMain: parseBooleanFlag(img.isMain),
+    createdDate: img.createdDate,
+    updatedDate: img.updatedDate,
+  }))
+}
+
+/**
+ * Reorder product images
+ * Backend endpoint: PUT /api/products/{productId}/images/reorder
+ */
+export async function reorderProductImages(productId: string, order: ImagePositionInput[]): Promise<AdminProductImage[]> {
+  const payload = order.map((o) => ({ imageId: Number.parseInt(o.imageId, 10), position: o.position }))
+  const images = await api.put<any[]>(`/api/products/${productId}/images/reorder`, payload)
+  return (images || []).map((img: any) => ({
+    id: img.id?.toString() || '',
+    imageUrl: img.imageUrl || img.url || '',
+    position: typeof img.position === 'number' ? img.position : Number.parseInt(img.position, 10) || 0,
+    isMain: parseBooleanFlag(img.isMain),
+    createdDate: img.createdDate,
+    updatedDate: img.updatedDate,
+  }))
+}
+
+/**
+ * Replace a product image file (keeps position and isMain)
+ * Backend endpoint: PUT /api/products/{productId}/images/{imageId}/replace
+ */
+export async function replaceProductImage(productId: string, imageId: string, file: File): Promise<AdminProductImage> {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const { getAccessToken } = await import('./apiClient')
+  const token = getAccessToken()
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_SHOP_API_BASE_URL || 'http://localhost:8080'
+
+  const response = await fetch(`${baseUrl}/api/products/${productId}/images/${imageId}/replace`, {
+    method: 'PUT',
+    headers: token ? {
+      'Authorization': `Bearer ${token}`,
+    } : {},
+    body: formData,
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    const error = await response.text()
+    throw new Error(`Failed to replace image: ${error}`)
+  }
+
+  const img = await response.json()
+  return {
+    id: img.id?.toString() || '',
+    imageUrl: img.imageUrl || img.url || '',
+    position: typeof img.position === 'number' ? img.position : Number.parseInt(img.position, 10) || 0,
+    isMain: parseBooleanFlag(img.isMain),
+    createdDate: img.createdDate,
+    updatedDate: img.updatedDate,
+  }
+}
+
 /**
  * Upload variant image
  * Backend endpoint: POST /api/products/{productId}/variants/{variantId}/image
@@ -499,7 +589,20 @@ export interface CategoryCreateInput {
  * Backend endpoint: GET /api/categories
  */
 export async function getAdminCategories(): Promise<AdminCategory[]> {
-  return api.get<AdminCategory[]>('/api/categories')
+  const cats = await api.get<any[]>('/api/categories')
+  return (cats || []).map((c: any) => ({
+    id: typeof c.id === 'number' ? c.id : Number.parseInt(String(c.id || '0'), 10),
+    slug: c.slug || '',
+    name: c.name || '',
+    description: c.description || undefined,
+    imageUrl: c.imageUrl || undefined,
+    productCount: c.productCount ?? undefined,
+    parentId: c.parentId ?? c.parent_id ?? c.parent?.id ?? undefined,
+    children: c.children ?? undefined,
+    status: (c.active === false ? 'inactive' : 'active') as AdminCategory['status'],
+    createdAt: c.createdDate || c.createdAt || new Date().toISOString(),
+    updatedAt: c.updatedDate || c.updatedAt || c.createdDate || new Date().toISOString(),
+  }))
 }
 
 /**
@@ -588,12 +691,16 @@ export async function getCategoriesByTopic(topicSlug: string): Promise<Category[
  */
 export async function createCategory(data: CategoryCreateInput): Promise<AdminCategory> {
   // Convert status to active boolean
+  const resolvedParentId =
+    data.parentId === null || data.parentId === undefined || data.parentId === ''
+      ? null
+      : (typeof data.parentId === 'string' ? Number.parseInt(data.parentId, 10) : data.parentId)
   const payload = {
     name: data.name,
     slug: data.slug,
     description: data.description,
     active: data.status === 'active',
-    parentId: data.parentId ? parseInt(data.parentId) : null,
+    parentId: resolvedParentId,
   }
   return api.post<AdminCategory>('/api/categories', payload)
 }
@@ -609,7 +716,12 @@ export async function updateCategory(id: string, data: Partial<CategoryCreateInp
   if (data.slug !== undefined) payload.slug = data.slug
   if (data.description !== undefined) payload.description = data.description
   if (data.status !== undefined) payload.active = data.status === 'active'
-  if (data.parentId !== undefined) payload.parentId = data.parentId ? parseInt(data.parentId) : null
+  if (data.parentId !== undefined) {
+    payload.parentId =
+      data.parentId === null || data.parentId === '' || data.parentId === undefined
+        ? null
+        : (typeof data.parentId === 'string' ? Number.parseInt(data.parentId, 10) : data.parentId)
+  }
 
   return api.put<AdminCategory>(`/api/categories/${id}`, payload)
 }
@@ -715,7 +827,7 @@ export async function getAdminOrders(params: OrdersListParams = {}): Promise<Ord
     })),
     total: Number(order.totalAmount ?? 0),
     currency: (order.currency || 'eur').toUpperCase(),
-    status: String(order.status || 'pending').toLowerCase(),
+    status: (String(order.status || 'pending').toLowerCase() as AdminOrder['status']),
     paymentStatus: order.paymentIntentId ? 'paid' : 'pending',
     shippingAddress: {
       street: order.shippingAddress || '',
@@ -759,7 +871,7 @@ export async function getAdminOrder(id: string): Promise<AdminOrder> {
     })),
     total: Number(order.totalAmount ?? 0),
     currency: (order.currency || 'eur').toUpperCase(),
-    status: String(order.status || 'pending').toLowerCase(),
+    status: (String(order.status || 'pending').toLowerCase() as AdminOrder['status']),
     paymentStatus: order.paymentIntentId ? 'paid' : 'pending',
     shippingAddress: {
       street: order.shippingAddress || '',
@@ -798,7 +910,7 @@ export async function updateOrderStatus(
     })),
     total: Number(order.totalAmount ?? 0),
     currency: (order.currency || 'eur').toUpperCase(),
-    status: String(order.status || 'pending').toLowerCase(),
+    status: (String(order.status || 'pending').toLowerCase() as AdminOrder['status']),
     paymentStatus: order.paymentIntentId ? 'paid' : 'pending',
     shippingAddress: {
       street: order.shippingAddress || '',
@@ -967,7 +1079,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       })),
       total: Number(order.totalAmount ?? 0),
       currency: (order.currency || 'eur').toUpperCase(),
-      status: String(order.status || 'pending').toLowerCase(),
+      status: (String(order.status || 'pending').toLowerCase() as AdminOrder['status']),
       paymentStatus: order.paymentIntentId ? 'paid' : 'pending',
       shippingAddress: {
         street: order.shippingAddress || '',

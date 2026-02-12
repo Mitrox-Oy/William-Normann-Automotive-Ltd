@@ -24,6 +24,32 @@ function parseBooleanFlag(value: unknown): boolean {
   return false
 }
 
+function extractOrderedImages(rawImages: unknown, fallbackImageUrl?: string): string[] {
+  const images: string[] = []
+
+  if (Array.isArray(rawImages)) {
+    const sorted = [...rawImages].sort((left: any, right: any) => {
+      const leftMain = parseBooleanFlag(left?.isMain)
+      const rightMain = parseBooleanFlag(right?.isMain)
+      if (leftMain !== rightMain) return leftMain ? -1 : 1
+
+      const leftPosition = typeof left?.position === 'number' ? left.position : Number.parseInt(left?.position, 10)
+      const rightPosition = typeof right?.position === 'number' ? right.position : Number.parseInt(right?.position, 10)
+      const normalizedLeft = Number.isFinite(leftPosition) ? leftPosition : Number.MAX_SAFE_INTEGER
+      const normalizedRight = Number.isFinite(rightPosition) ? rightPosition : Number.MAX_SAFE_INTEGER
+      return normalizedLeft - normalizedRight
+    })
+
+    images.push(...sorted.map((img: any) => img?.imageUrl || img?.url || '').filter(Boolean))
+  }
+
+  if (images.length === 0 && fallbackImageUrl) {
+    images.push(fallbackImageUrl)
+  }
+
+  return images
+}
+
 export interface ProductVariant {
   id: number
   name: string
@@ -34,6 +60,7 @@ export interface ProductVariant {
   defaultVariant: boolean
   position: number
   options: Record<string, string>
+  imageUrl?: string
   createdDate?: string
   updatedDate?: string
 }
@@ -41,6 +68,7 @@ export interface ProductVariant {
 export interface Product {
   id: string
   slug: string
+  sku: string
   name: string
   description: string
   shortDescription?: string
@@ -356,14 +384,7 @@ export async function fetchProducts(params: SearchParams = {}): Promise<Products
 
     // Transform backend ProductDTO to frontend Product format
     const products: Product[] = (backendData.content || []).map((p: any) => {
-      // Extract images from ProductImageResponse array or use imageUrl
-      const images: string[] = []
-      if (p.images && Array.isArray(p.images)) {
-        images.push(...p.images.map((img: any) => img.imageUrl || img.url || '').filter(Boolean))
-      }
-      if (p.imageUrl && !images.includes(p.imageUrl)) {
-        images.unshift(p.imageUrl)
-      }
+      const images = extractOrderedImages(p.images, p.imageUrl)
 
       // Determine availability
       const stockQty = p.stockQuantity || 0
@@ -376,7 +397,9 @@ export async function fetchProducts(params: SearchParams = {}): Promise<Products
 
       return {
         id: p.id?.toString() || '',
-        slug: p.slug || p.sku?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || p.id?.toString() || '',
+        // Backend detail endpoint is keyed by SKU, so keep slug == SKU to avoid mismatches.
+        slug: p.sku || p.id?.toString() || '',
+        sku: p.sku || '',
         name: p.name || '',
         description: p.description || '',
         price: typeof p.price === 'number' ? p.price : parseFloat(p.price) || 0,
@@ -386,7 +409,7 @@ export async function fetchProducts(params: SearchParams = {}): Promise<Products
         images: images.length > 0 ? images : [''],
         category: p.categoryId?.toString() || '',
         categoryName: p.categoryName || '',
-        partNumber: p.sku || '',
+        partNumber: p.partNumber || undefined,
         manufacturer: p.brand || p.manufacturer || '',
         brand: p.brand || p.manufacturer || '',
         productType: p.productType || undefined,
@@ -484,13 +507,7 @@ export async function fetchProductBySlug(slug: string): Promise<Product | null> 
 
     const data = await response.json()
 
-    const images: string[] = []
-    if (data.images && Array.isArray(data.images)) {
-      images.push(...data.images.map((img: any) => img.imageUrl || img.url || '').filter(Boolean))
-    }
-    if (data.imageUrl && !images.includes(data.imageUrl)) {
-      images.unshift(data.imageUrl)
-    }
+    const images = extractOrderedImages(data.images, data.imageUrl)
 
     const stockQty = data.stockQuantity || 0
     let availability: 'in_stock' | 'low_stock' | 'out_of_stock' | 'pre_order' = 'out_of_stock'
@@ -512,7 +529,9 @@ export async function fetchProductBySlug(slug: string): Promise<Product | null> 
 
     return {
       id: data.id?.toString() || '',
-      slug: data.slug || data.sku?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || data.id?.toString() || '',
+      // Backend detail endpoint is keyed by SKU, so keep slug == SKU to avoid mismatches.
+      slug: data.sku || data.id?.toString() || '',
+      sku: data.sku || '',
       name: data.name || '',
       description: data.description || '',
       shortDescription: data.shortDescription || '',
@@ -523,7 +542,7 @@ export async function fetchProductBySlug(slug: string): Promise<Product | null> 
       images: images.length > 0 ? images : [''],
       category: data.categoryId?.toString() || '',
       categoryName: data.categoryName || '',
-      partNumber: data.sku || '',
+      partNumber: data.partNumber || undefined,
       manufacturer: data.brand || data.manufacturer || '',
       brand: data.brand || data.manufacturer || '',
       productType: data.productType || undefined,

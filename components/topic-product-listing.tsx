@@ -31,7 +31,7 @@ import {
   TRANSMISSION_TYPES,
 } from "@/lib/filterAttributes"
 import { getImageUrl } from "@/lib/utils"
-import { Search, ShoppingCart, Filter, X, ArrowLeft } from "lucide-react"
+import { Search, ShoppingCart, Filter, X, ArrowLeft, ChevronDown } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { motion } from "framer-motion"
@@ -77,6 +77,22 @@ function formatHorsepowerFromKw(value?: number): string | undefined {
   return `${new Intl.NumberFormat("en-US").format(hp)} hp`
 }
 
+/**
+ * Card excerpt policy:
+ * - Use the first paragraph/line only.
+ * - Collapse whitespace.
+ * - Truncate to keep cards compact without fragile regex "metadata stripping".
+ */
+function getCardExcerpt(description?: string, maxChars: number = 150): string | undefined {
+  if (!description) return undefined
+  const raw = String(description)
+  const firstParagraph = raw.split(/\n\s*\n/)[0] ?? raw
+  const collapsed = firstParagraph.replace(/\s+/g, " ").trim()
+  if (!collapsed) return undefined
+  if (collapsed.length <= maxChars) return collapsed
+  return `${collapsed.slice(0, Math.max(0, maxChars - 3)).trim()}...`
+}
+
 export function TopicProductListing({
   rootCategoryId,
   topicSlug,
@@ -85,7 +101,7 @@ export function TopicProductListing({
   defaultCategoryId,
   showBackLink = true,
   backLinkHref = "/shop",
-  backLinkLabel = "Back to Shop"
+  backLinkLabel = "Shop Home"
 }: TopicProductListingProps) {
   const DISPLAY_PAGE_SIZE = 12
   const router = useRouter()
@@ -123,10 +139,11 @@ export function TopicProductListing({
   const [streetLegal, setStreetLegal] = useState("all")
   const [styleTag, setStyleTag] = useState("")
 
-  const [sortBy, setSortBy] = useState<SearchParams['sortBy']>("newest")
+  const [sortBy, setSortBy] = useState<NonNullable<SearchParams['sortBy']>>("newest")
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [showMobileFilters, setShowMobileFilters] = useState(false)
+  const [filtersCollapsed, setFiltersCollapsed] = useState(true)
   const [brands, setBrands] = useState<string[]>([])
   const skipInitialPageReset = useRef(true)
 
@@ -209,6 +226,7 @@ export function TopicProductListing({
     if (sortBy !== "newest") params.set("sortBy", sortBy)
     if (page > 1) params.set("page", String(page))
 
+    if (!pathname) return
     const query = params.toString()
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
   }, [
@@ -465,14 +483,31 @@ export function TopicProductListing({
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold">Filters</h3>
-                {hasActiveFilters && (
-                  <Button variant="ghost" size="sm" onClick={clearFilters}>
-                    Clear
+                <div className="flex items-center gap-1">
+                  {hasActiveFilters && !filtersCollapsed && (
+                    <Button variant="ghost" size="sm" onClick={clearFilters}>
+                      Clear
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto p-0 !text-white hover:bg-transparent hover:!text-white [&_svg]:!text-white"
+                    onClick={() => setFiltersCollapsed((prev) => !prev)}
+                    aria-label={filtersCollapsed ? "Show all filters" : "Hide all filters"}
+                  >
+                    <ChevronDown
+                      className={`pointer-events-none size-5 shrink-0 transition-transform duration-200 ${filtersCollapsed ? "rotate-0" : "rotate-180"}`}
+                      style={{ color: "#ffffff", stroke: "#ffffff", opacity: 1 }}
+                    />
                   </Button>
-                )}
+                </div>
               </div>
               <Separator />
             </div>
+
+            {!filtersCollapsed && (
+              <>
 
             {/* Category Filter */}
             <div>
@@ -684,6 +719,8 @@ export function TopicProductListing({
                 />
               </div>
             </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </aside>
@@ -715,7 +752,7 @@ export function TopicProductListing({
               Filters
             </Button>
 
-            <Select value={sortBy} onValueChange={(value) => setSortBy(value as SearchParams['sortBy'])}>
+            <Select value={sortBy} onValueChange={(value) => setSortBy(value as NonNullable<SearchParams['sortBy']>)}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
@@ -923,6 +960,7 @@ export function TopicProductListing({
                 const availabilityBadge = getAvailabilityBadge(product.availability)
                 const isQuoteOnly = isQuoteOnlyProduct(product)
                 const isCarListingCard = isCarsTopic || product.productType === "car"
+                const isPartListingCard = isPartsTopic || product.productType === "part"
                 const carQuickFacts: string[] = []
                 if (product.year) carQuickFacts.push(String(product.year))
                 const mileageLabel = formatMileage(product.mileage)
@@ -933,6 +971,18 @@ export function TopicProductListing({
                 if (product.transmission) carQuickFacts.push(formatEnumLabel(product.transmission))
                 if (product.driveType) carQuickFacts.push(formatEnumLabel(product.driveType))
                 const visibleCarFacts = carQuickFacts.slice(0, 6)
+
+                const partFacts: Array<{ label: string; value: string }> = []
+                if (isPartListingCard) {
+                  if (product.partCategory) partFacts.push({ label: "Category", value: product.partCategory })
+                  if (product.condition) partFacts.push({ label: "Condition", value: formatEnumLabel(product.condition) })
+                  if (product.material) partFacts.push({ label: "Material", value: product.material })
+                  if (product.partPosition && product.partPosition.length > 0) {
+                    partFacts.push({ label: "Position", value: product.partPosition.slice(0, 2).join(", ") })
+                  }
+                }
+
+                const excerpt = getCardExcerpt(product.description)
 
                 return (
                   <motion.div
@@ -989,9 +1039,24 @@ export function TopicProductListing({
                                 </div>
                               )}
 
-                              {product.description && (
-                                <p className="text-sm text-muted-foreground line-clamp-2">
-                                  {product.description}
+                              {isPartListingCard && partFacts.length > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                  {partFacts.slice(0, 4).map((fact) => (
+                                    <Badge
+                                      key={`${product.id}-partfact-${fact.label}`}
+                                      variant="secondary"
+                                      className="text-xs font-normal"
+                                      title={`${fact.label}: ${fact.value}`}
+                                    >
+                                      {fact.label}: {fact.value}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
+
+                              {excerpt && (
+                                <p className="text-sm text-muted-foreground line-clamp-2" title={product.description}>
+                                  {excerpt}
                                 </p>
                               )}
 
@@ -1010,14 +1075,7 @@ export function TopicProductListing({
                                 <Button asChild variant="outline">
                                   <span>View</span>
                                 </Button>
-                                {isCarListingCard ? (
-                                  <Button
-                                    asChild
-                                    variant="secondary"
-                                  >
-                                    <span>Quote</span>
-                                  </Button>
-                                ) : !isQuoteOnly ? (
+                                {!isQuoteOnly ? (
                                   <Button
                                     onClick={(e) => {
                                       e.preventDefault()
@@ -1034,7 +1092,7 @@ export function TopicProductListing({
                                     asChild
                                     variant="secondary"
                                   >
-                                    <span>Quote</span>
+                                    <span>Request Quote</span>
                                   </Button>
                                 )}
                               </div>

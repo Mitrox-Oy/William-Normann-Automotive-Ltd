@@ -15,12 +15,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -33,6 +36,11 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final CategoryService categoryService;
+
+    private static final int MAX_SKU_LENGTH = 50;
+    private static final int SKU_SUFFIX_LENGTH = 6;
+    private static final int SKU_GENERATION_MAX_ATTEMPTS = 12;
+    private static final Pattern NON_ALNUM = Pattern.compile("[^A-Z0-9]+");
 
     @Autowired
     public ProductService(ProductRepository productRepository, CategoryRepository categoryRepository,
@@ -126,17 +134,24 @@ public class ProductService {
     public ProductDTO createProduct(ProductDTO productDTO) {
         validateProductData(productDTO);
 
-        if (productRepository.existsBySku(productDTO.getSku())) {
-            throw new IllegalArgumentException("Product with SKU '" + productDTO.getSku() + "' already exists");
-        }
-
         Category category = categoryRepository.findById(productDTO.getCategoryId())
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Category not found with id: " + productDTO.getCategoryId()));
 
+        String resolvedProductType = resolveProductType(category);
+        String resolvedSku = resolveOrGenerateSkuForCreate(productDTO, resolvedProductType);
+
+        if (productRepository.existsBySku(resolvedSku)) {
+            throw new IllegalArgumentException("Product with SKU '" + resolvedSku + "' already exists");
+        }
+
+        // Validate publish-critical fields (only on create / when actively publishing).
+        validatePublishAttributes(productDTO, resolvedProductType, true, null);
+
         Product product = convertToEntity(productDTO);
         product.setCategory(category);
-        product.setProductType(resolveProductType(category));
+        product.setProductType(resolvedProductType);
+        product.setSku(resolvedSku);
 
         Product savedProduct = productRepository.save(product);
         return convertToDTO(savedProduct);
@@ -151,19 +166,33 @@ public class ProductService {
 
         validateProductData(productDTO);
 
-        // Check SKU uniqueness if changed
-        if (!existingProduct.getSku().equals(productDTO.getSku()) &&
-                productRepository.existsBySku(productDTO.getSku())) {
-            throw new IllegalArgumentException("Product with SKU '" + productDTO.getSku() + "' already exists");
-        }
-
         Category category = categoryRepository.findById(productDTO.getCategoryId())
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Category not found with id: " + productDTO.getCategoryId()));
 
+        String resolvedProductType = resolveProductType(category);
+
+        // SKU rules:
+        // - Stable after creation (never auto-regenerate).
+        // - Admin may manually override by sending a non-blank SKU.
+        String incomingSku = trimToNull(productDTO.getSku());
+        if (incomingSku != null && !incomingSku.isBlank()) {
+            validateManualSku(incomingSku);
+            String existingSku = existingProduct.getSku();
+            if (existingSku == null || !existingSku.equals(incomingSku)) {
+                if (productRepository.existsBySku(incomingSku)) {
+                    throw new IllegalArgumentException("Product with SKU '" + incomingSku + "' already exists");
+                }
+                existingProduct.setSku(incomingSku);
+            }
+        }
+
+        // Validate publish-critical fields when product is (being) published.
+        validatePublishAttributes(productDTO, resolvedProductType, false, existingProduct);
+
         updateProductEntity(existingProduct, productDTO);
         existingProduct.setCategory(category);
-        existingProduct.setProductType(resolveProductType(category));
+        existingProduct.setProductType(resolvedProductType);
 
         Product savedProduct = productRepository.save(existingProduct);
         return convertToDTO(savedProduct);
@@ -222,7 +251,9 @@ public class ProductService {
         product.setDescription(dto.getDescription());
         product.setPrice(dto.getPrice());
         product.setStockQuantity(dto.getStockQuantity() != null ? dto.getStockQuantity() : 0);
-        product.setSku(dto.getSku());
+        // SKU is resolved explicitly by createProduct (and preserved on update unless manually overridden).
+        // Do not normalize-case SKUs here.
+        product.setSku(trimToNull(dto.getSku()));
         product.setImageUrl(dto.getImageUrl());
         product.setActive(dto.getActive() != null ? dto.getActive() : true);
         product.setFeatured(dto.getFeatured() != null ? dto.getFeatured() : false);
@@ -315,7 +346,7 @@ public class ProductService {
         product.setDescription(dto.getDescription());
         product.setPrice(dto.getPrice());
         product.setStockQuantity(dto.getStockQuantity() != null ? dto.getStockQuantity() : 0);
-        product.setSku(dto.getSku());
+        // Do not auto-regenerate or clear SKU on update. Manual SKU overrides are handled in updateProduct().
         product.setImageUrl(dto.getImageUrl());
         product.setActive(dto.getActive() != null ? dto.getActive() : true);
         product.setFeatured(dto.getFeatured() != null ? dto.getFeatured() : false);
@@ -529,6 +560,199 @@ public class ProductService {
         criteria.setBrand(brand);
         criteria.setInStockOnly(inStockOnly);
         return searchWithFilters(null, query, categoryId, criteria, featuredOnly, pageable);
+    }
+
+    private String resolveOrGenerateSkuForCreate(ProductDTO dto, String resolvedProductType) {
+        String incomingSku = trimToNull(dto.getSku());
+        if (incomingSku != null && !incomingSku.isBlank()) {
+            validateManualSku(incomingSku);
+            return incomingSku;
+        }
+
+        String generated = generateSku(dto, resolvedProductType);
+        // Ensure uniqueness. Extremely unlikely to loop, but enforce deterministically.
+        for (int attempt = 0; attempt < SKU_GENERATION_MAX_ATTEMPTS; attempt++) {
+            if (!productRepository.existsBySku(generated)) {
+                // Store back on DTO so callers/admin UI can display it after save.
+                dto.setSku(generated);
+                return generated;
+            }
+            generated = bumpSkuSuffix(generated);
+        }
+        throw new IllegalStateException("Failed to generate a unique SKU after " + SKU_GENERATION_MAX_ATTEMPTS + " attempts");
+    }
+
+    /**
+     * SKU auto-generation:
+     * - Derived from product snapshot data at creation time (human-friendly).
+     * - Uniqueness guaranteed via random suffix.
+     * - Stable: never auto-regenerates after creation.
+     */
+    public String generateSku(ProductDTO dto, String resolvedProductType) {
+        String type = resolvedProductType != null ? resolvedProductType.trim().toLowerCase(Locale.ROOT) : "";
+
+        String derived;
+        if ("part".equals(type)) {
+            // Example: PART-OIL-FILTER-FORD-ABC123
+            String category = abbreviateWord(dto.getPartCategory(), 12);
+            String makeOrBrand = abbreviateWord(firstNonBlank(dto.getMake(), dto.getBrand()), 8);
+            String nameHint = abbreviateWords(dto.getName(), 2, 10);
+
+            derived = joinSkuSegments(
+                    "PART",
+                    firstNonBlank(category, nameHint),
+                    makeOrBrand
+            );
+        } else if ("car".equals(type)) {
+            // Example: MERC-AMG-C63-S-2020-ABC123
+            String make = abbreviateWord(dto.getMake(), 4);
+            String model = abbreviateWord(dto.getModel(), 10);
+            String nameHint = abbreviateWords(dto.getName(), 4, 10);
+            String year = dto.getYear() != null ? String.valueOf(dto.getYear()) : null;
+
+            derived = joinSkuSegments(
+                    firstNonBlank(make, nameHint),
+                    model,
+                    year
+            );
+        } else {
+            // Fallback for tools/custom/etc.
+            String nameHint = abbreviateWords(dto.getName(), 5, 12);
+            derived = firstNonBlank(nameHint, "PROD");
+        }
+
+        String base = normalizeSkuBase(derived);
+        if (base.isBlank()) {
+            base = "PROD";
+        }
+
+        String suffix = randomSkuSuffix();
+        int maxBaseLen = Math.max(1, MAX_SKU_LENGTH - (1 + SKU_SUFFIX_LENGTH));
+        if (base.length() > maxBaseLen) {
+            base = base.substring(0, maxBaseLen).replaceAll("-+$", "");
+            if (base.isBlank()) base = "PROD";
+        }
+
+        return base + "-" + suffix;
+    }
+
+    private String bumpSkuSuffix(String sku) {
+        // Replace suffix after last '-' (or append if missing).
+        String suffix = randomSkuSuffix();
+        int idx = sku.lastIndexOf('-');
+        String base = idx > 0 ? sku.substring(0, idx) : sku;
+        int maxBaseLen = Math.max(1, MAX_SKU_LENGTH - (1 + SKU_SUFFIX_LENGTH));
+        if (base.length() > maxBaseLen) {
+            base = base.substring(0, maxBaseLen).replaceAll("-+$", "");
+            if (base.isBlank()) base = "PROD";
+        }
+        return base + "-" + suffix;
+    }
+
+    private void validateManualSku(String sku) {
+        String trimmed = sku.trim();
+        if (trimmed.isBlank()) {
+            throw new IllegalArgumentException("SKU cannot be blank");
+        }
+        if (trimmed.length() < 3) {
+            throw new IllegalArgumentException("SKU must be at least 3 characters");
+        }
+        if (trimmed.length() > MAX_SKU_LENGTH) {
+            throw new IllegalArgumentException("SKU must be at most " + MAX_SKU_LENGTH + " characters");
+        }
+    }
+
+    private void validatePublishAttributes(ProductDTO dto, String resolvedProductType, boolean isCreate, Product existingProduct) {
+        // Only enforce completeness when product is being published.
+        boolean willBeActive = dto.getActive() != null ? Boolean.TRUE.equals(dto.getActive())
+                : (existingProduct != null ? Boolean.TRUE.equals(existingProduct.getActive()) : true);
+
+        if (!willBeActive) return;
+        if (resolvedProductType == null) return;
+
+        String type = resolvedProductType.trim().toLowerCase(Locale.ROOT);
+        if ("car".equals(type)) {
+            // Avoid breaking legacy updates: enforce on create, and on updates only when explicit active=true is sent.
+            boolean enforce = isCreate || (dto.getActive() != null && Boolean.TRUE.equals(dto.getActive()));
+            if (!enforce) return;
+
+            if (isBlank(dto.getMake()) || isBlank(dto.getModel()) || dto.getYear() == null) {
+                throw new IllegalArgumentException("Cars require make, model and year when active");
+            }
+        }
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
+    private static String trimToNull(String value) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static String firstNonBlank(String... values) {
+        if (values == null) return null;
+        for (String v : values) {
+            if (v != null && !v.trim().isEmpty()) return v.trim();
+        }
+        return null;
+    }
+
+    private static String randomSkuSuffix() {
+        // Uppercase hex (A-F0-9) is fine for uniqueness and DB constraints.
+        String raw = UUID.randomUUID().toString().replace("-", "").toUpperCase(Locale.ROOT);
+        return raw.substring(0, SKU_SUFFIX_LENGTH);
+    }
+
+    private static String normalizeSkuBase(String value) {
+        if (value == null) return "";
+        String normalized = Normalizer.normalize(value, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "");
+        normalized = normalized.toUpperCase(Locale.ROOT);
+        normalized = NON_ALNUM.matcher(normalized).replaceAll("-");
+        normalized = normalized.replaceAll("-{2,}", "-");
+        normalized = normalized.replaceAll("^-+", "").replaceAll("-+$", "");
+        return normalized;
+    }
+
+    private static String joinSkuSegments(String... segments) {
+        return Arrays.stream(segments)
+                .filter(s -> s != null && !s.trim().isEmpty())
+                .map(String::trim)
+                .collect(Collectors.joining("-"));
+    }
+
+    private static String abbreviateWord(String value, int maxLen) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) return null;
+        // Keep alnum chunks only for abbreviation logic; normalize later.
+        String chunk = trimmed.replaceAll("[^A-Za-z0-9]+", "");
+        if (chunk.isEmpty()) chunk = trimmed;
+        if (chunk.length() <= maxLen) return chunk;
+        return chunk.substring(0, maxLen);
+    }
+
+    private static String abbreviateWords(String value, int maxWords, int maxWordLen) {
+        if (value == null) return null;
+        String[] parts = value.trim().split("\\s+");
+        if (parts.length == 0) return null;
+        StringBuilder sb = new StringBuilder();
+        int used = 0;
+        for (String part : parts) {
+            if (part == null) continue;
+            String p = part.trim();
+            if (p.isEmpty()) continue;
+            if (used >= maxWords) break;
+            String abbr = abbreviateWord(p, maxWordLen);
+            if (abbr == null || abbr.isEmpty()) continue;
+            if (sb.length() > 0) sb.append("-");
+            sb.append(abbr);
+            used++;
+        }
+        return sb.length() == 0 ? null : sb.toString();
     }
 
     /**

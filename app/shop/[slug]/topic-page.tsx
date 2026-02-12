@@ -92,7 +92,7 @@ export default function TopicPage({ topic }: TopicPageProps) {
             <CardContent className="p-8 text-center">
               <p className="mb-4 text-destructive">{error}</p>
               <Link href="/shop" className="text-sm text-muted-foreground hover:text-primary">
-                ← Back to Shop
+                ← Shop Home
               </Link>
             </CardContent>
           </Card>
@@ -109,7 +109,7 @@ export default function TopicPage({ topic }: TopicPageProps) {
             <CardContent className="p-8 text-center">
               <p className="mb-4">Topic not found</p>
               <Link href="/shop" className="text-sm text-muted-foreground hover:text-primary">
-                ← Back to Shop
+                ← Shop Home
               </Link>
             </CardContent>
           </Card>
@@ -127,7 +127,7 @@ export default function TopicPage({ topic }: TopicPageProps) {
           className="inline-flex items-center text-sm text-muted-foreground hover:text-primary mb-6"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Shop
+          Shop Home
         </Link>
 
         {/* Page Title */}

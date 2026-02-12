@@ -117,7 +117,7 @@ export default function TopicSubcategoryPage() {
                 <Button asChild>
                   <Link href="/shop">
                     <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to Shop
+                    Shop Home
                   </Link>
                 </Button>
                 {isValidTopicRoute && topicInfo && (

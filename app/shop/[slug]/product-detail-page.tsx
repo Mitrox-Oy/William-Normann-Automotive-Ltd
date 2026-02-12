@@ -65,6 +65,8 @@ export default function ProductDetailPage({ slug }: ProductDetailPageProps) {
           setProduct(null)
         } else {
           setProduct(data)
+          // Always default to the first (main) image for a newly loaded product.
+          setSelectedImage(0)
           // Auto-select variant from URL or default variant
           if (data.variants && data.variants.length > 0) {
             const variantId = searchParams.get('variant')
@@ -138,7 +140,8 @@ export default function ProductDetailPage({ slug }: ProductDetailPageProps) {
       phone: formData.get("phone"),
       message: formData.get("message"),
       product: quoteProductName,
-      partNumber: selectedVariant?.sku || product?.partNumber || '',
+      // Send SKU (variant SKU if selected, otherwise product SKU) for lead follow-up.
+      partNumber: selectedVariant?.sku || product?.sku || '',
       quantity: quantity.toString(),
       source: "product_quote",
     }
@@ -199,7 +202,7 @@ export default function ProductDetailPage({ slug }: ProductDetailPageProps) {
               <Button asChild>
                 <Link href="/shop">
                   <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back to Shop
+                  Shop Home
                 </Link>
               </Button>
             </CardContent>
@@ -211,11 +214,12 @@ export default function ProductDetailPage({ slug }: ProductDetailPageProps) {
 
   const availabilityBadge = getAvailabilityBadge(product.availability)
   const displayName = selectedVariant ? `${product.name} — ${selectedVariant.name}` : product.name
-  const displaySku = selectedVariant?.sku
+  const displaySku = selectedVariant?.sku || product.sku
   const quoteProductName = selectedVariant ? `${product.name} - ${selectedVariant.name}` : product.name
   const infoSections = product.infoSections || []
   const isQuoteOnly = product.quoteOnly === true
   const normalizedProductType = product.productType?.toLowerCase()
+  const isCarProduct = normalizedProductType === "car"
 
   const formatEnumValue = (value?: string) => {
     if (!value) return undefined
@@ -237,20 +241,6 @@ export default function ProductDetailPage({ slug }: ProductDetailPageProps) {
     hasValue(product.compatibleYearStart) ||
     hasValue(product.compatibleYearEnd) ||
     hasValue(product.vinCompatible)
-
-  const hasCarTab =
-    normalizedProductType === "car" ||
-    hasValue(product.make) ||
-    hasValue(product.model) ||
-    hasValue(product.year) ||
-    hasValue(product.mileage) ||
-    hasValue(product.fuelType) ||
-    hasValue(product.transmission) ||
-    hasValue(product.bodyType) ||
-    hasValue(product.driveType) ||
-    hasValue(product.powerKw) ||
-    hasValue(product.color) ||
-    hasValue(product.warrantyIncluded)
 
   const hasPartsTab =
     normalizedProductType === "part" ||
@@ -279,6 +269,24 @@ export default function ProductDetailPage({ slug }: ProductDetailPageProps) {
     hasValue(product.streetLegal) ||
     hasValue(product.installationDifficulty)
 
+  const carDetailsText = (() => {
+    if (!isCarProduct) return ""
+    const lines: string[] = []
+    if (product.year !== undefined) lines.push(`Year: ${product.year}`)
+    if (product.make) lines.push(`Make: ${product.make}`)
+    if (product.model) lines.push(`Model: ${product.model}`)
+    if (product.mileage !== undefined) {
+      lines.push(`Mileage: ${new Intl.NumberFormat("en-US").format(product.mileage)} km`)
+    }
+    if (product.powerKw !== undefined) lines.push(`Power: ${product.powerKw} kW`)
+    if (product.fuelType) lines.push(`Fuel Type: ${formatEnumValue(product.fuelType)}`)
+    if (product.transmission) lines.push(`Transmission: ${formatEnumValue(product.transmission)}`)
+    if (product.driveType) lines.push(`Drive Type: ${formatEnumValue(product.driveType)}`)
+    if (product.color) lines.push(`Color: ${product.color}`)
+    if (product.warrantyIncluded !== undefined) lines.push(`Warranty: ${product.warrantyIncluded ? "Included" : "Not included"}`)
+    return lines.join("\n")
+  })()
+
   const compatibilityYearRange =
     hasValue(product.compatibleYearStart) || hasValue(product.compatibleYearEnd)
       ? `${product.compatibleYearStart ?? "Any"} - ${product.compatibleYearEnd ?? "Any"}`
@@ -299,7 +307,7 @@ export default function ProductDetailPage({ slug }: ProductDetailPageProps) {
             className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Shop
+            Shop Home
           </Link>
         </div>
 
@@ -349,6 +357,7 @@ export default function ProductDetailPage({ slug }: ProductDetailPageProps) {
                 ))}
               </div>
             )}
+
           </motion.div>
 
           {/* Product Info */}
@@ -362,14 +371,14 @@ export default function ProductDetailPage({ slug }: ProductDetailPageProps) {
                 {availabilityBadge.label}
               </Badge>
               <h1 className="mb-3 text-3xl font-bold lg:text-4xl">{displayName}</h1>
+              {displaySku && (
+                <p className="text-sm text-muted-foreground">
+                  SKU: <span className="font-mono font-medium">{displaySku}</span>
+                </p>
+              )}
               {product.partNumber && (
                 <p className="text-sm text-muted-foreground">
                   Part Number: <span className="font-mono font-medium">{product.partNumber}</span>
-                </p>
-              )}
-              {displaySku && (
-                <p className="text-sm text-muted-foreground">
-                  Variant SKU: <span className="font-mono font-medium">{displaySku}</span>
                 </p>
               )}
               {product.manufacturer && (
@@ -552,7 +561,6 @@ export default function ProductDetailPage({ slug }: ProductDetailPageProps) {
             <TabsList className="inline-flex w-fit max-w-full flex-wrap gap-2">
               <TabsTrigger className="!flex-none min-w-[120px] px-4" value="description">Description</TabsTrigger>
               {hasVehicleTab && <TabsTrigger className="!flex-none min-w-[120px] px-4" value="vehicle">Vehicle</TabsTrigger>}
-              {hasCarTab && <TabsTrigger className="!flex-none min-w-[120px] px-4" value="car-fields">Car Fields</TabsTrigger>}
               {hasPartsTab && <TabsTrigger className="!flex-none min-w-[120px] px-4" value="parts">Parts</TabsTrigger>}
               {hasToolsTab && <TabsTrigger className="!flex-none min-w-[120px] px-4" value="tools">Tools</TabsTrigger>}
               {hasCustomTab && <TabsTrigger className="!flex-none min-w-[120px] px-4" value="custom">Custom</TabsTrigger>}
@@ -595,12 +603,14 @@ export default function ProductDetailPage({ slug }: ProductDetailPageProps) {
                       )}
                     </div>
                   )}
+
                   <div className="prose prose-sm max-w-none dark:prose-invert">
+                    {carDetailsText && <p className="leading-relaxed whitespace-pre-line">{carDetailsText}</p>}
                     {product.description ? (
                       <p className="leading-relaxed whitespace-pre-line">{product.description}</p>
-                    ) : (
+                    ) : !carDetailsText ? (
                       <p className="text-muted-foreground">No description available.</p>
-                    )}
+                    ) : null}
                   </div>
                 </CardContent>
               </Card>
@@ -634,72 +644,6 @@ export default function ProductDetailPage({ slug }: ProductDetailPageProps) {
                       {product.vinCompatible !== undefined && (
                         <div>
                           <span className="font-medium text-foreground">VIN Compatible:</span> {product.vinCompatible ? "Yes" : "No"}
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            )}
-
-            {hasCarTab && (
-              <TabsContent value="car-fields" className="mt-6">
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
-                      {product.make && (
-                        <div>
-                          <span className="font-medium text-foreground">Make:</span> {product.make}
-                        </div>
-                      )}
-                      {product.model && (
-                        <div>
-                          <span className="font-medium text-foreground">Model:</span> {product.model}
-                        </div>
-                      )}
-                      {product.year !== undefined && (
-                        <div>
-                          <span className="font-medium text-foreground">Year:</span> {product.year}
-                        </div>
-                      )}
-                      {product.mileage !== undefined && (
-                        <div>
-                          <span className="font-medium text-foreground">Mileage:</span> {product.mileage}
-                        </div>
-                      )}
-                      {product.fuelType && (
-                        <div>
-                          <span className="font-medium text-foreground">Fuel Type:</span> {formatEnumValue(product.fuelType)}
-                        </div>
-                      )}
-                      {product.transmission && (
-                        <div>
-                          <span className="font-medium text-foreground">Transmission:</span> {formatEnumValue(product.transmission)}
-                        </div>
-                      )}
-                      {product.bodyType && (
-                        <div>
-                          <span className="font-medium text-foreground">Body Type:</span> {formatEnumValue(product.bodyType)}
-                        </div>
-                      )}
-                      {product.driveType && (
-                        <div>
-                          <span className="font-medium text-foreground">Drive Type:</span> {formatEnumValue(product.driveType)}
-                        </div>
-                      )}
-                      {product.powerKw !== undefined && (
-                        <div>
-                          <span className="font-medium text-foreground">Power:</span> {product.powerKw} kW
-                        </div>
-                      )}
-                      {product.color && (
-                        <div>
-                          <span className="font-medium text-foreground">Color:</span> {product.color}
-                        </div>
-                      )}
-                      {product.warrantyIncluded !== undefined && (
-                        <div>
-                          <span className="font-medium text-foreground">Warranty Included:</span> {product.warrantyIncluded ? "Yes" : "No"}
                         </div>
                       )}
                     </div>
@@ -910,8 +854,8 @@ export default function ProductDetailPage({ slug }: ProductDetailPageProps) {
                 <p className="text-slate-200">
                   Price: {formatCurrency(selectedVariant?.price || product.price, product.currency)}
                 </p>
-                {(selectedVariant?.sku || product?.partNumber) && (
-                  <p className="text-slate-200">Part #: {selectedVariant?.sku || product?.partNumber}</p>
+                {displaySku && (
+                  <p className="text-slate-200">SKU: {displaySku}</p>
                 )}
                 <p className="text-slate-200">Quantity: {quantity}</p>
               </div>

@@ -30,7 +30,7 @@ import {
   csvToList,
   type ProductType,
 } from "@/lib/filterAttributes"
-import { ChevronLeft, Plus, Trash2, Upload, X } from "lucide-react"
+import { ChevronLeft, ChevronRight, Plus, Trash2, Upload, X } from "lucide-react"
 import Link from "next/link"
 // Simple toast implementation - replace with proper toast library if needed
 function showToast(message: string, type: 'success' | 'error' | 'warning' = 'success') {
@@ -58,6 +58,21 @@ interface InfoSection {
   title: string
   content: string
   enabled: boolean
+}
+
+function getProductNamePlaceholder(productType?: ProductType): string {
+  switch (productType) {
+    case "car":
+      return "e.g., BMW 330i M Sport"
+    case "part":
+      return "e.g., Brembo Front Brake Pads"
+    case "tool":
+      return "e.g., Digital Torque Wrench Set"
+    case "custom":
+      return "e.g., Custom Carbon Fiber Splitter"
+    default:
+      return "e.g., Product name"
+  }
 }
 
 function NewProductPageContent() {
@@ -214,14 +229,21 @@ function NewProductPageContent() {
 
   function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || [])
-    setImages([...images, ...files])
+    if (files.length === 0) return
+
+    setImages((prev) => [...prev, ...files])
+
     files.forEach((file) => {
       const reader = new FileReader()
-      reader.onload = (e) => {
-        setImageUrls([...imageUrls, e.target?.result as string])
+      reader.onload = (event) => {
+        const imageDataUrl = event.target?.result as string
+        if (!imageDataUrl) return
+        setImageUrls((prev) => [...prev, imageDataUrl])
       }
       reader.readAsDataURL(file)
     })
+
+    e.target.value = ""
   }
 
   function removeImage(index: number) {
@@ -232,6 +254,30 @@ function NewProductPageContent() {
     } else if (mainImageIndex !== null && mainImageIndex > index) {
       setMainImageIndex(mainImageIndex - 1)
     }
+  }
+
+  function moveQueuedImage(index: number, direction: "left" | "right") {
+    const targetIndex = direction === "left" ? index - 1 : index + 1
+    if (targetIndex < 0 || targetIndex >= imageUrls.length) return
+
+    setImages((prev) => {
+      const next = [...prev]
+      ;[next[index], next[targetIndex]] = [next[targetIndex], next[index]]
+      return next
+    })
+
+    setImageUrls((prev) => {
+      const next = [...prev]
+      ;[next[index], next[targetIndex]] = [next[targetIndex], next[index]]
+      return next
+    })
+
+    setMainImageIndex((prev) => {
+      if (prev === null) return prev
+      if (prev === index) return targetIndex
+      if (prev === targetIndex) return index
+      return prev
+    })
   }
 
   function csvToArray(value: string): string[] {
@@ -266,7 +312,7 @@ function NewProductPageContent() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
 
-    if (!name || !sku || !price || !categoryId) {
+    if (!name || !price || !categoryId) {
       showToast("Please fill in all required fields", "error")
       return
     }
@@ -286,7 +332,7 @@ function NewProductPageContent() {
         description: description || undefined,
         price: parseFloat(price),
         stockQuantity: parseInt(stockQuantity) || 0,
-        sku,
+        sku: sku.trim() ? sku.trim() : undefined,
         categoryId: parseInt(categoryId),
         imageUrl: imageUrl || undefined,
         active,
@@ -338,9 +384,10 @@ function NewProductPageContent() {
       infoSections.forEach((section, index) => {
         const sectionNum = index + 1
         if (section.enabled && section.title && section.content) {
-          productData[`infoSection${sectionNum}Title` as keyof ProductCreateInput] = section.title
-          productData[`infoSection${sectionNum}Content` as keyof ProductCreateInput] = section.content
-          productData[`infoSection${sectionNum}Enabled` as keyof ProductCreateInput] = true
+          const target = productData as any
+          target[`infoSection${sectionNum}Title`] = section.title
+          target[`infoSection${sectionNum}Content`] = section.content
+          target[`infoSection${sectionNum}Enabled`] = true
         }
       })
 
@@ -385,6 +432,10 @@ function NewProductPageContent() {
     }
   }
 
+  const isCarProduct = productType === "car"
+  const showVehicleTab = productType === "part" || productType === "custom"
+  const namePlaceholder = getProductNamePlaceholder(productType)
+
   return (
     <section className="py-24 lg:py-32">
       <Container>
@@ -406,8 +457,8 @@ function NewProductPageContent() {
           <Tabs defaultValue="basic" className="space-y-6">
             <TabsList>
               <TabsTrigger value="basic">Basic Info</TabsTrigger>
-              <TabsTrigger value="details">Details</TabsTrigger>
-              <TabsTrigger value="vehicle">Vehicle</TabsTrigger>
+              {!isCarProduct && <TabsTrigger value="details">Details</TabsTrigger>}
+              {showVehicleTab && <TabsTrigger value="vehicle">Vehicle</TabsTrigger>}
               {productType === "car" && <TabsTrigger value="car-fields">Car Fields</TabsTrigger>}
               {productType === "part" && <TabsTrigger value="parts">Parts</TabsTrigger>}
               {productType === "tool" && <TabsTrigger value="tools">Tools</TabsTrigger>}
@@ -431,7 +482,7 @@ function NewProductPageContent() {
                       id="name"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="e.g., iPhone 15 Pro"
+                      placeholder={namePlaceholder}
                       required
                       minLength={2}
                       maxLength={200}
@@ -439,16 +490,17 @@ function NewProductPageContent() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="sku">SKU *</Label>
+                    <Label htmlFor="sku">SKU (optional)</Label>
                     <Input
                       id="sku"
                       value={sku}
                       onChange={(e) => setSku(e.target.value)}
-                      placeholder="e.g., IPH15P-256-BLK"
-                      required
-                      minLength={3}
+                      placeholder="Leave blank to auto-generate"
                       maxLength={50}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      If left blank, the backend will generate a stable SKU on creation.
+                    </p>
                   </div>
 
                   <div className="space-y-2">
@@ -559,120 +611,100 @@ function NewProductPageContent() {
             </TabsContent>
 
             {/* Details Tab */}
-            <TabsContent value="details" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Additional Details</CardTitle>
-                  <CardDescription>Optional product information</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="brand">Brand</Label>
-                      <Input
-                        id="brand"
-                        value={brand}
-                        onChange={(e) => setBrand(e.target.value)}
-                        placeholder="e.g., Apple"
-                        maxLength={100}
-                      />
+            {!isCarProduct && (
+              <TabsContent value="details" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Additional Details</CardTitle>
+                    <CardDescription>Optional product information</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="brand">Brand</Label>
+                        <Input
+                          id="brand"
+                          value={brand}
+                          onChange={(e) => setBrand(e.target.value)}
+                          placeholder="e.g., Apple"
+                          maxLength={100}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>OEM Type</Label>
+                        <Select value={oemType} onValueChange={setOemType}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select OEM type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Not specified</SelectItem>
+                            {OEM_TYPES.map((value) => (
+                              <SelectItem key={value} value={value}>{value.toUpperCase()}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
 
+            {/* Vehicle Compatibility Tab */}
+            {showVehicleTab && (
+              <TabsContent value="vehicle" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Vehicle Compatibility</CardTitle>
+                    <CardDescription>Use for parts/custom</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="weight">Weight (kg)</Label>
-                      <Input
-                        id="weight"
-                        type="number"
-                        step="0.001"
-                        min="0"
-                        value={weight}
-                        onChange={(e) => setWeight(e.target.value)}
-                        placeholder="0.000"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>OEM Type</Label>
-                      <Select value={oemType} onValueChange={setOemType}>
+                      <Label>Compatibility Mode</Label>
+                      <Select value={compatibilityMode} onValueChange={setCompatibilityMode}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select OEM type" />
+                          <SelectValue placeholder="Select mode" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">Not specified</SelectItem>
-                          {OEM_TYPES.map((value) => (
-                            <SelectItem key={value} value={value}>{value.toUpperCase()}</SelectItem>
+                          {COMPATIBILITY_MODES.map((value) => (
+                            <SelectItem key={value} value={value}>{value.replace("_", " ")}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="imageUrl">Main Image URL</Label>
-                    <Input
-                      id="imageUrl"
-                      value={imageUrl}
-                      onChange={(e) => setImageUrl(e.target.value)}
-                      placeholder="https://example.com/image.jpg"
-                    />
-                    <p className="text-xs text-muted-foreground">Or upload images in the Images tab</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Vehicle Compatibility Tab */}
-            <TabsContent value="vehicle" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Vehicle Compatibility</CardTitle>
-                  <CardDescription>Use for parts/custom (optional for tools)</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Compatibility Mode</Label>
-                    <Select value={compatibilityMode} onValueChange={setCompatibilityMode}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select mode" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {COMPATIBILITY_MODES.map((value) => (
-                          <SelectItem key={value} value={value}>{value.replace("_", " ")}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {compatibilityMode === "vehicle_specific" && (
-                    <>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Compatible Makes (comma-separated)</Label>
-                          <Input value={compatibleMakesInput} onChange={(e) => setCompatibleMakesInput(e.target.value)} placeholder="BMW, Mercedes-Benz" />
+                    {compatibilityMode === "vehicle_specific" && (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Compatible Makes (comma-separated)</Label>
+                            <Input value={compatibleMakesInput} onChange={(e) => setCompatibleMakesInput(e.target.value)} placeholder="BMW, Mercedes-Benz" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Compatible Models (comma-separated)</Label>
+                            <Input value={compatibleModelsInput} onChange={(e) => setCompatibleModelsInput(e.target.value)} placeholder="330i, C250" />
+                          </div>
                         </div>
-                        <div className="space-y-2">
-                          <Label>Compatible Models (comma-separated)</Label>
-                          <Input value={compatibleModelsInput} onChange={(e) => setCompatibleModelsInput(e.target.value)} placeholder="330i, C250" />
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label>Year Start</Label>
+                            <Input type="number" value={compatibleYearStart} onChange={(e) => setCompatibleYearStart(e.target.value)} />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Year End</Label>
+                            <Input type="number" value={compatibleYearEnd} onChange={(e) => setCompatibleYearEnd(e.target.value)} />
+                          </div>
+                          <div className="flex items-center space-x-2 pt-8">
+                            <Switch checked={vinCompatible} onCheckedChange={setVinCompatible} />
+                            <Label>VIN Compatible</Label>
+                          </div>
                         </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <Label>Year Start</Label>
-                          <Input type="number" value={compatibleYearStart} onChange={(e) => setCompatibleYearStart(e.target.value)} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Year End</Label>
-                          <Input type="number" value={compatibleYearEnd} onChange={(e) => setCompatibleYearEnd(e.target.value)} />
-                        </div>
-                        <div className="flex items-center space-x-2 pt-8">
-                          <Switch checked={vinCompatible} onCheckedChange={setVinCompatible} />
-                          <Label>VIN Compatible</Label>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
 
             {productType === "car" && (
               <TabsContent value="car-fields" className="space-y-6">
@@ -690,6 +722,18 @@ function NewProductPageContent() {
                       <Input type="number" value={mileage} onChange={(e) => setMileage(e.target.value)} placeholder="Mileage" />
                       <Input type="number" value={powerKw} onChange={(e) => setPowerKw(e.target.value)} placeholder="Power (kW)" />
                       <Input value={vehicleColor} onChange={(e) => setVehicleColor(e.target.value)} placeholder="Color" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="car-weight">Weight (kg)</Label>
+                      <Input
+                        id="car-weight"
+                        type="number"
+                        step="0.001"
+                        min="0"
+                        value={weight}
+                        onChange={(e) => setWeight(e.target.value)}
+                        placeholder="0.000"
+                      />
                     </div>
                     <div className="grid grid-cols-4 gap-4">
                       <Select value={fuelType} onValueChange={setFuelType}>
@@ -832,13 +876,22 @@ function NewProductPageContent() {
                   <CardDescription>Upload product images (max 10 images)</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="imageUrl">Main Image URL</Label>
+                    <Input
+                      id="imageUrl"
+                      value={imageUrl}
+                      onChange={(e) => setImageUrl(e.target.value)}
+                      placeholder="https://example.com/image.jpg"
+                    />
+                    <p className="text-xs text-muted-foreground">Optional: use a direct image URL or upload files below</p>
+                  </div>
+
+                  <Label htmlFor="image-upload" className="block cursor-pointer border-2 border-dashed border-muted-foreground/25 rounded-lg p-6">
                     <div className="flex flex-col items-center justify-center space-y-4">
                       <Upload className="h-12 w-12 text-muted-foreground" />
                       <div className="text-center">
-                        <Label htmlFor="image-upload" className="cursor-pointer">
-                          <span className="text-primary hover:underline">Click to upload</span> or drag and drop
-                        </Label>
+                        <span className="text-primary hover:underline">Click to upload</span> or drag and drop
                         <Input
                           id="image-upload"
                           type="file"
@@ -850,7 +903,7 @@ function NewProductPageContent() {
                         <p className="text-xs text-muted-foreground mt-2">PNG, JPG, GIF up to 5MB each</p>
                       </div>
                     </div>
-                  </div>
+                  </Label>
 
                   {imageUrls.length > 0 && (
                     <div className="grid grid-cols-4 gap-4">
@@ -871,6 +924,29 @@ function NewProductPageContent() {
                               type="button"
                               variant="secondary"
                               size="sm"
+                              className="text-black hover:text-black"
+                              onClick={() => moveQueuedImage(index, "left")}
+                              disabled={index === 0}
+                              title="Move left"
+                            >
+                              <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              className="text-black hover:text-black"
+                              onClick={() => moveQueuedImage(index, "right")}
+                              disabled={index === imageUrls.length - 1}
+                              title="Move right"
+                            >
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              className="text-black hover:text-black"
                               onClick={() => setMainImageIndex(index)}
                             >
                               Set Main

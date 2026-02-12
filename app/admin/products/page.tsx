@@ -15,11 +15,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { RequireAuth } from "@/components/AuthProvider"
-import { getAdminProducts, deleteProduct, getAllCategories, getCategoriesByTopic, getCategoryBySlug, createCategory, updateCategory, deleteCategory, type AdminProduct, type AdminCategory } from "@/lib/adminApi"
+import { getAdminProducts, deleteProduct, getAllCategories, getAdminCategories, getCategoryBySlug, createCategory, updateCategory, deleteCategory, type AdminProduct, type AdminCategory } from "@/lib/adminApi"
 import { formatCurrency, SHOP_TOPICS, TOPIC_INFO, type ShopTopic } from "@/lib/shopApi"
 import { Plus, Search, Edit, Trash2, ChevronLeft, ChevronRight, Package, FolderTree, Car, Wrench, Settings, Sparkles } from "lucide-react"
 import Link from "next/link"
-import type { Category } from "@/lib/shopApi"
+ 
 
 // Topic icons mapping
 const TOPIC_ICONS: Record<ShopTopic, React.ReactNode> = {
@@ -45,11 +45,11 @@ function AdminProductsContent() {
   const [totalPages, setTotalPages] = useState(1)
   
   // Categories state
-  const [categories, setCategories] = useState<Category[]>([])
-  const [allTopicCategories, setAllTopicCategories] = useState<Category[]>([])  // For parent dropdown
+  const [categories, setCategories] = useState<AdminCategory[]>([])
+  const [allTopicCategories, setAllTopicCategories] = useState<AdminCategory[]>([])  // For parent dropdown
   const [categoriesLoading, setCategoriesLoading] = useState(true)
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false)
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null)
+  const [editingCategory, setEditingCategory] = useState<AdminCategory | null>(null)
   const [categoryForm, setCategoryForm] = useState({
     name: "",
     slug: "",
@@ -116,12 +116,29 @@ function AdminProductsContent() {
   async function loadCategories() {
     try {
       setCategoriesLoading(true)
-      // Get categories filtered by selected topic
-      const data = await getCategoriesByTopic(selectedTopic)
-      // Exclude the root category itself, only show subcategories
-      const subcategories = data.filter(c => c.slug !== selectedTopic)
-      setCategories(subcategories || [])
-      setAllTopicCategories(data || [])  // Keep all for parent dropdown
+      const all = await getAdminCategories()
+      if (!topicRootCategoryId) {
+        setCategories([])
+        setAllTopicCategories([])
+        return
+      }
+
+      const categoryMap = new Map<number, AdminCategory>()
+      all.forEach((c) => categoryMap.set(c.id, c))
+
+      function isDescendantOf(category: AdminCategory, rootId: number): boolean {
+        if (category.id === rootId) return true
+        if (!category.parentId) return false
+        const parentId = typeof category.parentId === "number" ? category.parentId : Number.parseInt(String(category.parentId), 10)
+        const parent = categoryMap.get(parentId)
+        if (!parent) return false
+        return isDescendantOf(parent, rootId)
+      }
+
+      const inTopic = all.filter((c) => isDescendantOf(c, topicRootCategoryId))
+      const subcategories = inTopic.filter((c) => c.id !== topicRootCategoryId)
+      setCategories(subcategories)
+      setAllTopicCategories(inTopic)
     } catch (error) {
       console.error("Failed to load categories:", error)
       setCategories([])
@@ -131,14 +148,14 @@ function AdminProductsContent() {
     }
   }
 
-  function openCategoryDialog(category?: Category) {
+  function openCategoryDialog(category?: AdminCategory) {
     if (category) {
       setEditingCategory(category)
       setCategoryForm({
         name: category.name,
         slug: category.slug,
         description: category.description || "",
-        status: "active",
+        status: category.status || "active",
         parentId: category.parentId?.toString() || "",
       })
     } else {

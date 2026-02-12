@@ -34,9 +34,10 @@ public class ProductDTO {
     @Schema(description = "Available stock quantity", example = "50")
     private Integer stockQuantity;
 
-    @NotBlank(message = "SKU is required")
-    @Size(min = 3, max = 50, message = "SKU must be between 3 and 50 characters")
-    @Schema(description = "Stock Keeping Unit", example = "IPH15P-256-BLK", required = true)
+    // SKU is optional on create. If omitted/blank, backend auto-generates a stable SKU.
+    // If provided, backend enforces uniqueness and length constraints.
+    @Size(max = 50, message = "SKU must be at most 50 characters")
+    @Schema(description = "Stock Keeping Unit (optional on create; auto-generated if blank)", example = "IPH15P-256-BLK", required = false)
     private String sku;
 
     @Schema(description = "Product image URL", example = "https://example.com/images/iphone15pro.jpg")

@@ -60,21 +60,34 @@ public class ProductImageService {
         uploadedImageService.save(fileName, file);
         String imageUrl = "/api/images/" + fileName;
 
-        // Calculate position
-        int position = (int) currentImageCount;
+        boolean shouldBeMain = currentImageCount == 0 || (isMain != null && isMain);
 
-        // If this is the first image or explicitly set as main, make it main
-        if (currentImageCount == 0 || (isMain != null && isMain)) {
-            // Clear existing main image
+        // Position policy: main image is always position 0 so shop cards and detail pages show it first.
+        int position;
+        if (shouldBeMain) {
+            // Shift existing images down (position +1) to make room at 0.
+            if (currentImageCount > 0) {
+                productImageRepository.incrementPositionsFromPosition(productId, 0);
+            }
             productImageRepository.clearMainImageForProduct(productId);
+            position = 0;
             isMain = true;
         } else {
+            position = (int) currentImageCount;
             isMain = false;
         }
 
         // Create and save ProductImage
         ProductImage productImage = new ProductImage(imageUrl, position, isMain, product);
-        return productImageRepository.save(productImage);
+        ProductImage saved = productImageRepository.save(productImage);
+
+        // Backwards-compatibility: some frontends still read Product.imageUrl.
+        if (Boolean.TRUE.equals(isMain)) {
+            product.setImageUrl(imageUrl);
+            productRepository.save(product);
+        }
+
+        return saved;
     }
 
     public void deleteImage(Long productId, Long imageId) {
@@ -85,32 +98,43 @@ public class ProductImageService {
             throw new IllegalArgumentException("Image does not belong to the specified product");
         }
 
-        // Check if at least one image will remain (business rule)
-        long remainingImages = productImageRepository.countByProductId(productId) - 1;
-        if (remainingImages == 0) {
-            throw new IllegalArgumentException("Cannot delete the last image. Products must have at least one image.");
-        }
+        Integer deletedPosition = image.getPosition();
+        boolean wasMain = Boolean.TRUE.equals(image.getIsMain());
+        String deletedUrl = image.getImageUrl();
 
-        // If deleting main image, set another image as main
-        if (image.getIsMain()) {
-            List<ProductImage> otherImages = productImageRepository.findByProductIdOrderByPositionAsc(productId);
-            otherImages.stream()
-                    .filter(img -> !img.getId().equals(imageId))
-                    .findFirst()
-                    .ifPresent(img -> {
-                        img.setIsMain(true);
-                        productImageRepository.save(img);
-                    });
-        }
-
-        // Adjust positions of images after deleted image
-        productImageRepository.decrementPositionsAfterPosition(productId, image.getPosition());
-
-        // Delete the image
         productImageRepository.delete(image);
 
         // Delete physical file
-        deleteImageFile(image.getImageUrl());
+        deleteImageFileQuietly(deletedUrl);
+
+        // Adjust positions of images after deleted image (best-effort; older data can have null positions).
+        if (deletedPosition != null) {
+            productImageRepository.decrementPositionsAfterPosition(productId, deletedPosition);
+        }
+
+        // If the deleted image was main, ensure another remaining image becomes main (and therefore position 0).
+        List<ProductImage> remaining = productImageRepository.findByProductIdOrderByPositionAsc(productId);
+        if (remaining.isEmpty()) {
+            // Keep legacy imageUrl consistent to avoid broken storefront thumbnails.
+            productRepository.findById(productId).ifPresent(p -> {
+                p.setImageUrl(null);
+                productRepository.save(p);
+            });
+            return;
+        }
+
+        if (wasMain) {
+            setMainImage(productId, remaining.get(0).getId());
+            return;
+        }
+
+        // Enforce policy: main image is always position 0. If data got out of sync, fix it.
+        ProductImage main = remaining.stream().filter(img -> Boolean.TRUE.equals(img.getIsMain())).findFirst().orElse(null);
+        if (main == null) {
+            setMainImage(productId, remaining.get(0).getId());
+        } else if (main.getPosition() == null || main.getPosition() != 0) {
+            setMainImage(productId, main.getId());
+        }
     }
 
     public void setMainImage(Long productId, Long imageId) {
@@ -121,12 +145,33 @@ public class ProductImageService {
             throw new IllegalArgumentException("Image does not belong to the specified product");
         }
 
-        // Clear existing main image
-        productImageRepository.clearMainImageForProduct(productId);
+        // Main image must be position 0, so reorder positions accordingly (max 10 images -> safe to rewrite).
+        List<ProductImage> allImages = productImageRepository.findByProductIdOrderByPositionAsc(productId);
+        List<ProductImage> reordered = new java.util.ArrayList<>();
+        for (ProductImage img : allImages) {
+            if (img.getId().equals(imageId)) {
+                reordered.add(img);
+            }
+        }
+        for (ProductImage img : allImages) {
+            if (!img.getId().equals(imageId)) {
+                reordered.add(img);
+            }
+        }
 
-        // Set new main image
-        image.setIsMain(true);
-        productImageRepository.save(image);
+        for (int i = 0; i < reordered.size(); i++) {
+            ProductImage img = reordered.get(i);
+            img.setPosition(i);
+            img.setIsMain(img.getId().equals(imageId));
+            productImageRepository.save(img);
+        }
+
+        // Backwards-compatibility: keep legacy Product.imageUrl in sync with main selection.
+        Product product = image.getProduct();
+        if (product != null) {
+            product.setImageUrl(image.getImageUrl());
+            productRepository.save(product);
+        }
     }
 
     public void updateImagePosition(Long productId, Long imageId, Integer newPosition) {
@@ -172,6 +217,40 @@ public class ProductImageService {
         productImageRepository.save(image);
     }
 
+    public ProductImage replaceImage(Long productId, Long imageId, MultipartFile file) throws IOException {
+        ProductImage image = productImageRepository.findById(imageId)
+                .orElseThrow(() -> new IllegalArgumentException("Image not found with id: " + imageId));
+
+        if (!image.getProduct().getId().equals(productId)) {
+            throw new IllegalArgumentException("Image does not belong to the specified product");
+        }
+
+        validateImageFile(file);
+
+        // Save the new file first, then swap the URL, then clean up the old file.
+        String oldUrl = image.getImageUrl();
+        String fileName = saveImageFile(file);
+        uploadedImageService.save(fileName, file);
+        String imageUrl = "/api/images/" + fileName;
+
+        image.setImageUrl(imageUrl);
+        ProductImage saved = productImageRepository.save(image);
+
+        // Best-effort cleanup of old file/storage reference.
+        if (oldUrl != null && !oldUrl.isBlank()) {
+            deleteImageFileQuietly(oldUrl);
+        }
+
+        // Backwards-compatibility: if we replaced the main image file, keep Product.imageUrl pointing at it.
+        if (Boolean.TRUE.equals(saved.getIsMain()) && saved.getProduct() != null) {
+            Product product = saved.getProduct();
+            product.setImageUrl(saved.getImageUrl());
+            productRepository.save(product);
+        }
+
+        return saved;
+    }
+
     public List<ProductImage> reorderImages(Long productId, List<ImagePositionDTO> newOrder) {
         // Validate all images belong to the product
         for (ImagePositionDTO dto : newOrder) {
@@ -189,6 +268,12 @@ public class ProductImageService {
             ProductImage image = productImageRepository.findById(dto.getImageId()).get();
             image.setPosition(dto.getPosition());
             productImageRepository.save(image);
+        }
+
+        // Enforce: main image is always position 0.
+        ProductImage main = productImageRepository.findByProductIdAndIsMainTrue(productId).orElse(null);
+        if (main != null && main.getPosition() != null && main.getPosition() != 0) {
+            setMainImage(productId, main.getId());
         }
 
         return productImageRepository.findByProductIdOrderByPositionAsc(productId);
@@ -244,16 +329,29 @@ public class ProductImageService {
         return fileName;
     }
 
-    private void deleteImageFile(String imageUrl) {
-        String fileName = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+    private void deleteImageFileQuietly(String imageUrl) {
+        if (imageUrl == null || imageUrl.isBlank()) {
+            return;
+        }
+
+        String fileName = uploadedImageService.extractFileName(imageUrl);
+        if (fileName == null || fileName.isBlank()) {
+            return;
+        }
+
         try {
             Path filePath = Paths.get(UPLOAD_DIR, fileName);
             Files.deleteIfExists(filePath);
         } catch (IOException e) {
             // Log error but don't throw exception
             System.err.println("Failed to delete image file: " + imageUrl);
-        } finally {
+        }
+
+        // DB cleanup should not be allowed to fail the API call.
+        try {
             uploadedImageService.deleteByFileName(fileName);
+        } catch (RuntimeException e) {
+            System.err.println("Failed to delete uploaded image DB row for fileName=" + fileName + ": " + e.getMessage());
         }
     }
 }

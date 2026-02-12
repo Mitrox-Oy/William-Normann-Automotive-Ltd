@@ -69,7 +69,7 @@ public class ProductImageController {
             @PathVariable Long imageId) {
         try {
             productImageService.setMainImage(productId, imageId);
-            return ResponseEntity.ok().build();
+            return ResponseEntity.noContent().build();
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
         }
@@ -77,12 +77,29 @@ public class ProductImageController {
 
     @DeleteMapping("/{imageId}")
     @PreAuthorize("hasAnyRole('OWNER', 'ADMIN')")
-    public ResponseEntity<Void> deleteImage(
+    public ResponseEntity<?> deleteImage(
             @PathVariable Long productId,
             @PathVariable Long imageId) {
         try {
             productImageService.deleteImage(productId, imageId);
-            return ResponseEntity.ok().build();
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(java.util.Map.of("message", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/{imageId}/replace")
+    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN')")
+    public ResponseEntity<ProductImageResponse> replaceImage(
+            @PathVariable Long productId,
+            @PathVariable Long imageId,
+            @RequestParam("file") MultipartFile file) {
+        try {
+            ProductImage replaced = productImageService.replaceImage(productId, imageId, file);
+            return ResponseEntity.ok(new ProductImageResponse(replaced));
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
         }

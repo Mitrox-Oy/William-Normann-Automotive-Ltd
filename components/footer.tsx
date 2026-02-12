@@ -41,9 +41,9 @@ export function Footer() {
               </div>
             </div>
 
-            {/* Quick Links */}
+            {/* Explore */}
             <div>
-              <h3 className="mb-4 font-semibold">Quick Links</h3>
+              <h3 className="mb-4 font-semibold">Explore</h3>
               <ul className="space-y-3 text-sm">
                 {siteConfig.nav.map((item) => (
                   <li key={item.href}>

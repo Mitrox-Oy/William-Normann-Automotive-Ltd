@@ -150,7 +150,8 @@ class ProductServiceTest {
         // Given
         when(productRepository.existsBySku(testProductDTO.getSku())).thenReturn(false);
         when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
-        when(productRepository.save(any(Product.class))).thenReturn(testProduct);
+        // Return the saved entity so assertions can observe service-side mutations (e.g., generated SKU).
+        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
         ProductDTO result = productService.createProduct(testProductDTO);
@@ -159,8 +160,29 @@ class ProductServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.getName()).isEqualTo("iPhone 15 Pro");
         assertThat(result.getCategoryId()).isEqualTo(1L);
+        assertThat(result.getSku()).isEqualTo("IPH15P-256-BLK");
         verify(productRepository).existsBySku(testProductDTO.getSku());
         verify(categoryRepository).findById(1L);
+        verify(productRepository).save(any(Product.class));
+    }
+
+    @Test
+    void createProduct_WithBlankSku_ShouldAutoGenerateSku() {
+        // Given
+        testProductDTO.setSku("");
+        when(productRepository.existsBySku(anyString())).thenReturn(false);
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
+        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // When
+        ProductDTO result = productService.createProduct(testProductDTO);
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getSku()).isNotBlank();
+        assertThat(result.getSku()).hasSizeLessThanOrEqualTo(50);
+        assertThat(result.getSku()).contains("-");
+        verify(productRepository, atLeastOnce()).existsBySku(anyString());
         verify(productRepository).save(any(Product.class));
     }
 
@@ -168,6 +190,7 @@ class ProductServiceTest {
     void createProduct_WithDuplicateSku_ShouldThrowException() {
         // Given
         when(productRepository.existsBySku(testProductDTO.getSku())).thenReturn(true);
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
 
         // When & Then
         assertThatThrownBy(() -> productService.createProduct(testProductDTO))
@@ -175,13 +198,13 @@ class ProductServiceTest {
                 .hasMessageContaining("already exists");
 
         verify(productRepository).existsBySku(testProductDTO.getSku());
+        verify(categoryRepository).findById(1L);
         verify(productRepository, never()).save(any(Product.class));
     }
 
     @Test
     void createProduct_WithInvalidCategory_ShouldThrowException() {
         // Given
-        when(productRepository.existsBySku(testProductDTO.getSku())).thenReturn(false);
         when(categoryRepository.findById(1L)).thenReturn(Optional.empty());
 
         // When & Then
@@ -229,6 +252,30 @@ class ProductServiceTest {
         verify(productRepository).findById(1L);
         verify(categoryRepository).findById(1L);
         verify(productRepository).save(any(Product.class));
+    }
+
+    @Test
+    void updateProduct_WithNullSku_ShouldNotClearOrRegenerateSku() {
+        // Given
+        ProductDTO updateDTO = new ProductDTO();
+        updateDTO.setName("iPhone 15 Pro Max");
+        updateDTO.setDescription("Updated description");
+        updateDTO.setPrice(new BigDecimal("1199.99"));
+        updateDTO.setStockQuantity(30);
+        updateDTO.setSku(null); // omitted
+        updateDTO.setCategoryId(1L);
+
+        when(productRepository.findById(1L)).thenReturn(Optional.of(testProduct));
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
+        when(productRepository.save(any(Product.class))).thenReturn(testProduct);
+
+        // When
+        ProductDTO result = productService.updateProduct(1L, updateDTO);
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(testProduct.getSku()).isEqualTo("IPH15P-256-BLK");
+        verify(productRepository, never()).existsBySku(anyString());
     }
 
     @Test
