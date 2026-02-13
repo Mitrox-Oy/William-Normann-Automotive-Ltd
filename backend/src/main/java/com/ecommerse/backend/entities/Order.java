@@ -94,6 +94,30 @@ public class Order {
     @Column(name = "stripe_checkout_session_id", length = 255)
     private String stripeCheckoutSessionId;
 
+    @Column(name = "payment_provider", length = 32)
+    private String paymentProvider;
+
+    @Column(name = "paid_at")
+    private LocalDateTime paidAt;
+
+    @Column(name = "failed_at")
+    private LocalDateTime failedAt;
+
+    @Column(name = "canceled_at")
+    private LocalDateTime canceledAt;
+
+    @Column(name = "expired_at")
+    private LocalDateTime expiredAt;
+
+    @Column(name = "inventory_released_at")
+    private LocalDateTime inventoryReleasedAt;
+
+    @Column(name = "failure_code", length = 128)
+    private String failureCode;
+
+    @Column(name = "failure_message", length = 1000)
+    private String failureMessage;
+
     @Column(name = "currency", length = 3, nullable = false)
     private String currency = "eur";
 
@@ -179,7 +203,8 @@ public class Order {
     }
 
     private String generateOrderNumber() {
-        // Start from 1000000000000 (Jan 1, 2001) to avoid conflicts with old Stripe data
+        // Start from 1000000000000 (Jan 1, 2001) to avoid conflicts with old Stripe
+        // data
         // This ensures order numbers are always >= ORD-1000000000000
         long timestamp = System.currentTimeMillis();
         long offset = 1000000000000L; // Base offset
@@ -361,6 +386,70 @@ public class Order {
 
     public void setInventoryLocked(boolean inventoryLocked) {
         this.inventoryLocked = inventoryLocked;
+    }
+
+    public String getPaymentProvider() {
+        return paymentProvider;
+    }
+
+    public void setPaymentProvider(String paymentProvider) {
+        this.paymentProvider = paymentProvider;
+    }
+
+    public LocalDateTime getPaidAt() {
+        return paidAt;
+    }
+
+    public void setPaidAt(LocalDateTime paidAt) {
+        this.paidAt = paidAt;
+    }
+
+    public LocalDateTime getFailedAt() {
+        return failedAt;
+    }
+
+    public void setFailedAt(LocalDateTime failedAt) {
+        this.failedAt = failedAt;
+    }
+
+    public LocalDateTime getCanceledAt() {
+        return canceledAt;
+    }
+
+    public void setCanceledAt(LocalDateTime canceledAt) {
+        this.canceledAt = canceledAt;
+    }
+
+    public LocalDateTime getExpiredAt() {
+        return expiredAt;
+    }
+
+    public void setExpiredAt(LocalDateTime expiredAt) {
+        this.expiredAt = expiredAt;
+    }
+
+    public LocalDateTime getInventoryReleasedAt() {
+        return inventoryReleasedAt;
+    }
+
+    public void setInventoryReleasedAt(LocalDateTime inventoryReleasedAt) {
+        this.inventoryReleasedAt = inventoryReleasedAt;
+    }
+
+    public String getFailureCode() {
+        return failureCode;
+    }
+
+    public void setFailureCode(String failureCode) {
+        this.failureCode = failureCode;
+    }
+
+    public String getFailureMessage() {
+        return failureMessage;
+    }
+
+    public void setFailureMessage(String failureMessage) {
+        this.failureMessage = failureMessage;
     }
 
     @Override

@@ -30,6 +30,11 @@ public enum OrderStatus {
     FAILED,
 
     /**
+     * Checkout expired before payment was completed
+     */
+    EXPIRED,
+
+    /**
      * Order is being prepared for shipment
      */
     PROCESSING,

@@ -1,11 +1,15 @@
 package com.ecommerse.backend.controllers;
 
 import com.ecommerse.backend.dto.ProductDTO;
+import com.ecommerse.backend.dto.ProductCsvImportResult;
+import com.ecommerse.backend.dto.ProductOcrPrefillResponse;
 import com.ecommerse.backend.dto.ProductVariantPositionRequest;
 import com.ecommerse.backend.dto.ProductVariantRequest;
 import com.ecommerse.backend.dto.ProductVariantResponse;
+import com.ecommerse.backend.services.ProductCsvImportService;
 import com.ecommerse.backend.services.FileService;
 import com.ecommerse.backend.services.ProductFilterCriteria;
+import com.ecommerse.backend.services.ProductOcrPrefillService;
 import com.ecommerse.backend.services.ProductService;
 import com.ecommerse.backend.services.ProductVariantService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -46,12 +50,18 @@ public class ProductController {
     private final ProductService productService;
     private final ProductVariantService productVariantService;
     private final FileService fileService;
+    private final ProductCsvImportService productCsvImportService;
+    private final ProductOcrPrefillService productOcrPrefillService;
 
     public ProductController(ProductService productService, ProductVariantService productVariantService,
-            FileService fileService) {
+            FileService fileService,
+            ProductCsvImportService productCsvImportService,
+            ProductOcrPrefillService productOcrPrefillService) {
         this.productService = productService;
         this.productVariantService = productVariantService;
         this.fileService = fileService;
+        this.productCsvImportService = productCsvImportService;
+        this.productOcrPrefillService = productOcrPrefillService;
     }
 
     @Operation(summary = "Get all products", description = "Retrieve a paginated list of all active products. Available to all users. Use rootCategoryId to scope to a topic (cars, parts, tools, custom).")
@@ -527,6 +537,48 @@ public class ProductController {
         try {
             productService.bulkUpdateStock(stockUpdates);
             return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @Operation(summary = "Import products from CSV", description = "Bulk import products from a CSV file. Valid rows are imported, invalid rows are reported. Requires OWNER role.", security = @SecurityRequirement(name = "Bearer Authentication"))
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Import completed with per-row results"),
+            @ApiResponse(responseCode = "400", description = "Invalid CSV file or payload"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - requires OWNER role")
+    })
+    @PostMapping(value = "/import/csv", consumes = "multipart/form-data")
+    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN')")
+    public ResponseEntity<ProductCsvImportResult> importProductsFromCsv(
+            @Parameter(description = "CSV file", required = true) @RequestParam("file") MultipartFile file,
+            @Parameter(description = "If true, validates only without creating products", example = "true") @RequestParam(defaultValue = "false") boolean dryRun) {
+
+        try {
+            ProductCsvImportResult result = productCsvImportService.importCsv(file, dryRun);
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @Operation(summary = "OCR prefill from image", description = "Extract product fields from an image and return suggestions for owner review. Requires OWNER role.", security = @SecurityRequirement(name = "Bearer Authentication"))
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "OCR prefill response returned"),
+            @ApiResponse(responseCode = "400", description = "Invalid image payload"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - requires OWNER role")
+    })
+    @PostMapping(value = "/ocr/prefill", consumes = "multipart/form-data")
+    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN')")
+    public ResponseEntity<ProductOcrPrefillResponse> ocrPrefillFromImage(
+            @Parameter(description = "Image file", required = true) @RequestParam("file") MultipartFile file) {
+        try {
+            ProductOcrPrefillResponse response = productOcrPrefillService.prefillFromImage(file);
+            return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
         }

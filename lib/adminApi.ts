@@ -145,6 +145,37 @@ export interface ProductUpdateInput extends Partial<ProductCreateInput> {
   id: string
 }
 
+export interface ProductCsvImportRowResult {
+  rowNumber: number
+  status: string
+  name?: string
+  sku?: string
+  productId?: number
+  errors: string[]
+}
+
+export interface ProductCsvImportResult {
+  dryRun: boolean
+  totalRows: number
+  successCount: number
+  failedCount: number
+  rows: ProductCsvImportRowResult[]
+}
+
+export interface ProductOcrFieldSuggestion {
+  value: string
+  confidence: number
+}
+
+export interface ProductOcrPrefillResponse {
+  implemented: boolean
+  provider: string
+  message: string
+  rawText: string
+  fields: Record<string, ProductOcrFieldSuggestion>
+  missingRequiredFields: string[]
+}
+
 export interface ProductsListParams {
   page?: number
   limit?: number
@@ -411,6 +442,64 @@ export async function getAdminProduct(id: string): Promise<AdminProduct> {
  */
 export async function createProduct(data: ProductCreateInput): Promise<any> {
   return api.post<any>('/api/products', data)
+}
+
+/**
+ * Import products from CSV
+ * Backend endpoint: POST /api/products/import/csv (multipart/form-data)
+ */
+export async function importProductsCsv(file: File, dryRun: boolean = false): Promise<ProductCsvImportResult> {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const { getAccessToken } = await import('./apiClient')
+  const token = getAccessToken()
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_SHOP_API_BASE_URL || 'http://localhost:8080'
+
+  const response = await fetch(`${baseUrl}/api/products/import/csv?dryRun=${dryRun}`, {
+    method: 'POST',
+    headers: token ? {
+      'Authorization': `Bearer ${token}`,
+    } : {},
+    body: formData,
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    const error = await response.text()
+    throw new Error(`Failed to import CSV: ${error || response.statusText}`)
+  }
+
+  return response.json()
+}
+
+/**
+ * OCR prefill scaffold
+ * Backend endpoint: POST /api/products/ocr/prefill (multipart/form-data)
+ */
+export async function ocrPrefillProductFromImage(file: File): Promise<ProductOcrPrefillResponse> {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const { getAccessToken } = await import('./apiClient')
+  const token = getAccessToken()
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_SHOP_API_BASE_URL || 'http://localhost:8080'
+
+  const response = await fetch(`${baseUrl}/api/products/ocr/prefill`, {
+    method: 'POST',
+    headers: token ? {
+      'Authorization': `Bearer ${token}`,
+    } : {},
+    body: formData,
+    credentials: 'include',
+  })
+
+  const payload = await response.json().catch(() => null)
+  if (!response.ok) {
+    throw new Error(payload?.message || `OCR prefill unavailable (${response.status})`)
+  }
+
+  return payload as ProductOcrPrefillResponse
 }
 
 /**

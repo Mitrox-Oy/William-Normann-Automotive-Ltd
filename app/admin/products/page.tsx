@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, type ChangeEvent } from "react"
 import { Container } from "@/components/container"
 import { SectionHeading } from "@/components/section-heading"
 import { Card, CardContent } from "@/components/ui/card"
@@ -15,9 +15,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { RequireAuth } from "@/components/AuthProvider"
-import { getAdminProducts, deleteProduct, getAllCategories, getAdminCategories, getCategoryBySlug, createCategory, updateCategory, deleteCategory, type AdminProduct, type AdminCategory } from "@/lib/adminApi"
+import { getAdminProducts, deleteProduct, getAllCategories, getAdminCategories, getCategoryBySlug, createCategory, updateCategory, deleteCategory, importProductsCsv, type AdminProduct, type AdminCategory, type ProductCsvImportResult } from "@/lib/adminApi"
 import { formatCurrency, SHOP_TOPICS, TOPIC_INFO, type ShopTopic } from "@/lib/shopApi"
-import { Plus, Search, Edit, Trash2, ChevronLeft, ChevronRight, Package, FolderTree, Car, Wrench, Settings, Sparkles } from "lucide-react"
+import { Plus, Search, Edit, Trash2, ChevronLeft, ChevronRight, Package, FolderTree, Car, Wrench, Settings, Sparkles, Upload } from "lucide-react"
 import Link from "next/link"
 
 
@@ -39,10 +39,13 @@ function AdminProductsContent() {
   // Products state
   const [products, setProducts] = useState<AdminProduct[]>([])
   const [productsLoading, setProductsLoading] = useState(true)
+  const [csvImportLoading, setCsvImportLoading] = useState(false)
+  const [csvImportSummary, setCsvImportSummary] = useState<ProductCsvImportResult | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const csvFileInputRef = useRef<HTMLInputElement | null>(null)
 
   // Categories state
   const [categories, setCategories] = useState<AdminCategory[]>([])
@@ -110,6 +113,37 @@ function AdminProductsContent() {
     } catch (error) {
       console.error("Failed to delete product:", error)
     }
+  }
+
+  async function handleCsvImport(file: File, dryRun: boolean) {
+    try {
+      setCsvImportLoading(true)
+      const summary = await importProductsCsv(file, dryRun)
+      setCsvImportSummary(summary)
+
+      if (!dryRun && summary.successCount > 0) {
+        await loadProducts()
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "CSV import failed"
+      alert(message)
+    } finally {
+      setCsvImportLoading(false)
+    }
+  }
+
+  function openCsvFileDialog() {
+    csvFileInputRef.current?.click()
+  }
+
+  async function onCsvFileSelected(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const importNow = window.confirm("Click OK to IMPORT valid rows now. Click Cancel to run DRY-RUN validation only.")
+    await handleCsvImport(file, !importNow)
+
+    event.target.value = ""
   }
 
   // Categories functions - now topic-aware
@@ -362,7 +396,45 @@ function AdminProductsContent() {
                 </SelectContent>
               </Select>
               <Button onClick={loadProducts}>Search</Button>
+              <Button variant="outline" onClick={openCsvFileDialog} disabled={csvImportLoading}>
+                <Upload className="mr-2 h-4 w-4" />
+                {csvImportLoading ? "Importing..." : "Import CSV"}
+              </Button>
+              <input
+                ref={csvFileInputRef}
+                type="file"
+                accept=".csv,text/csv"
+                className="hidden"
+                onChange={onCsvFileSelected}
+              />
             </div>
+
+            {csvImportSummary && (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex flex-wrap items-center gap-3 text-sm">
+                    <Badge variant={csvImportSummary.dryRun ? "secondary" : "default"}>
+                      {csvImportSummary.dryRun ? "Dry Run" : "Imported"}
+                    </Badge>
+                    <span>Total: {csvImportSummary.totalRows}</span>
+                    <span>Success: {csvImportSummary.successCount}</span>
+                    <span>Failed: {csvImportSummary.failedCount}</span>
+                  </div>
+                  {csvImportSummary.failedCount > 0 && (
+                    <div className="mt-3 space-y-1 text-xs text-destructive max-h-36 overflow-auto">
+                      {csvImportSummary.rows
+                        .filter((row) => row.errors?.length)
+                        .slice(0, 10)
+                        .map((row) => (
+                          <p key={`csv-row-${row.rowNumber}`}>
+                            Row {row.rowNumber}: {row.errors.join(", ")}
+                          </p>
+                        ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Products Table */}
             <Card>

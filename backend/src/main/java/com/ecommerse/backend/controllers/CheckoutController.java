@@ -15,9 +15,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import jakarta.validation.Valid;
+import jakarta.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -161,7 +166,9 @@ public class CheckoutController {
          * Response: { "id": "cs_test_..." }
          */
         @PostMapping("/create-session")
-        public ResponseEntity<?> createSession(@RequestBody(required = false) CreateSessionReq req) {
+        @PreAuthorize("hasRole('CUSTOMER')")
+        public ResponseEntity<?> createSession(@RequestBody(required = false) CreateSessionReq req,
+                        HttpServletRequest httpRequest) {
                 try {
                         // Validate request
                         if (req == null || req.orderId() == null || req.orderId().isBlank()) {
@@ -249,7 +256,13 @@ public class CheckoutController {
                         // Build success and cancel URLs (Next.js routes)
                         String successUrl = frontendBaseUrl + "/checkout/success?orderId=" + req.orderId()
                                         + "&session_id={CHECKOUT_SESSION_ID}";
-                        String cancelUrl = frontendBaseUrl + "/cart";
+                        String backendBaseUrl = ServletUriComponentsBuilder.fromRequestUri(httpRequest)
+                                        .replacePath(null)
+                                        .build()
+                                        .toUriString();
+                        String encodedOrderId = URLEncoder.encode(req.orderId(), StandardCharsets.UTF_8);
+                        String cancelUrl = backendBaseUrl + "/api/checkout/cancel?orderId=" + encodedOrderId
+                                        + "&session_id={CHECKOUT_SESSION_ID}";
 
                         // Create Stripe Checkout Session
                         var params = SessionCreateParams.builder()
@@ -259,6 +272,9 @@ public class CheckoutController {
                                         .addAllLineItem(lineItems)
                                         .setClientReferenceId(req.orderId())
                                         .putMetadata("orderId", req.orderId())
+                                        .setPaymentIntentData(SessionCreateParams.PaymentIntentData.builder()
+                                                        .putMetadata("orderId", req.orderId())
+                                                        .build())
                                         // Optional: enable automatic tax and shipping collection
                                         // .setAutomaticTax(SessionCreateParams.AutomaticTax.builder().setEnabled(true).build())
                                         // .setShippingAddressCollection(SessionCreateParams.ShippingAddressCollection.builder()
@@ -302,5 +318,23 @@ public class CheckoutController {
                                         "message",
                                         e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
                 }
+        }
+
+        @GetMapping("/cancel")
+        public ResponseEntity<Void> cancelCheckoutFallback(
+                        @RequestParam(value = "orderId", required = false) String orderId,
+                        @RequestParam(value = "session_id", required = false) String sessionId) {
+                if (orderId != null && !orderId.isBlank()) {
+                        try {
+                                orderService.markPaymentCanceled(orderId, null, sessionId,
+                                                "checkout_canceled", "Checkout canceled by customer");
+                        } catch (Exception ex) {
+                                logger.warn("Cancel fallback could not transition order {}: {}", orderId,
+                                                ex.getMessage());
+                        }
+                }
+
+                String redirectUrl = frontendBaseUrl + "/cart?checkout=canceled";
+                return ResponseEntity.status(302).location(URI.create(redirectUrl)).build();
         }
 }

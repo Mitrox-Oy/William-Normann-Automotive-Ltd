@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, type ChangeEvent } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Container } from "@/components/container"
 import { SectionHeading } from "@/components/section-heading"
@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RequireAuth } from "@/components/AuthProvider"
-import { createProduct, createProductVariant, uploadProductImage, getAllCategories, getCategoriesByTopic, type ProductCreateInput, type ProductVariantCreateInput } from "@/lib/adminApi"
+import { createProduct, createProductVariant, uploadProductImage, getAllCategories, getCategoriesByTopic, ocrPrefillProductFromImage, type ProductCreateInput, type ProductVariantCreateInput, type ProductOcrPrefillResponse } from "@/lib/adminApi"
 import { SHOP_TOPICS, TOPIC_INFO, isValidTopic, type ShopTopic } from "@/lib/shopApi"
 import {
   COMPATIBILITY_MODES,
@@ -138,6 +138,9 @@ function NewProductPageContent() {
   const selectedTopic: ShopTopic = (topicParam && isValidTopic(topicParam)) ? topicParam : 'parts'
 
   const [loading, setLoading] = useState(false)
+  const [ocrLoading, setOcrLoading] = useState(false)
+  const [ocrResult, setOcrResult] = useState<ProductOcrPrefillResponse | null>(null)
+  const ocrInputRef = useRef<HTMLInputElement | null>(null)
   const [categories, setCategories] = useState<Category[]>([])
   const [loadingCategories, setLoadingCategories] = useState(true)
 
@@ -275,6 +278,109 @@ function NewProductPageContent() {
     } finally {
       setLoadingCategories(false)
     }
+  }
+
+  function openOcrPicker() {
+    ocrInputRef.current?.click()
+  }
+
+  async function handleOcrFileSelect(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    try {
+      setOcrLoading(true)
+      const result = await ocrPrefillProductFromImage(file)
+      setOcrResult(result)
+      showToast(result.message || "OCR scan completed", result.implemented ? "success" : "warning")
+    } catch (error: any) {
+      showToast(error?.message || "OCR scan failed", "error")
+    } finally {
+      setOcrLoading(false)
+      event.target.value = ""
+    }
+  }
+
+  function applyOcrSuggestions() {
+    if (!ocrResult?.fields) return
+
+    const fieldValue = (key: string) => ocrResult.fields[key]?.value?.trim()
+    const asBoolean = (key: string): boolean | undefined => {
+      const value = fieldValue(key)
+      if (!value) return undefined
+      const normalized = value.toLowerCase()
+      if (["true", "1", "yes"].includes(normalized)) return true
+      if (["false", "0", "no"].includes(normalized)) return false
+      return undefined
+    }
+
+    const asNumberString = (key: string): string | undefined => {
+      const value = fieldValue(key)
+      if (!value) return undefined
+      const normalized = value.replace(/[^0-9.\-]/g, "")
+      return normalized || undefined
+    }
+
+    const categorySlug = fieldValue("categorySlug")
+    if (categorySlug) {
+      const matched = categories.find((category) => category.slug.toLowerCase() === categorySlug.toLowerCase())
+      if (matched) {
+        setCategoryId(String(matched.id))
+      }
+    }
+
+    const maybeName = fieldValue("name")
+    if (maybeName) setName(maybeName)
+    const maybeDescription = fieldValue("description")
+    if (maybeDescription) setDescription(maybeDescription)
+    const maybeBrand = fieldValue("brand")
+    if (maybeBrand) setBrand(maybeBrand)
+    const maybeCondition = fieldValue("condition")
+    if (maybeCondition) setCondition(maybeCondition)
+    const maybeType = fieldValue("productType")
+    if (maybeType && ["car", "part", "tool", "custom"].includes(maybeType.toLowerCase())) {
+      setProductType(maybeType.toLowerCase() as ProductType)
+    }
+
+    const maybePrice = asNumberString("price")
+    if (maybePrice) setPrice(maybePrice)
+    const maybeStock = asNumberString("stockQuantity")
+    if (maybeStock) setStockQuantity(maybeStock)
+    const maybeYear = asNumberString("year")
+    if (maybeYear) setCarYear(maybeYear)
+    const maybeMileage = asNumberString("mileage")
+    if (maybeMileage) setMileage(maybeMileage)
+    const maybePower = asNumberString("powerKw")
+    if (maybePower) setPowerKw(maybePower)
+    const maybeWeight = asNumberString("weight")
+    if (maybeWeight) setWeight(maybeWeight)
+
+    const maybeMake = fieldValue("make")
+    if (maybeMake) setCarMake(maybeMake)
+    const maybeModel = fieldValue("model")
+    if (maybeModel) setCarModel(maybeModel)
+
+    const maybeFuel = fieldValue("fuelType")
+    if (maybeFuel && FUEL_TYPES.includes(maybeFuel as any)) setFuelType(maybeFuel)
+    const maybeTransmission = fieldValue("transmission")
+    if (maybeTransmission && TRANSMISSION_TYPES.includes(maybeTransmission as any)) setTransmission(maybeTransmission)
+    const maybeBody = fieldValue("bodyType")
+    if (maybeBody && BODY_TYPES.includes(maybeBody as any)) setBodyType(maybeBody)
+    const maybeDrive = fieldValue("driveType")
+    if (maybeDrive && DRIVE_TYPES.includes(maybeDrive as any)) setDriveType(maybeDrive)
+
+    const maybeActive = asBoolean("active")
+    if (maybeActive !== undefined) setActive(maybeActive)
+    const maybeFeatured = asBoolean("featured")
+    if (maybeFeatured !== undefined) setFeatured(maybeFeatured)
+    const maybeQuoteOnly = asBoolean("quoteOnly")
+    if (maybeQuoteOnly !== undefined) setQuoteOnly(maybeQuoteOnly)
+    const maybeStreetLegal = asBoolean("streetLegal")
+    if (maybeStreetLegal !== undefined) setStreetLegal(maybeStreetLegal)
+    const maybeWarranty = asBoolean("warrantyIncluded")
+    if (maybeWarranty !== undefined) setWarrantyIncluded(maybeWarranty)
+
+    showToast("OCR suggestions applied. Please review before saving.", "success")
   }
 
   function updateInfoSection(index: number, field: keyof InfoSection, value: string | boolean) {
@@ -574,6 +680,65 @@ function NewProductPageContent() {
 
             {/* Basic Info Tab */}
             <TabsContent value="basic" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>OCR Quick Fill (Beta)</CardTitle>
+                  <CardDescription>Drop a product sheet photo to extract and prefill fields.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div
+                    className="rounded-lg border border-dashed p-6 text-center"
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={async (event) => {
+                      event.preventDefault()
+                      const file = event.dataTransfer.files?.[0]
+                      if (!file) return
+                      try {
+                        setOcrLoading(true)
+                        const result = await ocrPrefillProductFromImage(file)
+                        setOcrResult(result)
+                        showToast(result.message || "OCR scan completed", result.implemented ? "success" : "warning")
+                      } catch (error: any) {
+                        showToast(error?.message || "OCR scan failed", "error")
+                      } finally {
+                        setOcrLoading(false)
+                      }
+                    }}
+                  >
+                    <p className="text-sm text-muted-foreground mb-3">Drop image here or choose file</p>
+                    <Button type="button" variant="outline" onClick={openOcrPicker} disabled={ocrLoading}>
+                      {ocrLoading ? "Scanning..." : "Scan Product Photo"}
+                    </Button>
+                    <input
+                      ref={ocrInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleOcrFileSelect}
+                    />
+                  </div>
+
+                  {ocrResult && (
+                    <div className="rounded-md border p-3 space-y-3">
+                      <div className="text-sm">
+                        <p><strong>Provider:</strong> {ocrResult.provider || "n/a"}</p>
+                        <p><strong>Status:</strong> {ocrResult.implemented ? "Ready" : "Not configured"}</p>
+                        <p><strong>Message:</strong> {ocrResult.message}</p>
+                        <p><strong>Detected fields:</strong> {Object.keys(ocrResult.fields || {}).length}</p>
+                      </div>
+                      {ocrResult.missingRequiredFields?.length > 0 && (
+                        <p className="text-xs text-destructive">
+                          Missing required suggestions: {ocrResult.missingRequiredFields.join(", ")}
+                        </p>
+                      )}
+                      <Button type="button" onClick={applyOcrSuggestions} disabled={!ocrResult.implemented}>
+                        Apply Suggested Fields
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader>
                   <CardTitle>Basic Information</CardTitle>

@@ -39,6 +39,8 @@ public class OrderService {
     private static final Logger logger = LoggerFactory.getLogger(OrderService.class);
     private static final EnumSet<OrderStatus> PROCESSED_STATUSES = EnumSet.of(OrderStatus.PAID, OrderStatus.PROCESSING,
             OrderStatus.SHIPPED, OrderStatus.DELIVERED);
+    private static final EnumSet<OrderStatus> TERMINAL_CHECKOUT_STATUSES = EnumSet.of(OrderStatus.PAID,
+            OrderStatus.FAILED, OrderStatus.CANCELLED, OrderStatus.EXPIRED, OrderStatus.REFUNDED);
     private static final EnumSet<OrderStatus> PAYMENT_ELIGIBLE_STATUSES = EnumSet.of(OrderStatus.PENDING,
             OrderStatus.CONFIRMED, OrderStatus.CHECKOUT_CREATED);
 
@@ -267,17 +269,15 @@ public class OrderService {
         String secretKey = resolveStripeSecretKey();
 
         if (secretKey == null || secretKey.isBlank()) {
-            logger.warn("Stripe secret key not configured; marking order {} as PAID without verification",
+            logger.warn("Stripe secret key not configured; skipping finalize verification for order {}",
                     order.getOrderNumber());
-            Order processed = finalizeOrderPayment(order, null);
-            return convertToDto(processed);
+            return convertToDto(order);
         }
 
         if (effectiveSessionId == null || effectiveSessionId.isBlank()) {
-            logger.warn("Order {} does not have a checkout session id; marking as PAID without verification",
+            logger.warn("Order {} does not have a checkout session id; skipping finalize verification",
                     order.getOrderNumber());
-            Order processed = finalizeOrderPayment(order, null);
-            return convertToDto(processed);
+            return convertToDto(order);
         }
 
         try {
@@ -289,7 +289,8 @@ public class OrderService {
                 String status = session.getStatus();
                 if ((paymentStatus != null && paymentStatus.equalsIgnoreCase("paid"))
                         || (status != null && status.equalsIgnoreCase("complete"))) {
-                    Order processed = finalizeOrderPayment(order, session.getPaymentIntent());
+                    Order processed = transitionCheckoutStatus(order, OrderStatus.PAID, session.getPaymentIntent(),
+                            effectiveSessionId, null, null);
                     return convertToDto(processed);
                 }
                 logger.info("Checkout session {} not yet paid (status={}, paymentStatus={}) for order {}",
@@ -301,8 +302,7 @@ public class OrderService {
         } catch (StripeException e) {
             logger.error("Unable to verify checkout session {} for order {}: {}", effectiveSessionId,
                     order.getOrderNumber(), e.getMessage(), e);
-            Order processed = finalizeOrderPayment(order, null);
-            return convertToDto(processed);
+            return convertToDto(order);
         }
 
         return convertToDto(order);
@@ -317,77 +317,180 @@ public class OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("Order not found"));
 
-        Order processed = finalizeOrderPayment(order, paymentIntentId);
+        Order processed = transitionCheckoutStatus(order, OrderStatus.PAID, paymentIntentId,
+                order.getStripeCheckoutSessionId(), null, null);
         return convertToDto(processed);
     }
 
     @Transactional
     public OrderDTO markPaymentFailed(String orderIdOrNumber, String paymentIntentId) {
-        Order order = findOrderByIdOrNumber(orderIdOrNumber);
+        return markCheckoutTerminal(orderIdOrNumber, paymentIntentId, null, OrderStatus.FAILED,
+                "payment_failed", "Payment failed");
+    }
 
-        if (order.getStatus() == OrderStatus.PAID || order.getStatus() == OrderStatus.SHIPPED
-                || order.getStatus() == OrderStatus.DELIVERED) {
-            logger.info("Ignoring payment failure event for order {} with status {}", order.getOrderNumber(),
-                    order.getStatus());
-            return convertToDto(order);
+    @Transactional
+    public OrderDTO markPaymentFailed(String orderIdOrNumber, String paymentIntentId, String checkoutSessionId,
+            String failureCode, String failureMessage) {
+        return markCheckoutTerminal(orderIdOrNumber, paymentIntentId, checkoutSessionId, OrderStatus.FAILED,
+                failureCode, failureMessage);
+    }
+
+    @Transactional
+    public OrderDTO markPaymentCanceled(String orderIdOrNumber, String paymentIntentId, String checkoutSessionId,
+            String failureCode, String failureMessage) {
+        return markCheckoutTerminal(orderIdOrNumber, paymentIntentId, checkoutSessionId, OrderStatus.CANCELLED,
+                failureCode, failureMessage);
+    }
+
+    @Transactional
+    public OrderDTO markCheckoutExpired(String orderIdOrNumber, String checkoutSessionId, String failureCode,
+            String failureMessage) {
+        return markCheckoutTerminal(orderIdOrNumber, null, checkoutSessionId, OrderStatus.EXPIRED,
+                failureCode, failureMessage);
+    }
+
+    @Transactional
+    public int expireStaleCheckouts(int expiryMinutes) {
+        int ttlMinutes = expiryMinutes > 0 ? expiryMinutes : 45;
+        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(ttlMinutes);
+        List<Order> staleOrders = orderRepository.findByStatusInAndCreatedDateBeforeOrderByCreatedDateAsc(
+                PAYMENT_ELIGIBLE_STATUSES,
+                cutoff);
+
+        int expiredCount = 0;
+        for (Order order : staleOrders) {
+            OrderStatus previousStatus = order.getStatus();
+            Order transitioned = transitionCheckoutStatus(order, OrderStatus.EXPIRED, order.getPaymentIntentId(),
+                    order.getStripeCheckoutSessionId(), "expired", "Checkout expired due to inactivity");
+            if (previousStatus != OrderStatus.EXPIRED && transitioned.getStatus() == OrderStatus.EXPIRED) {
+                expiredCount++;
+            }
         }
-
-        if (paymentIntentId != null && !paymentIntentId.isBlank()) {
-            order.setPaymentIntentId(paymentIntentId);
-        }
-
-        if (order.isInventoryLocked()) {
-            restoreInventory(order);
-            order.setInventoryLocked(false);
-        }
-
-        order.setStatus(OrderStatus.FAILED);
-        order.setUpdatedDate(LocalDateTime.now());
-
-        Order saved = orderRepository.save(order);
-        logger.info("Order {} marked as FAILED; inventory restored", saved.getOrderNumber());
-        return convertToDto(saved);
+        return expiredCount;
     }
 
     private Order finalizeOrderPayment(Order order, String paymentIntentId) {
+        return transitionCheckoutStatus(order, OrderStatus.PAID, paymentIntentId,
+                order != null ? order.getStripeCheckoutSessionId() : null,
+                null, null);
+    }
+
+    private OrderDTO markCheckoutTerminal(String orderIdOrNumber, String paymentIntentId, String checkoutSessionId,
+            OrderStatus terminalStatus, String failureCode, String failureMessage) {
+        Order order = resolveOrderForProvider(orderIdOrNumber, paymentIntentId, checkoutSessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found for checkout transition"));
+        Order transitioned = transitionCheckoutStatus(order, terminalStatus, paymentIntentId, checkoutSessionId,
+                failureCode, failureMessage);
+        return convertToDto(transitioned);
+    }
+
+    private Optional<Order> resolveOrderForProvider(String orderIdOrNumber, String paymentIntentId,
+            String checkoutSessionId) {
+        if (orderIdOrNumber != null && !orderIdOrNumber.isBlank()) {
+            return Optional.of(findOrderByIdOrNumber(orderIdOrNumber));
+        }
+        if (paymentIntentId != null && !paymentIntentId.isBlank()) {
+            Optional<Order> byPaymentIntent = orderRepository.findByPaymentIntentId(paymentIntentId);
+            if (byPaymentIntent.isPresent()) {
+                return byPaymentIntent;
+            }
+        }
+        if (checkoutSessionId != null && !checkoutSessionId.isBlank()) {
+            Optional<Order> bySession = orderRepository.findByStripeCheckoutSessionId(checkoutSessionId);
+            if (bySession.isPresent()) {
+                return bySession;
+            }
+        }
+        return Optional.empty();
+    }
+
+    private Order transitionCheckoutStatus(Order order, OrderStatus targetStatus, String paymentIntentId,
+            String checkoutSessionId, String failureCode, String failureMessage) {
         if (order == null) {
             throw new IllegalArgumentException("Order cannot be null");
         }
 
-        if (PROCESSED_STATUSES.contains(order.getStatus())) {
-            if (order.getPaymentIntentId() == null && paymentIntentId != null && !paymentIntentId.isBlank()) {
-                order.setPaymentIntentId(paymentIntentId);
-                order.setUpdatedDate(LocalDateTime.now());
-                order = orderRepository.save(order);
+        if (paymentIntentId != null && !paymentIntentId.isBlank()) {
+            order.setPaymentIntentId(paymentIntentId);
+            order.setPaymentProvider("stripe");
+        }
+        if (checkoutSessionId != null && !checkoutSessionId.isBlank()) {
+            order.setStripeCheckoutSessionId(checkoutSessionId);
+            order.setPaymentProvider("stripe");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        OrderStatus currentStatus = order.getStatus();
+
+        if (TERMINAL_CHECKOUT_STATUSES.contains(currentStatus)) {
+            if (currentStatus == targetStatus && (failureCode != null || failureMessage != null)) {
+                if (failureCode != null && !failureCode.isBlank()) {
+                    order.setFailureCode(failureCode);
+                }
+                if (failureMessage != null && !failureMessage.isBlank()) {
+                    order.setFailureMessage(trimFailureMessage(failureMessage));
+                }
+                order.setUpdatedDate(now);
+                return orderRepository.save(order);
             }
             return order;
         }
 
-        if (!PAYMENT_ELIGIBLE_STATUSES.contains(order.getStatus())) {
-            throw new IllegalStateException("Cannot mark order as paid from status: " + order.getStatus());
+        switch (targetStatus) {
+            case PAID -> {
+                if (!PAYMENT_ELIGIBLE_STATUSES.contains(currentStatus)) {
+                    return order;
+                }
+                boolean inventoryWasLocked = order.isInventoryLocked();
+                if (!inventoryWasLocked) {
+                    applyInventoryAdjustments(order);
+                }
+                order.setStatus(OrderStatus.PAID);
+                order.setPaidAt(now);
+                order.setInventoryLocked(false);
+                order.setFailureCode(null);
+                order.setFailureMessage(null);
+                order.setUpdatedDate(now);
+                Order saved = orderRepository.save(order);
+                dispatchPostPaymentNotifications(saved);
+                logger.info("Order {} transitioned to PAID (paymentIntent={}, reservedInventory={})",
+                        saved.getOrderNumber(), paymentIntentId, inventoryWasLocked);
+                return saved;
+            }
+            case FAILED, CANCELLED, EXPIRED -> {
+                if (order.isInventoryLocked()) {
+                    restoreInventory(order);
+                    order.setInventoryLocked(false);
+                    order.setInventoryReleasedAt(now);
+                }
+                order.setStatus(targetStatus);
+                if (targetStatus == OrderStatus.FAILED) {
+                    order.setFailedAt(now);
+                } else if (targetStatus == OrderStatus.CANCELLED) {
+                    order.setCanceledAt(now);
+                } else if (targetStatus == OrderStatus.EXPIRED) {
+                    order.setExpiredAt(now);
+                }
+                if (failureCode != null && !failureCode.isBlank()) {
+                    order.setFailureCode(failureCode);
+                }
+                if (failureMessage != null && !failureMessage.isBlank()) {
+                    order.setFailureMessage(trimFailureMessage(failureMessage));
+                }
+                order.setUpdatedDate(now);
+                Order saved = orderRepository.save(order);
+                logger.info("Order {} transitioned to {}", saved.getOrderNumber(), targetStatus);
+                return saved;
+            }
+            default -> throw new IllegalArgumentException("Unsupported checkout transition status: " + targetStatus);
         }
+    }
 
-        if (paymentIntentId != null && !paymentIntentId.isBlank()) {
-            order.setPaymentIntentId(paymentIntentId);
+    private String trimFailureMessage(String failureMessage) {
+        if (failureMessage == null) {
+            return null;
         }
-
-        boolean inventoryWasLocked = order.isInventoryLocked();
-        if (!inventoryWasLocked) {
-            applyInventoryAdjustments(order);
-        }
-
-        order.setStatus(OrderStatus.PAID);
-        order.setInventoryLocked(false);
-        order.setUpdatedDate(LocalDateTime.now());
-
-        Order saved = orderRepository.save(order);
-
-        dispatchPostPaymentNotifications(saved);
-
-        logger.info("Order {} transitioned to PAID (paymentIntent={}, reservedInventory={})",
-                saved.getOrderNumber(), paymentIntentId, inventoryWasLocked);
-
-        return saved;
+        return failureMessage.length() > 1000 ? failureMessage.substring(0, 1000) : failureMessage;
     }
 
     private String resolveStripeSecretKey() {
@@ -526,6 +629,7 @@ public class OrderService {
         if (order.getStatus() == OrderStatus.PENDING) {
             order.setStatus(OrderStatus.CONFIRMED);
         }
+        order.setPaymentProvider("stripe");
         Order saved = orderRepository.save(order);
         return convertToDto(saved);
     }
@@ -677,20 +781,16 @@ public class OrderService {
 
         switch (newStatus) {
             case PAID: {
-                savedOrder = finalizeOrderPayment(order, order.getPaymentIntentId());
+                savedOrder = transitionCheckoutStatus(order, OrderStatus.PAID, order.getPaymentIntentId(),
+                        order.getStripeCheckoutSessionId(), null, null);
                 break;
             }
             case CANCELLED: {
-                boolean needsRestock = !order.isInventoryLocked() || PROCESSED_STATUSES.contains(currentStatus);
-                if (needsRestock) {
-                    restoreInventory(order);
-                }
-                order.setInventoryLocked(false);
-                order.setStatus(OrderStatus.CANCELLED);
-                order.setUpdatedDate(LocalDateTime.now());
-                order.setShippedDate(null);
-                order.setDeliveredDate(null);
-                savedOrder = orderRepository.save(order);
+                savedOrder = transitionCheckoutStatus(order, OrderStatus.CANCELLED, order.getPaymentIntentId(),
+                        order.getStripeCheckoutSessionId(), "owner_cancelled", "Order canceled by owner/admin");
+                savedOrder.setShippedDate(null);
+                savedOrder.setDeliveredDate(null);
+                savedOrder = orderRepository.save(savedOrder);
                 break;
             }
             case REFUNDED: {
@@ -743,13 +843,13 @@ public class OrderService {
                 break;
             }
             case FAILED: {
-                if (!order.isInventoryLocked()) {
-                    restoreInventory(order);
-                }
-                order.setInventoryLocked(false);
-                order.setStatus(OrderStatus.FAILED);
-                order.setUpdatedDate(LocalDateTime.now());
-                savedOrder = orderRepository.save(order);
+                savedOrder = transitionCheckoutStatus(order, OrderStatus.FAILED, order.getPaymentIntentId(),
+                        order.getStripeCheckoutSessionId(), "owner_failed", "Order marked failed by owner/admin");
+                break;
+            }
+            case EXPIRED: {
+                savedOrder = transitionCheckoutStatus(order, OrderStatus.EXPIRED, order.getPaymentIntentId(),
+                        order.getStripeCheckoutSessionId(), "owner_expired", "Order marked expired by owner/admin");
                 break;
             }
             default: {
@@ -937,6 +1037,7 @@ public class OrderService {
             return; // Idempotent
         }
         order.setStripeCheckoutSessionId(checkoutSessionId);
+        order.setPaymentProvider("stripe");
         order.setStatus(OrderStatus.CHECKOUT_CREATED);
         order.setUpdatedDate(LocalDateTime.now());
         orderRepository.save(order);
@@ -984,7 +1085,15 @@ public class OrderService {
     @Transactional
     public void markPaid(String orderIdOrNumber, String paymentIntentId) {
         Order order = findOrderByIdOrNumber(orderIdOrNumber);
-        finalizeOrderPayment(order, paymentIntentId);
+        transitionCheckoutStatus(order, OrderStatus.PAID, paymentIntentId, order.getStripeCheckoutSessionId(), null,
+                null);
+    }
+
+    @Transactional
+    public void markPaid(String orderIdOrNumber, String paymentIntentId, String checkoutSessionId) {
+        Order order = resolveOrderForProvider(orderIdOrNumber, paymentIntentId, checkoutSessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found for paid transition"));
+        transitionCheckoutStatus(order, OrderStatus.PAID, paymentIntentId, checkoutSessionId, null, null);
     }
 
     private boolean isAwaitingPayment(Order order) {
@@ -1030,7 +1139,15 @@ public class OrderService {
         dto.setCanBeDelivered(order.canBeDelivered());
         dto.setStripeCheckoutSessionId(order.getStripeCheckoutSessionId());
         dto.setPaymentIntentId(order.getPaymentIntentId());
+        dto.setPaymentProvider(order.getPaymentProvider());
         dto.setInventoryLocked(order.isInventoryLocked());
+        dto.setInventoryReleasedAt(order.getInventoryReleasedAt());
+        dto.setFailureCode(order.getFailureCode());
+        dto.setFailureMessage(order.getFailureMessage());
+        dto.setPaidAt(order.getPaidAt());
+        dto.setFailedAt(order.getFailedAt());
+        dto.setCanceledAt(order.getCanceledAt());
+        dto.setExpiredAt(order.getExpiredAt());
 
         List<OrderItemDTO> items = order.getOrderItems().stream()
                 .map(this::convertItemToDto)

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -112,6 +113,11 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Page<Order> findByStatusAndPaymentIntentIdIsNotNullOrderByCreatedDateDesc(OrderStatus status, Pageable pageable);
 
     Optional<Order> findByStripeCheckoutSessionId(String sessionId);
+
+    Optional<Order> findByPaymentIntentId(String paymentIntentId);
+
+    List<Order> findByStatusInAndCreatedDateBeforeOrderByCreatedDateAsc(Collection<OrderStatus> statuses,
+            LocalDateTime createdDate);
 
     Optional<Order> findTopByUserOrderByCreatedDateDesc(User user);
 

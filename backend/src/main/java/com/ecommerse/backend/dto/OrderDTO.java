@@ -84,8 +84,32 @@ public class OrderDTO {
     @Schema(description = "Stripe payment intent identifier", example = "pi_test_a1b2c3")
     private String paymentIntentId;
 
+    @Schema(description = "Payment provider identifier", example = "stripe")
+    private String paymentProvider;
+
     @Schema(description = "Indicates if inventory is reserved for this order", example = "true")
     private Boolean inventoryLocked;
+
+    @Schema(description = "Timestamp when inventory was released due to failed/canceled/expired checkout")
+    private LocalDateTime inventoryReleasedAt;
+
+    @Schema(description = "Payment failure code", example = "card_declined")
+    private String failureCode;
+
+    @Schema(description = "Payment failure message", example = "Your card was declined")
+    private String failureMessage;
+
+    @Schema(description = "Timestamp when checkout was paid")
+    private LocalDateTime paidAt;
+
+    @Schema(description = "Timestamp when checkout failed")
+    private LocalDateTime failedAt;
+
+    @Schema(description = "Timestamp when checkout was canceled")
+    private LocalDateTime canceledAt;
+
+    @Schema(description = "Timestamp when checkout expired")
+    private LocalDateTime expiredAt;
 
     @Schema(description = "Whether order can be shipped", example = "false")
     private Boolean canBeShipped;
@@ -271,12 +295,76 @@ public class OrderDTO {
         this.paymentIntentId = paymentIntentId;
     }
 
+    public String getPaymentProvider() {
+        return paymentProvider;
+    }
+
+    public void setPaymentProvider(String paymentProvider) {
+        this.paymentProvider = paymentProvider;
+    }
+
     public Boolean getInventoryLocked() {
         return inventoryLocked;
     }
 
     public void setInventoryLocked(Boolean inventoryLocked) {
         this.inventoryLocked = inventoryLocked;
+    }
+
+    public LocalDateTime getInventoryReleasedAt() {
+        return inventoryReleasedAt;
+    }
+
+    public void setInventoryReleasedAt(LocalDateTime inventoryReleasedAt) {
+        this.inventoryReleasedAt = inventoryReleasedAt;
+    }
+
+    public String getFailureCode() {
+        return failureCode;
+    }
+
+    public void setFailureCode(String failureCode) {
+        this.failureCode = failureCode;
+    }
+
+    public String getFailureMessage() {
+        return failureMessage;
+    }
+
+    public void setFailureMessage(String failureMessage) {
+        this.failureMessage = failureMessage;
+    }
+
+    public LocalDateTime getPaidAt() {
+        return paidAt;
+    }
+
+    public void setPaidAt(LocalDateTime paidAt) {
+        this.paidAt = paidAt;
+    }
+
+    public LocalDateTime getFailedAt() {
+        return failedAt;
+    }
+
+    public void setFailedAt(LocalDateTime failedAt) {
+        this.failedAt = failedAt;
+    }
+
+    public LocalDateTime getCanceledAt() {
+        return canceledAt;
+    }
+
+    public void setCanceledAt(LocalDateTime canceledAt) {
+        this.canceledAt = canceledAt;
+    }
+
+    public LocalDateTime getExpiredAt() {
+        return expiredAt;
+    }
+
+    public void setExpiredAt(LocalDateTime expiredAt) {
+        this.expiredAt = expiredAt;
     }
 
     public Boolean getCanBeShipped() {

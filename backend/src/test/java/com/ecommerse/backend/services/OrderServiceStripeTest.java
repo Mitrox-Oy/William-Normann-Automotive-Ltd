@@ -22,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -166,5 +167,39 @@ class OrderServiceStripeTest {
         assertEquals(OrderStatus.FAILED, dto.getStatus());
         verify(productRepository).save(productCaptor.capture());
         assertEquals(3, productCaptor.getValue().getStockQuantity());
+    }
+
+    @Test
+    void repeatedPaymentFailedWebhookShouldBeIdempotentAndRestockOnce() {
+        Order order = createOrderWithItem(2, 0, true);
+        order.setStatus(OrderStatus.CHECKOUT_CREATED);
+        when(orderRepository.findById(42L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        OrderDTO first = orderService.markPaymentFailed("42", "pi_test");
+        OrderDTO second = orderService.markPaymentFailed("42", "pi_test");
+
+        assertEquals(OrderStatus.FAILED, first.getStatus());
+        assertEquals(OrderStatus.FAILED, second.getStatus());
+        verify(productRepository, times(1)).save(any(Product.class));
+    }
+
+    @Test
+    void expireStaleCheckoutsShouldExpireAndReleaseInventoryOnce() {
+        Order staleOrder = createOrderWithItem(4, 1, true);
+        staleOrder.setStatus(OrderStatus.CHECKOUT_CREATED);
+        staleOrder.setCreatedDate(LocalDateTime.now().minusHours(2));
+
+        when(orderRepository.findByStatusInAndCreatedDateBeforeOrderByCreatedDateAsc(any(), any()))
+                .thenReturn(List.of(staleOrder));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        int firstRun = orderService.expireStaleCheckouts(45);
+        int secondRun = orderService.expireStaleCheckouts(45);
+
+        assertEquals(1, firstRun);
+        assertEquals(0, secondRun);
+        assertEquals(OrderStatus.EXPIRED, staleOrder.getStatus());
+        verify(productRepository, times(1)).save(any(Product.class));
     }
 }
