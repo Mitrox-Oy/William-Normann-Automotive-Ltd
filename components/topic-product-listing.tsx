@@ -24,12 +24,14 @@ import {
 } from "@/lib/shopApi"
 import {
   BODY_TYPES,
+  COMPATIBILITY_MODES,
   DRIVE_TYPES,
   FUEL_TYPES,
   POWER_SOURCES,
   PRODUCT_CONDITIONS,
   TRANSMISSION_TYPES,
 } from "@/lib/filterAttributes"
+import { getPartsDeepCategories, getPartsSubcategories, resolvePartsBranch } from "@/lib/partsTaxonomy"
 import { getImageUrl } from "@/lib/utils"
 import { Search, ShoppingCart, Filter, X, ArrowLeft, ChevronDown } from "lucide-react"
 import Image from "next/image"
@@ -42,9 +44,15 @@ interface TopicProductListingProps {
   topicName?: string
   topicDescription?: string
   defaultCategoryId?: number
+  defaultCategorySlug?: string
   showBackLink?: boolean
   backLinkHref?: string
   backLinkLabel?: string
+}
+
+interface CategoryOption {
+  id: number
+  label: string
 }
 
 function isQuoteOnlyProduct(product: Product): boolean {
@@ -93,12 +101,37 @@ function getCardExcerpt(description?: string, maxChars: number = 150): string | 
   return `${collapsed.slice(0, Math.max(0, maxChars - 3)).trim()}...`
 }
 
+function resolvePartsMainFromCategorySlug(categorySlug?: string): string {
+  if (!categorySlug) return ""
+  const normalizedSlug = categorySlug.toLowerCase()
+  if (!normalizedSlug.startsWith("parts-")) return ""
+
+  const mainCandidates = [
+    "engine-drivetrain",
+    "suspension-steering",
+    "brakes",
+    "wheels-tires",
+    "electrical-lighting",
+    "exterior-body",
+    "interior",
+    "cooling-hvac",
+    "maintenance-service",
+  ]
+
+  const matchedMain = mainCandidates.find(
+    (candidate) => normalizedSlug === `parts-${candidate}` || normalizedSlug.startsWith(`parts-${candidate}-`),
+  )
+
+  return matchedMain || ""
+}
+
 export function TopicProductListing({
   rootCategoryId,
   topicSlug,
   topicName,
   topicDescription,
   defaultCategoryId,
+  defaultCategorySlug,
   showBackLink = true,
   backLinkHref = "/shop",
   backLinkLabel = "Shop Home"
@@ -107,9 +140,10 @@ export function TopicProductListing({
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const defaultPartsMainFromPage = topicSlug === "parts" ? resolvePartsMainFromCategorySlug(defaultCategorySlug) : ""
 
   const [products, setProducts] = useState<Product[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
+  const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
@@ -130,9 +164,43 @@ export function TopicProductListing({
   const [transmission, setTransmission] = useState("all")
   const [bodyType, setBodyType] = useState("all")
   const [driveType, setDriveType] = useState("all")
+  const [compatibilityMode, setCompatibilityMode] = useState("all")
+  const [compatibleMake, setCompatibleMake] = useState("")
+  const [compatibleModel, setCompatibleModel] = useState("")
   const [compatibleYear, setCompatibleYear] = useState("")
   const [oemType, setOemType] = useState("all")
   const [partCategory, setPartCategory] = useState("")
+  const [partsMain, setPartsMain] = useState(defaultPartsMainFromPage)
+  const [partsSub, setPartsSub] = useState("")
+  const [partsDeep, setPartsDeep] = useState("")
+  const [wheelDiameterMin, setWheelDiameterMin] = useState("")
+  const [wheelDiameterMax, setWheelDiameterMax] = useState("")
+  const [wheelWidthMin, setWheelWidthMin] = useState("")
+  const [wheelWidthMax, setWheelWidthMax] = useState("")
+  const [wheelOffsetMin, setWheelOffsetMin] = useState("")
+  const [wheelOffsetMax, setWheelOffsetMax] = useState("")
+  const [centerBoreMin, setCenterBoreMin] = useState("")
+  const [centerBoreMax, setCenterBoreMax] = useState("")
+  const [wheelBoltPattern, setWheelBoltPattern] = useState("")
+  const [wheelMaterial, setWheelMaterial] = useState("")
+  const [wheelColor, setWheelColor] = useState("")
+  const [hubCentricRingsNeeded, setHubCentricRingsNeeded] = useState("all")
+  const [engineType, setEngineType] = useState("")
+  const [engineDisplacementMin, setEngineDisplacementMin] = useState("")
+  const [engineDisplacementMax, setEngineDisplacementMax] = useState("")
+  const [engineCylinders, setEngineCylinders] = useState("")
+  const [enginePowerMin, setEnginePowerMin] = useState("")
+  const [enginePowerMax, setEnginePowerMax] = useState("")
+  const [turboType, setTurboType] = useState("")
+  const [flangeType, setFlangeType] = useState("")
+  const [wastegateType, setWastegateType] = useState("")
+  const [rotorDiameterMin, setRotorDiameterMin] = useState("")
+  const [rotorDiameterMax, setRotorDiameterMax] = useState("")
+  const [padCompound, setPadCompound] = useState("")
+  const [adjustableHeight, setAdjustableHeight] = useState("all")
+  const [adjustableDamping, setAdjustableDamping] = useState("all")
+  const [lightingVoltage, setLightingVoltage] = useState("")
+  const [bulbType, setBulbType] = useState("")
   const [toolCategory, setToolCategory] = useState("")
   const [powerSource, setPowerSource] = useState("all")
   const [finish, setFinish] = useState("all")
@@ -149,11 +217,34 @@ export function TopicProductListing({
 
   const { addItem } = useCart()
 
-  // Load categories for this topic (children of root category)
+  // Load categories for this topic (full descendant tree under root category)
   useEffect(() => {
-    fetchCategoryChildren(rootCategoryId)
-      .then(setCategories)
-      .catch((err) => console.error('Failed to load categories:', err))
+    const loadCategoryOptions = async () => {
+      try {
+        const options: CategoryOption[] = []
+
+        const collect = async (parentId: number, depth: number) => {
+          const children = await fetchCategoryChildren(parentId)
+          const sortedChildren = [...children].sort((left, right) =>
+            left.name.localeCompare(right.name, undefined, { sensitivity: "base" }),
+          )
+
+          for (const child of sortedChildren) {
+            const prefix = depth === 0 ? "" : `${"— ".repeat(depth)} `
+            options.push({ id: child.id, label: `${prefix}${child.name}` })
+            await collect(child.id, depth + 1)
+          }
+        }
+
+        await collect(rootCategoryId, 0)
+        setCategoryOptions(options)
+      } catch (err) {
+        console.error('Failed to load categories:', err)
+        setCategoryOptions([])
+      }
+    }
+
+    loadCategoryOptions()
   }, [rootCategoryId])
 
   // Load brands scoped to this topic
@@ -183,9 +274,43 @@ export function TopicProductListing({
     setTransmission(get("transmission") || "all")
     setBodyType(get("bodyType") || "all")
     setDriveType(get("driveType") || "all")
+    setCompatibilityMode(get("compatibilityMode") || "all")
+    setCompatibleMake(get("compatibleMake") || "")
+    setCompatibleModel(get("compatibleModel") || "")
     setCompatibleYear(get("compatibleYear") || "")
     setOemType(get("oemType") || "all")
     setPartCategory(get("partCategory") || "")
+    setPartsMain(get("partsMain") || defaultPartsMainFromPage)
+    setPartsSub(get("partsSub") || "")
+    setPartsDeep(get("partsDeep") || "")
+    setWheelDiameterMin(get("wheelDiameterMin") || "")
+    setWheelDiameterMax(get("wheelDiameterMax") || "")
+    setWheelWidthMin(get("wheelWidthMin") || "")
+    setWheelWidthMax(get("wheelWidthMax") || "")
+    setWheelOffsetMin(get("wheelOffsetMin") || "")
+    setWheelOffsetMax(get("wheelOffsetMax") || "")
+    setCenterBoreMin(get("centerBoreMin") || "")
+    setCenterBoreMax(get("centerBoreMax") || "")
+    setWheelBoltPattern(get("wheelBoltPattern") || "")
+    setWheelMaterial(get("wheelMaterial") || "")
+    setWheelColor(get("wheelColor") || "")
+    setHubCentricRingsNeeded(get("hubCentricRingsNeeded") || "all")
+    setEngineType(get("engineType") || "")
+    setEngineDisplacementMin(get("engineDisplacementMin") || "")
+    setEngineDisplacementMax(get("engineDisplacementMax") || "")
+    setEngineCylinders(get("engineCylinders") || "")
+    setEnginePowerMin(get("enginePowerMin") || "")
+    setEnginePowerMax(get("enginePowerMax") || "")
+    setTurboType(get("turboType") || "")
+    setFlangeType(get("flangeType") || "")
+    setWastegateType(get("wastegateType") || "")
+    setRotorDiameterMin(get("rotorDiameterMin") || "")
+    setRotorDiameterMax(get("rotorDiameterMax") || "")
+    setPadCompound(get("padCompound") || "")
+    setAdjustableHeight(get("adjustableHeight") || "all")
+    setAdjustableDamping(get("adjustableDamping") || "all")
+    setLightingVoltage(get("lightingVoltage") || "")
+    setBulbType(get("bulbType") || "")
     setToolCategory(get("toolCategory") || "")
     setPowerSource(get("powerSource") || "all")
     setFinish(get("finish") || "all")
@@ -193,7 +318,7 @@ export function TopicProductListing({
     setStyleTag(get("styleTag") || "")
     setSortBy((get("sortBy") as SearchParams["sortBy"]) || "newest")
     setPage(Math.max(1, Number.parseInt(get("page") || "1", 10) || 1))
-  }, [searchParams, defaultCategoryId])
+  }, [searchParams, defaultCategoryId, defaultPartsMainFromPage])
 
   // Keep URL query params in sync with current filters.
   useEffect(() => {
@@ -215,9 +340,43 @@ export function TopicProductListing({
     if (transmission !== "all") params.set("transmission", transmission)
     if (bodyType !== "all") params.set("bodyType", bodyType)
     if (driveType !== "all") params.set("driveType", driveType)
+    if (compatibilityMode !== "all") params.set("compatibilityMode", compatibilityMode)
+    if (compatibleMake) params.set("compatibleMake", compatibleMake)
+    if (compatibleModel) params.set("compatibleModel", compatibleModel)
     if (compatibleYear) params.set("compatibleYear", compatibleYear)
     if (oemType !== "all") params.set("oemType", oemType)
     if (partCategory) params.set("partCategory", partCategory)
+    if (partsMain) params.set("partsMain", partsMain)
+    if (partsSub) params.set("partsSub", partsSub)
+    if (partsDeep) params.set("partsDeep", partsDeep)
+    if (wheelDiameterMin) params.set("wheelDiameterMin", wheelDiameterMin)
+    if (wheelDiameterMax) params.set("wheelDiameterMax", wheelDiameterMax)
+    if (wheelWidthMin) params.set("wheelWidthMin", wheelWidthMin)
+    if (wheelWidthMax) params.set("wheelWidthMax", wheelWidthMax)
+    if (wheelOffsetMin) params.set("wheelOffsetMin", wheelOffsetMin)
+    if (wheelOffsetMax) params.set("wheelOffsetMax", wheelOffsetMax)
+    if (centerBoreMin) params.set("centerBoreMin", centerBoreMin)
+    if (centerBoreMax) params.set("centerBoreMax", centerBoreMax)
+    if (wheelBoltPattern) params.set("wheelBoltPattern", wheelBoltPattern)
+    if (wheelMaterial) params.set("wheelMaterial", wheelMaterial)
+    if (wheelColor) params.set("wheelColor", wheelColor)
+    if (hubCentricRingsNeeded !== "all") params.set("hubCentricRingsNeeded", hubCentricRingsNeeded)
+    if (engineType) params.set("engineType", engineType)
+    if (engineDisplacementMin) params.set("engineDisplacementMin", engineDisplacementMin)
+    if (engineDisplacementMax) params.set("engineDisplacementMax", engineDisplacementMax)
+    if (engineCylinders) params.set("engineCylinders", engineCylinders)
+    if (enginePowerMin) params.set("enginePowerMin", enginePowerMin)
+    if (enginePowerMax) params.set("enginePowerMax", enginePowerMax)
+    if (turboType) params.set("turboType", turboType)
+    if (flangeType) params.set("flangeType", flangeType)
+    if (wastegateType) params.set("wastegateType", wastegateType)
+    if (rotorDiameterMin) params.set("rotorDiameterMin", rotorDiameterMin)
+    if (rotorDiameterMax) params.set("rotorDiameterMax", rotorDiameterMax)
+    if (padCompound) params.set("padCompound", padCompound)
+    if (adjustableHeight !== "all") params.set("adjustableHeight", adjustableHeight)
+    if (adjustableDamping !== "all") params.set("adjustableDamping", adjustableDamping)
+    if (lightingVoltage) params.set("lightingVoltage", lightingVoltage)
+    if (bulbType) params.set("bulbType", bulbType)
     if (toolCategory) params.set("toolCategory", toolCategory)
     if (powerSource !== "all") params.set("powerSource", powerSource)
     if (finish !== "all") params.set("finish", finish)
@@ -247,9 +406,43 @@ export function TopicProductListing({
     transmission,
     bodyType,
     driveType,
+    compatibilityMode,
+    compatibleMake,
+    compatibleModel,
     compatibleYear,
     oemType,
     partCategory,
+    partsMain,
+    partsSub,
+    partsDeep,
+    wheelDiameterMin,
+    wheelDiameterMax,
+    wheelWidthMin,
+    wheelWidthMax,
+    wheelOffsetMin,
+    wheelOffsetMax,
+    centerBoreMin,
+    centerBoreMax,
+    wheelBoltPattern,
+    wheelMaterial,
+    wheelColor,
+    hubCentricRingsNeeded,
+    engineType,
+    engineDisplacementMin,
+    engineDisplacementMax,
+    engineCylinders,
+    enginePowerMin,
+    enginePowerMax,
+    turboType,
+    flangeType,
+    wastegateType,
+    rotorDiameterMin,
+    rotorDiameterMax,
+    padCompound,
+    adjustableHeight,
+    adjustableDamping,
+    lightingVoltage,
+    bulbType,
     toolCategory,
     powerSource,
     finish,
@@ -299,9 +492,58 @@ export function TopicProductListing({
     if (transmission !== "all") params.transmission = transmission
     if (bodyType !== "all") params.bodyType = bodyType
     if (driveType !== "all") params.driveType = driveType
+    if (compatibilityMode !== "all") params.compatibilityMode = compatibilityMode
+    if (compatibleMake) params.compatibleMake = compatibleMake
+    if (compatibleModel) params.compatibleModel = compatibleModel
     if (!Number.isNaN(parsedCompatibleYear)) params.compatibleYear = parsedCompatibleYear
     if (oemType !== "all") params.oemType = oemType
     if (partCategory) params.partCategory = partCategory
+    if (partsMain) params.partsMain = partsMain
+    if (partsSub) params.partsSub = partsSub
+    if (partsDeep) params.partsDeep = partsDeep
+    const parsedWheelDiameterMin = parseFloat(wheelDiameterMin)
+    const parsedWheelDiameterMax = parseFloat(wheelDiameterMax)
+    const parsedWheelWidthMin = parseFloat(wheelWidthMin)
+    const parsedWheelWidthMax = parseFloat(wheelWidthMax)
+    const parsedWheelOffsetMin = parseInt(wheelOffsetMin, 10)
+    const parsedWheelOffsetMax = parseInt(wheelOffsetMax, 10)
+    const parsedCenterBoreMin = parseFloat(centerBoreMin)
+    const parsedCenterBoreMax = parseFloat(centerBoreMax)
+    const parsedEngineDisplacementMin = parseInt(engineDisplacementMin, 10)
+    const parsedEngineDisplacementMax = parseInt(engineDisplacementMax, 10)
+    const parsedEngineCylinders = parseInt(engineCylinders, 10)
+    const parsedEnginePowerMin = parseInt(enginePowerMin, 10)
+    const parsedEnginePowerMax = parseInt(enginePowerMax, 10)
+    const parsedRotorDiameterMin = parseInt(rotorDiameterMin, 10)
+    const parsedRotorDiameterMax = parseInt(rotorDiameterMax, 10)
+    if (!Number.isNaN(parsedWheelDiameterMin) && Number.isFinite(parsedWheelDiameterMin)) params.wheelDiameterMin = parsedWheelDiameterMin
+    if (!Number.isNaN(parsedWheelDiameterMax) && Number.isFinite(parsedWheelDiameterMax)) params.wheelDiameterMax = parsedWheelDiameterMax
+    if (!Number.isNaN(parsedWheelWidthMin) && Number.isFinite(parsedWheelWidthMin)) params.wheelWidthMin = parsedWheelWidthMin
+    if (!Number.isNaN(parsedWheelWidthMax) && Number.isFinite(parsedWheelWidthMax)) params.wheelWidthMax = parsedWheelWidthMax
+    if (!Number.isNaN(parsedWheelOffsetMin)) params.wheelOffsetMin = parsedWheelOffsetMin
+    if (!Number.isNaN(parsedWheelOffsetMax)) params.wheelOffsetMax = parsedWheelOffsetMax
+    if (!Number.isNaN(parsedCenterBoreMin) && Number.isFinite(parsedCenterBoreMin)) params.centerBoreMin = parsedCenterBoreMin
+    if (!Number.isNaN(parsedCenterBoreMax) && Number.isFinite(parsedCenterBoreMax)) params.centerBoreMax = parsedCenterBoreMax
+    if (wheelBoltPattern) params.wheelBoltPattern = wheelBoltPattern
+    if (wheelMaterial) params.wheelMaterial = wheelMaterial
+    if (wheelColor) params.wheelColor = wheelColor
+    if (hubCentricRingsNeeded !== "all") params.hubCentricRingsNeeded = hubCentricRingsNeeded === "true"
+    if (engineType) params.engineType = engineType
+    if (!Number.isNaN(parsedEngineDisplacementMin)) params.engineDisplacementMin = parsedEngineDisplacementMin
+    if (!Number.isNaN(parsedEngineDisplacementMax)) params.engineDisplacementMax = parsedEngineDisplacementMax
+    if (!Number.isNaN(parsedEngineCylinders)) params.engineCylinders = parsedEngineCylinders
+    if (!Number.isNaN(parsedEnginePowerMin)) params.enginePowerMin = parsedEnginePowerMin
+    if (!Number.isNaN(parsedEnginePowerMax)) params.enginePowerMax = parsedEnginePowerMax
+    if (turboType) params.turboType = turboType
+    if (flangeType) params.flangeType = flangeType
+    if (wastegateType) params.wastegateType = wastegateType
+    if (!Number.isNaN(parsedRotorDiameterMin)) params.rotorDiameterMin = parsedRotorDiameterMin
+    if (!Number.isNaN(parsedRotorDiameterMax)) params.rotorDiameterMax = parsedRotorDiameterMax
+    if (padCompound) params.padCompound = padCompound
+    if (adjustableHeight !== "all") params.adjustableHeight = adjustableHeight === "true"
+    if (adjustableDamping !== "all") params.adjustableDamping = adjustableDamping === "true"
+    if (lightingVoltage) params.lightingVoltage = lightingVoltage
+    if (bulbType) params.bulbType = bulbType
     if (toolCategory) params.toolCategory = toolCategory
     if (powerSource !== "all") params.powerSource = powerSource
     if (finish !== "all") params.finish = finish
@@ -336,9 +578,43 @@ export function TopicProductListing({
     transmission,
     bodyType,
     driveType,
+    compatibilityMode,
+    compatibleMake,
+    compatibleModel,
     compatibleYear,
     oemType,
     partCategory,
+    partsMain,
+    partsSub,
+    partsDeep,
+    wheelDiameterMin,
+    wheelDiameterMax,
+    wheelWidthMin,
+    wheelWidthMax,
+    wheelOffsetMin,
+    wheelOffsetMax,
+    centerBoreMin,
+    centerBoreMax,
+    wheelBoltPattern,
+    wheelMaterial,
+    wheelColor,
+    hubCentricRingsNeeded,
+    engineType,
+    engineDisplacementMin,
+    engineDisplacementMax,
+    engineCylinders,
+    enginePowerMin,
+    enginePowerMax,
+    turboType,
+    flangeType,
+    wastegateType,
+    rotorDiameterMin,
+    rotorDiameterMax,
+    padCompound,
+    adjustableHeight,
+    adjustableDamping,
+    lightingVoltage,
+    bulbType,
     toolCategory,
     powerSource,
     finish,
@@ -419,9 +695,43 @@ export function TopicProductListing({
     setTransmission("all")
     setBodyType("all")
     setDriveType("all")
+    setCompatibilityMode("all")
+    setCompatibleMake("")
+    setCompatibleModel("")
     setCompatibleYear("")
     setOemType("all")
     setPartCategory("")
+    setPartsMain(defaultPartsMainFromPage)
+    setPartsSub("")
+    setPartsDeep("")
+    setWheelDiameterMin("")
+    setWheelDiameterMax("")
+    setWheelWidthMin("")
+    setWheelWidthMax("")
+    setWheelOffsetMin("")
+    setWheelOffsetMax("")
+    setCenterBoreMin("")
+    setCenterBoreMax("")
+    setWheelBoltPattern("")
+    setWheelMaterial("")
+    setWheelColor("")
+    setHubCentricRingsNeeded("all")
+    setEngineType("")
+    setEngineDisplacementMin("")
+    setEngineDisplacementMax("")
+    setEngineCylinders("")
+    setEnginePowerMin("")
+    setEnginePowerMax("")
+    setTurboType("")
+    setFlangeType("")
+    setWastegateType("")
+    setRotorDiameterMin("")
+    setRotorDiameterMax("")
+    setPadCompound("")
+    setAdjustableHeight("all")
+    setAdjustableDamping("all")
+    setLightingVoltage("")
+    setBulbType("")
     setToolCategory("")
     setPowerSource("all")
     setFinish("all")
@@ -449,9 +759,43 @@ export function TopicProductListing({
     transmission !== "all" ||
     bodyType !== "all" ||
     driveType !== "all" ||
+    compatibilityMode !== "all" ||
+    Boolean(compatibleMake) ||
+    Boolean(compatibleModel) ||
     Boolean(compatibleYear) ||
     oemType !== "all" ||
     Boolean(partCategory) ||
+    partsMain !== defaultPartsMainFromPage ||
+    Boolean(partsSub) ||
+    Boolean(partsDeep) ||
+    Boolean(wheelDiameterMin) ||
+    Boolean(wheelDiameterMax) ||
+    Boolean(wheelWidthMin) ||
+    Boolean(wheelWidthMax) ||
+    Boolean(wheelOffsetMin) ||
+    Boolean(wheelOffsetMax) ||
+    Boolean(centerBoreMin) ||
+    Boolean(centerBoreMax) ||
+    Boolean(wheelBoltPattern) ||
+    Boolean(wheelMaterial) ||
+    Boolean(wheelColor) ||
+    hubCentricRingsNeeded !== "all" ||
+    Boolean(engineType) ||
+    Boolean(engineDisplacementMin) ||
+    Boolean(engineDisplacementMax) ||
+    Boolean(engineCylinders) ||
+    Boolean(enginePowerMin) ||
+    Boolean(enginePowerMax) ||
+    Boolean(turboType) ||
+    Boolean(flangeType) ||
+    Boolean(wastegateType) ||
+    Boolean(rotorDiameterMin) ||
+    Boolean(rotorDiameterMax) ||
+    Boolean(padCompound) ||
+    adjustableHeight !== "all" ||
+    adjustableDamping !== "all" ||
+    Boolean(lightingVoltage) ||
+    Boolean(bulbType) ||
     Boolean(toolCategory) ||
     powerSource !== "all" ||
     finish !== "all" ||
@@ -463,6 +807,9 @@ export function TopicProductListing({
   const isPartsTopic = topicSlug === "parts"
   const isToolsTopic = topicSlug === "tools"
   const isCustomTopic = topicSlug === "custom"
+  const partsBranch = resolvePartsBranch(partsMain, partsSub)
+  const partsSubOptions = getPartsSubcategories(partsMain)
+  const partsDeepOptions = getPartsDeepCategories(partsMain, partsSub)
 
   return (
     <div className="flex gap-8">
@@ -509,216 +856,357 @@ export function TopicProductListing({
             {!filtersCollapsed && (
               <>
 
-            {/* Category Filter */}
-            <div>
-              <label className="mb-2 block text-sm font-medium">Category</label>
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id.toString()}>
-                      {cat.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Availability Filter */}
-            <div>
-              <label className="mb-2 block text-sm font-medium">Availability</label>
-              <Select value={selectedAvailability} onValueChange={setSelectedAvailability}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="in_stock">In Stock</SelectItem>
-                  <SelectItem value="low_stock">Low Stock</SelectItem>
-                  <SelectItem value="pre_order">Pre-Order</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Brand Filter */}
-            <div>
-              <label className="mb-2 block text-sm font-medium">Brand</label>
-              <Select value={selectedBrand} onValueChange={setSelectedBrand}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Brands" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Brands</SelectItem>
-                  {brands.map((brand) => (
-                    <SelectItem key={brand} value={brand}>
-                      {brand}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Condition Filter */}
-            <div>
-              <label className="mb-2 block text-sm font-medium">Condition</label>
-              <Select value={selectedCondition} onValueChange={setSelectedCondition}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Conditions" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Conditions</SelectItem>
-                  {PRODUCT_CONDITIONS.map((value) => (
-                    <SelectItem key={value} value={value}>
-                      {value.replace("_", " ")}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Topic-specific filters */}
-            {(isCarsTopic || isPartsTopic || isCustomTopic) && (
-              <>
+                {/* Category Filter */}
                 <div>
-                  <label className="mb-2 block text-sm font-medium">Make</label>
-                  <Input value={vehicleMake} onChange={(e) => setVehicleMake(e.target.value)} placeholder="e.g. BMW" />
+                  <label className="mb-2 block text-sm font-medium">Category</label>
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Categories" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      {categoryOptions.map((option) => (
+                        <SelectItem key={option.id} value={option.id.toString()}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Model</label>
-                  <Input value={vehicleModel} onChange={(e) => setVehicleModel(e.target.value)} placeholder="e.g. 330i" />
-                </div>
-              </>
-            )}
 
-            {isCarsTopic && (
-              <>
-                <div className="grid grid-cols-2 gap-2">
-                  <Input type="number" value={yearMin} onChange={(e) => setYearMin(e.target.value)} placeholder="Year min" />
-                  <Input type="number" value={yearMax} onChange={(e) => setYearMax(e.target.value)} placeholder="Year max" />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <Input type="number" value={mileageMin} onChange={(e) => setMileageMin(e.target.value)} placeholder="Mileage min" />
-                  <Input type="number" value={mileageMax} onChange={(e) => setMileageMax(e.target.value)} placeholder="Mileage max" />
-                </div>
-                <Select value={fuelType} onValueChange={setFuelType}>
-                  <SelectTrigger><SelectValue placeholder="Fuel Type" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Fuel Types</SelectItem>
-                    {FUEL_TYPES.map((value) => <SelectItem key={value} value={value}>{value.replace("_", " ")}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Select value={transmission} onValueChange={setTransmission}>
-                  <SelectTrigger><SelectValue placeholder="Transmission" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Transmissions</SelectItem>
-                    {TRANSMISSION_TYPES.map((value) => <SelectItem key={value} value={value}>{value.replace("_", " ")}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Select value={bodyType} onValueChange={setBodyType}>
-                  <SelectTrigger><SelectValue placeholder="Body Type" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Body Types</SelectItem>
-                    {BODY_TYPES.map((value) => <SelectItem key={value} value={value}>{value.replace("_", " ")}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Select value={driveType} onValueChange={setDriveType}>
-                  <SelectTrigger><SelectValue placeholder="Drive Type" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Drive Types</SelectItem>
-                    {DRIVE_TYPES.map((value) => <SelectItem key={value} value={value}>{value.replace("_", " ")}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </>
-            )}
-
-            {isPartsTopic && (
-              <>
+                {/* Availability Filter */}
                 <div>
-                  <label className="mb-2 block text-sm font-medium">Compatible Year</label>
-                  <Input type="number" value={compatibleYear} onChange={(e) => setCompatibleYear(e.target.value)} placeholder="e.g. 2019" />
+                  <label className="mb-2 block text-sm font-medium">Availability</label>
+                  <Select value={selectedAvailability} onValueChange={setSelectedAvailability}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="in_stock">In Stock</SelectItem>
+                      <SelectItem value="low_stock">Low Stock</SelectItem>
+                      <SelectItem value="pre_order">Pre-Order</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Part Category</label>
-                  <Input value={partCategory} onChange={(e) => setPartCategory(e.target.value)} placeholder="e.g. brakes" />
-                </div>
-                <Select value={oemType} onValueChange={setOemType}>
-                  <SelectTrigger><SelectValue placeholder="OEM Type" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All OEM Types</SelectItem>
-                    <SelectItem value="oem">OEM</SelectItem>
-                    <SelectItem value="aftermarket">Aftermarket</SelectItem>
-                  </SelectContent>
-                </Select>
-              </>
-            )}
 
-            {isToolsTopic && (
-              <>
+                {/* Brand Filter */}
                 <div>
-                  <label className="mb-2 block text-sm font-medium">Tool Category</label>
-                  <Input value={toolCategory} onChange={(e) => setToolCategory(e.target.value)} placeholder="e.g. torque_wrench" />
+                  <label className="mb-2 block text-sm font-medium">Brand</label>
+                  <Select value={selectedBrand} onValueChange={setSelectedBrand}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Brands" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Brands</SelectItem>
+                      {brands.map((brand) => (
+                        <SelectItem key={brand} value={brand}>
+                          {brand}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Select value={powerSource} onValueChange={setPowerSource}>
-                  <SelectTrigger><SelectValue placeholder="Power Source" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Power Sources</SelectItem>
-                    {POWER_SOURCES.map((value) => <SelectItem key={value} value={value}>{value.replace("_", " ")}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </>
-            )}
 
-            {isCustomTopic && (
-              <>
+                {/* Condition Filter */}
                 <div>
-                  <label className="mb-2 block text-sm font-medium">Style Tag</label>
-                  <Input value={styleTag} onChange={(e) => setStyleTag(e.target.value)} placeholder="e.g. sport" />
+                  <label className="mb-2 block text-sm font-medium">Condition</label>
+                  <Select value={selectedCondition} onValueChange={setSelectedCondition}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Conditions" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Conditions</SelectItem>
+                      {PRODUCT_CONDITIONS.map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {value.replace("_", " ")}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Select value={finish} onValueChange={setFinish}>
-                  <SelectTrigger><SelectValue placeholder="Finish" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Finishes</SelectItem>
-                    <SelectItem value="matte">Matte</SelectItem>
-                    <SelectItem value="gloss">Gloss</SelectItem>
-                    <SelectItem value="satin">Satin</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={streetLegal} onValueChange={setStreetLegal}>
-                  <SelectTrigger><SelectValue placeholder="Street Legal" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="true">Street Legal</SelectItem>
-                    <SelectItem value="false">Track Only</SelectItem>
-                  </SelectContent>
-                </Select>
-              </>
-            )}
 
-            {/* Price Range */}
-            <div>
-              <label className="mb-2 block text-sm font-medium">Price Range</label>
-              <div className="space-y-2">
-                <Input
-                  type="number"
-                  placeholder="Min price"
-                  value={minPrice}
-                  onChange={(e) => handleMinPriceChange(e.target.value)}
-                  min="0"
-                  step="1"
-                />
-                <Input
-                  type="number"
-                  placeholder="Max price"
-                  value={maxPrice}
-                  onChange={(e) => handleMaxPriceChange(e.target.value)}
-                  min="0"
-                  step="1"
-                />
-              </div>
-            </div>
+                {/* Topic-specific filters */}
+                {(isCarsTopic || isCustomTopic) && (
+                  <>
+                    <div>
+                      <label className="mb-2 block text-sm font-medium">Make</label>
+                      <Input value={vehicleMake} onChange={(e) => setVehicleMake(e.target.value)} placeholder="e.g. BMW" />
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-sm font-medium">Model</label>
+                      <Input value={vehicleModel} onChange={(e) => setVehicleModel(e.target.value)} placeholder="e.g. 330i" />
+                    </div>
+                  </>
+                )}
+
+                {isCarsTopic && (
+                  <>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input type="number" value={yearMin} onChange={(e) => setYearMin(e.target.value)} placeholder="Year min" />
+                      <Input type="number" value={yearMax} onChange={(e) => setYearMax(e.target.value)} placeholder="Year max" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input type="number" value={mileageMin} onChange={(e) => setMileageMin(e.target.value)} placeholder="Mileage min" />
+                      <Input type="number" value={mileageMax} onChange={(e) => setMileageMax(e.target.value)} placeholder="Mileage max" />
+                    </div>
+                    <Select value={fuelType} onValueChange={setFuelType}>
+                      <SelectTrigger><SelectValue placeholder="Fuel Type" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Fuel Types</SelectItem>
+                        {FUEL_TYPES.map((value) => <SelectItem key={value} value={value}>{value.replace("_", " ")}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select value={transmission} onValueChange={setTransmission}>
+                      <SelectTrigger><SelectValue placeholder="Transmission" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Transmissions</SelectItem>
+                        {TRANSMISSION_TYPES.map((value) => <SelectItem key={value} value={value}>{value.replace("_", " ")}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select value={bodyType} onValueChange={setBodyType}>
+                      <SelectTrigger><SelectValue placeholder="Body Type" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Body Types</SelectItem>
+                        {BODY_TYPES.map((value) => <SelectItem key={value} value={value}>{value.replace("_", " ")}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select value={driveType} onValueChange={setDriveType}>
+                      <SelectTrigger><SelectValue placeholder="Drive Type" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Drive Types</SelectItem>
+                        {DRIVE_TYPES.map((value) => <SelectItem key={value} value={value}>{value.replace("_", " ")}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </>
+                )}
+
+                {isPartsTopic && (
+                  <>
+                    <div>
+                      <label className="mb-2 block text-sm font-medium">My Car</label>
+                      <Select value={compatibilityMode} onValueChange={setCompatibilityMode}>
+                        <SelectTrigger><SelectValue placeholder="Compatibility mode" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Any</SelectItem>
+                          {COMPATIBILITY_MODES.map((value) => <SelectItem key={value} value={value}>{value.replace("_", " ")}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {compatibilityMode === "vehicle_specific" && (
+                      <>
+                        <Input value={compatibleMake} onChange={(e) => setCompatibleMake(e.target.value)} placeholder="Compatible make" />
+                        <Input value={compatibleModel} onChange={(e) => setCompatibleModel(e.target.value)} placeholder="Compatible model" />
+                      </>
+                    )}
+                    <div>
+                      <label className="mb-2 block text-sm font-medium">Compatible Year</label>
+                      <Input type="number" value={compatibleYear} onChange={(e) => setCompatibleYear(e.target.value)} placeholder="e.g. 2019" />
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-sm font-medium">Main Category</label>
+                      <Select value={partsMain || "all"} onValueChange={(value) => {
+                        const next = value === "all" ? "" : value
+                        setPartsMain(next)
+                        setPartsSub("")
+                        setPartsDeep("")
+                      }}>
+                        <SelectTrigger><SelectValue placeholder="All main categories" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All main categories</SelectItem>
+                          <SelectItem value="engine-drivetrain">Engine & Drivetrain</SelectItem>
+                          <SelectItem value="suspension-steering">Suspension & Steering</SelectItem>
+                          <SelectItem value="brakes">Brakes</SelectItem>
+                          <SelectItem value="wheels-tires">Wheels & Tires</SelectItem>
+                          <SelectItem value="electrical-lighting">Electrical & Lighting</SelectItem>
+                          <SelectItem value="exterior-body">Exterior & Body</SelectItem>
+                          <SelectItem value="interior">Interior</SelectItem>
+                          <SelectItem value="cooling-hvac">Cooling & HVAC</SelectItem>
+                          <SelectItem value="maintenance-service">Maintenance & Service</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {partsMain && (
+                      <div>
+                        <label className="mb-2 block text-sm font-medium">Subcategory</label>
+                        <Select value={partsSub || "all"} onValueChange={(value) => {
+                          const next = value === "all" ? "" : value
+                          setPartsSub(next)
+                          setPartsDeep("")
+                        }}>
+                          <SelectTrigger><SelectValue placeholder="All subcategories" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All subcategories</SelectItem>
+                            {partsSubOptions.map((sub) => <SelectItem key={sub} value={sub}>{sub.replace(/-/g, " ")}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    {partsSub && (
+                      <div>
+                        <label className="mb-2 block text-sm font-medium">Deep Category</label>
+                        <Select value={partsDeep || "all"} onValueChange={(value) => setPartsDeep(value === "all" ? "" : value)}>
+                          <SelectTrigger><SelectValue placeholder="All deep categories" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All deep categories</SelectItem>
+                            {partsDeepOptions.map((deep) => <SelectItem key={deep} value={deep}>{deep.replace(/-/g, " ")}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    <div>
+                      <label className="mb-2 block text-sm font-medium">Part Category</label>
+                      <Input value={partCategory} onChange={(e) => setPartCategory(e.target.value)} placeholder="e.g. brakes" />
+                    </div>
+                    <Select value={oemType} onValueChange={setOemType}>
+                      <SelectTrigger><SelectValue placeholder="OEM Type" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All OEM Types</SelectItem>
+                        <SelectItem value="oem">OEM</SelectItem>
+                        <SelectItem value="aftermarket">Aftermarket</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    {partsBranch === "wheels" && (
+                      <>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input type="number" value={wheelDiameterMin} onChange={(e) => setWheelDiameterMin(e.target.value)} placeholder="Diameter min" />
+                          <Input type="number" value={wheelDiameterMax} onChange={(e) => setWheelDiameterMax(e.target.value)} placeholder="Diameter max" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input type="number" value={wheelWidthMin} onChange={(e) => setWheelWidthMin(e.target.value)} placeholder="Width min" />
+                          <Input type="number" value={wheelWidthMax} onChange={(e) => setWheelWidthMax(e.target.value)} placeholder="Width max" />
+                        </div>
+                        <Input value={wheelBoltPattern} onChange={(e) => setWheelBoltPattern(e.target.value)} placeholder="Bolt pattern (e.g. 5x112)" />
+                      </>
+                    )}
+
+                    {partsBranch === "engines" && (
+                      <>
+                        <Input value={engineType} onChange={(e) => setEngineType(e.target.value)} placeholder="Engine type (I4, V8...)" />
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input type="number" value={engineDisplacementMin} onChange={(e) => setEngineDisplacementMin(e.target.value)} placeholder="Displacement min (cc)" />
+                          <Input type="number" value={engineDisplacementMax} onChange={(e) => setEngineDisplacementMax(e.target.value)} placeholder="Displacement max (cc)" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input type="number" value={engineCylinders} onChange={(e) => setEngineCylinders(e.target.value)} placeholder="Cylinders" />
+                          <Input type="number" value={enginePowerMin} onChange={(e) => setEnginePowerMin(e.target.value)} placeholder="Power min (hp)" />
+                        </div>
+                      </>
+                    )}
+
+                    {partsBranch === "turbochargers" && (
+                      <>
+                        <Input value={turboType} onChange={(e) => setTurboType(e.target.value)} placeholder="Turbo type" />
+                        <Input value={flangeType} onChange={(e) => setFlangeType(e.target.value)} placeholder="Flange type" />
+                        <Input value={wastegateType} onChange={(e) => setWastegateType(e.target.value)} placeholder="Wastegate type" />
+                      </>
+                    )}
+
+                    {partsBranch === "brakes" && (
+                      <>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input type="number" value={rotorDiameterMin} onChange={(e) => setRotorDiameterMin(e.target.value)} placeholder="Rotor dia min" />
+                          <Input type="number" value={rotorDiameterMax} onChange={(e) => setRotorDiameterMax(e.target.value)} placeholder="Rotor dia max" />
+                        </div>
+                        <Input value={padCompound} onChange={(e) => setPadCompound(e.target.value)} placeholder="Pad compound" />
+                      </>
+                    )}
+
+                    {partsBranch === "suspension" && (
+                      <>
+                        <Select value={adjustableHeight} onValueChange={setAdjustableHeight}>
+                          <SelectTrigger><SelectValue placeholder="Adjustable height" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Any height adjustability</SelectItem>
+                            <SelectItem value="true">Height adjustable</SelectItem>
+                            <SelectItem value="false">Fixed height</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Select value={adjustableDamping} onValueChange={setAdjustableDamping}>
+                          <SelectTrigger><SelectValue placeholder="Adjustable damping" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Any damping adjustability</SelectItem>
+                            <SelectItem value="true">Damping adjustable</SelectItem>
+                            <SelectItem value="false">Fixed damping</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </>
+                    )}
+
+                    {partsBranch === "electrical-lighting" && (
+                      <>
+                        <Input value={lightingVoltage} onChange={(e) => setLightingVoltage(e.target.value)} placeholder="Voltage (e.g. 12V)" />
+                        <Input value={bulbType} onChange={(e) => setBulbType(e.target.value)} placeholder="Bulb type (e.g. H7)" />
+                      </>
+                    )}
+                  </>
+                )}
+
+                {isToolsTopic && (
+                  <>
+                    <div>
+                      <label className="mb-2 block text-sm font-medium">Tool Category</label>
+                      <Input value={toolCategory} onChange={(e) => setToolCategory(e.target.value)} placeholder="e.g. torque_wrench" />
+                    </div>
+                    <Select value={powerSource} onValueChange={setPowerSource}>
+                      <SelectTrigger><SelectValue placeholder="Power Source" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Power Sources</SelectItem>
+                        {POWER_SOURCES.map((value) => <SelectItem key={value} value={value}>{value.replace("_", " ")}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </>
+                )}
+
+                {isCustomTopic && (
+                  <>
+                    <div>
+                      <label className="mb-2 block text-sm font-medium">Style Tag</label>
+                      <Input value={styleTag} onChange={(e) => setStyleTag(e.target.value)} placeholder="e.g. sport" />
+                    </div>
+                    <Select value={finish} onValueChange={setFinish}>
+                      <SelectTrigger><SelectValue placeholder="Finish" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Finishes</SelectItem>
+                        <SelectItem value="matte">Matte</SelectItem>
+                        <SelectItem value="gloss">Gloss</SelectItem>
+                        <SelectItem value="satin">Satin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={streetLegal} onValueChange={setStreetLegal}>
+                      <SelectTrigger><SelectValue placeholder="Street Legal" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="true">Street Legal</SelectItem>
+                        <SelectItem value="false">Track Only</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </>
+                )}
+
+                {/* Price Range */}
+                <div>
+                  <label className="mb-2 block text-sm font-medium">Price Range</label>
+                  <div className="space-y-2">
+                    <Input
+                      type="number"
+                      placeholder="Min price"
+                      value={minPrice}
+                      onChange={(e) => handleMinPriceChange(e.target.value)}
+                      min="0"
+                      step="1"
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Max price"
+                      value={maxPrice}
+                      onChange={(e) => handleMaxPriceChange(e.target.value)}
+                      min="0"
+                      step="1"
+                    />
+                  </div>
+                </div>
               </>
             )}
           </CardContent>
@@ -786,9 +1274,9 @@ export function TopicProductListing({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Categories</SelectItem>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id.toString()}>
-                        {cat.name}
+                    {categoryOptions.map((option) => (
+                      <SelectItem key={option.id} value={option.id.toString()}>
+                        {option.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -844,7 +1332,7 @@ export function TopicProductListing({
                 </Select>
               </div>
 
-              {(isCarsTopic || isPartsTopic || isCustomTopic) && (
+              {(isCarsTopic || isCustomTopic) && (
                 <div className="grid grid-cols-2 gap-2">
                   <Input value={vehicleMake} onChange={(e) => setVehicleMake(e.target.value)} placeholder="Make" />
                   <Input value={vehicleModel} onChange={(e) => setVehicleModel(e.target.value)} placeholder="Model" />
@@ -859,9 +1347,44 @@ export function TopicProductListing({
               )}
 
               {isPartsTopic && (
-                <div className="grid grid-cols-2 gap-2">
-                  <Input value={partCategory} onChange={(e) => setPartCategory(e.target.value)} placeholder="Part category" />
-                  <Input type="number" value={compatibleYear} onChange={(e) => setCompatibleYear(e.target.value)} placeholder="Compatible year" />
+                <div className="space-y-2">
+                  <Select value={compatibilityMode} onValueChange={setCompatibilityMode}>
+                    <SelectTrigger><SelectValue placeholder="Compatibility mode" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Any</SelectItem>
+                      {COMPATIBILITY_MODES.map((value) => <SelectItem key={value} value={value}>{value.replace("_", " ")}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  {compatibilityMode === "vehicle_specific" && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input value={compatibleMake} onChange={(e) => setCompatibleMake(e.target.value)} placeholder="Compatible make" />
+                      <Input value={compatibleModel} onChange={(e) => setCompatibleModel(e.target.value)} placeholder="Compatible model" />
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input type="number" value={compatibleYear} onChange={(e) => setCompatibleYear(e.target.value)} placeholder="Compatible year" />
+                    <Input value={partCategory} onChange={(e) => setPartCategory(e.target.value)} placeholder="Part category" />
+                  </div>
+                  <Select value={partsMain || "all"} onValueChange={(value) => {
+                    const next = value === "all" ? "" : value
+                    setPartsMain(next)
+                    setPartsSub("")
+                    setPartsDeep("")
+                  }}>
+                    <SelectTrigger><SelectValue placeholder="Main category" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All main categories</SelectItem>
+                      <SelectItem value="engine-drivetrain">Engine & Drivetrain</SelectItem>
+                      <SelectItem value="suspension-steering">Suspension & Steering</SelectItem>
+                      <SelectItem value="brakes">Brakes</SelectItem>
+                      <SelectItem value="wheels-tires">Wheels & Tires</SelectItem>
+                      <SelectItem value="electrical-lighting">Electrical & Lighting</SelectItem>
+                      <SelectItem value="exterior-body">Exterior & Body</SelectItem>
+                      <SelectItem value="interior">Interior</SelectItem>
+                      <SelectItem value="cooling-hvac">Cooling & HVAC</SelectItem>
+                      <SelectItem value="maintenance-service">Maintenance & Service</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
 

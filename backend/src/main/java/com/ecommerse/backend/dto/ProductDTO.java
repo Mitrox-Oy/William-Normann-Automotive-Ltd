@@ -34,7 +34,8 @@ public class ProductDTO {
     @Schema(description = "Available stock quantity", example = "50")
     private Integer stockQuantity;
 
-    // SKU is optional on create. If omitted/blank, backend auto-generates a stable SKU.
+    // SKU is optional on create. If omitted/blank, backend auto-generates a stable
+    // SKU.
     // If provided, backend enforces uniqueness and length constraints.
     @Size(max = 50, message = "SKU must be at most 50 characters")
     @Schema(description = "Stock Keeping Unit (optional on create; auto-generated if blank)", example = "IPH15P-256-BLK", required = false)
@@ -123,6 +124,15 @@ public class ProductDTO {
     @Schema(description = "Part category", example = "brakes")
     private String partCategory;
 
+    @Schema(description = "Parts main taxonomy category slug", example = "engine-drivetrain")
+    private String partsMainCategory;
+
+    @Schema(description = "Parts sub taxonomy category slug", example = "turbochargers")
+    private String partsSubCategory;
+
+    @Schema(description = "Parts deep taxonomy category slug", example = "wastegates")
+    private String partsDeepCategory;
+
     @Schema(description = "OEM part number", example = "34-11-6-789-101")
     private String partNumber;
 
@@ -173,6 +183,69 @@ public class ProductDTO {
 
     @Schema(description = "Installation difficulty", example = "medium")
     private String installationDifficulty;
+
+    @Schema(description = "Wheel diameter in inches", example = "18.5")
+    private BigDecimal wheelDiameterInch;
+
+    @Schema(description = "Wheel width in inches", example = "8.5")
+    private BigDecimal wheelWidthInch;
+
+    @Schema(description = "Wheel bolt pattern", example = "5x112")
+    private String wheelBoltPattern;
+
+    @Schema(description = "Wheel offset ET", example = "35")
+    private Integer wheelOffsetEt;
+
+    @Schema(description = "Wheel material", example = "alloy")
+    private String wheelMaterial;
+
+    @Schema(description = "Wheel color", example = "black")
+    private String wheelColor;
+
+    @Schema(description = "Wheel center bore", example = "66.6")
+    private BigDecimal centerBore;
+
+    @Schema(description = "Hub centric rings required", example = "false")
+    private Boolean hubCentricRingsNeeded;
+
+    @Schema(description = "Engine type", example = "i6")
+    private String engineType;
+
+    @Schema(description = "Engine displacement in cc", example = "2998")
+    private Integer engineDisplacementCc;
+
+    @Schema(description = "Engine cylinders", example = "6")
+    private Integer engineCylinders;
+
+    @Schema(description = "Engine power in hp", example = "335")
+    private Integer enginePowerHp;
+
+    @Schema(description = "Turbo type", example = "single")
+    private String turboType;
+
+    @Schema(description = "Turbo flange type", example = "t3")
+    private String turboFlangeType;
+
+    @Schema(description = "Wastegate type", example = "external")
+    private String wastegateType;
+
+    @Schema(description = "Rotor diameter in mm", example = "380")
+    private Integer rotorDiameterMm;
+
+    @Schema(description = "Pad compound", example = "street")
+    private String padCompound;
+
+    @Schema(description = "Suspension adjustable height", example = "true")
+    private Boolean suspensionAdjustableHeight;
+
+    @Schema(description = "Suspension adjustable damping", example = "true")
+    private Boolean suspensionAdjustableDamping;
+
+    @Schema(description = "Lighting voltage", example = "12v")
+    private String lightingVoltage;
+
+    @Schema(description = "Bulb type", example = "h7")
+    private String bulbType;
 
     @Schema(description = "Optional info section 1 title", example = "Product Info")
     private String infoSection1Title;
@@ -565,6 +638,30 @@ public class ProductDTO {
         this.partCategory = partCategory;
     }
 
+    public String getPartsMainCategory() {
+        return partsMainCategory;
+    }
+
+    public void setPartsMainCategory(String partsMainCategory) {
+        this.partsMainCategory = partsMainCategory;
+    }
+
+    public String getPartsSubCategory() {
+        return partsSubCategory;
+    }
+
+    public void setPartsSubCategory(String partsSubCategory) {
+        this.partsSubCategory = partsSubCategory;
+    }
+
+    public String getPartsDeepCategory() {
+        return partsDeepCategory;
+    }
+
+    public void setPartsDeepCategory(String partsDeepCategory) {
+        this.partsDeepCategory = partsDeepCategory;
+    }
+
     public String getPartNumber() {
         return partNumber;
     }
@@ -699,6 +796,174 @@ public class ProductDTO {
 
     public void setInstallationDifficulty(String installationDifficulty) {
         this.installationDifficulty = installationDifficulty;
+    }
+
+    public BigDecimal getWheelDiameterInch() {
+        return wheelDiameterInch;
+    }
+
+    public void setWheelDiameterInch(BigDecimal wheelDiameterInch) {
+        this.wheelDiameterInch = wheelDiameterInch;
+    }
+
+    public BigDecimal getWheelWidthInch() {
+        return wheelWidthInch;
+    }
+
+    public void setWheelWidthInch(BigDecimal wheelWidthInch) {
+        this.wheelWidthInch = wheelWidthInch;
+    }
+
+    public String getWheelBoltPattern() {
+        return wheelBoltPattern;
+    }
+
+    public void setWheelBoltPattern(String wheelBoltPattern) {
+        this.wheelBoltPattern = wheelBoltPattern;
+    }
+
+    public Integer getWheelOffsetEt() {
+        return wheelOffsetEt;
+    }
+
+    public void setWheelOffsetEt(Integer wheelOffsetEt) {
+        this.wheelOffsetEt = wheelOffsetEt;
+    }
+
+    public String getWheelMaterial() {
+        return wheelMaterial;
+    }
+
+    public void setWheelMaterial(String wheelMaterial) {
+        this.wheelMaterial = wheelMaterial;
+    }
+
+    public String getWheelColor() {
+        return wheelColor;
+    }
+
+    public void setWheelColor(String wheelColor) {
+        this.wheelColor = wheelColor;
+    }
+
+    public BigDecimal getCenterBore() {
+        return centerBore;
+    }
+
+    public void setCenterBore(BigDecimal centerBore) {
+        this.centerBore = centerBore;
+    }
+
+    public Boolean getHubCentricRingsNeeded() {
+        return hubCentricRingsNeeded;
+    }
+
+    public void setHubCentricRingsNeeded(Boolean hubCentricRingsNeeded) {
+        this.hubCentricRingsNeeded = hubCentricRingsNeeded;
+    }
+
+    public String getEngineType() {
+        return engineType;
+    }
+
+    public void setEngineType(String engineType) {
+        this.engineType = engineType;
+    }
+
+    public Integer getEngineDisplacementCc() {
+        return engineDisplacementCc;
+    }
+
+    public void setEngineDisplacementCc(Integer engineDisplacementCc) {
+        this.engineDisplacementCc = engineDisplacementCc;
+    }
+
+    public Integer getEngineCylinders() {
+        return engineCylinders;
+    }
+
+    public void setEngineCylinders(Integer engineCylinders) {
+        this.engineCylinders = engineCylinders;
+    }
+
+    public Integer getEnginePowerHp() {
+        return enginePowerHp;
+    }
+
+    public void setEnginePowerHp(Integer enginePowerHp) {
+        this.enginePowerHp = enginePowerHp;
+    }
+
+    public String getTurboType() {
+        return turboType;
+    }
+
+    public void setTurboType(String turboType) {
+        this.turboType = turboType;
+    }
+
+    public String getTurboFlangeType() {
+        return turboFlangeType;
+    }
+
+    public void setTurboFlangeType(String turboFlangeType) {
+        this.turboFlangeType = turboFlangeType;
+    }
+
+    public String getWastegateType() {
+        return wastegateType;
+    }
+
+    public void setWastegateType(String wastegateType) {
+        this.wastegateType = wastegateType;
+    }
+
+    public Integer getRotorDiameterMm() {
+        return rotorDiameterMm;
+    }
+
+    public void setRotorDiameterMm(Integer rotorDiameterMm) {
+        this.rotorDiameterMm = rotorDiameterMm;
+    }
+
+    public String getPadCompound() {
+        return padCompound;
+    }
+
+    public void setPadCompound(String padCompound) {
+        this.padCompound = padCompound;
+    }
+
+    public Boolean getSuspensionAdjustableHeight() {
+        return suspensionAdjustableHeight;
+    }
+
+    public void setSuspensionAdjustableHeight(Boolean suspensionAdjustableHeight) {
+        this.suspensionAdjustableHeight = suspensionAdjustableHeight;
+    }
+
+    public Boolean getSuspensionAdjustableDamping() {
+        return suspensionAdjustableDamping;
+    }
+
+    public void setSuspensionAdjustableDamping(Boolean suspensionAdjustableDamping) {
+        this.suspensionAdjustableDamping = suspensionAdjustableDamping;
+    }
+
+    public String getLightingVoltage() {
+        return lightingVoltage;
+    }
+
+    public void setLightingVoltage(String lightingVoltage) {
+        this.lightingVoltage = lightingVoltage;
+    }
+
+    public String getBulbType() {
+        return bulbType;
+    }
+
+    public void setBulbType(String bulbType) {
+        this.bulbType = bulbType;
     }
 
     public String getInfoSection1Title() {

@@ -17,13 +17,33 @@ const AUTH_API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PU
 
 // In-memory token storage (only used if backend doesn't use httpOnly cookies)
 let accessToken: string | null = null
+const TOKEN_STORAGE_KEY = 'wna-auth-token'
 
 export function setAccessToken(token: string | null) {
-  accessToken = token
+  const normalizedToken = token?.startsWith('Bearer ') ? token.slice(7) : token
+  accessToken = normalizedToken || null
 }
 
 export function getAccessToken(): string | null {
   return accessToken
+}
+
+function hydrateAccessTokenFromStorage(): string | null {
+  if (accessToken) return accessToken
+  if (typeof window === 'undefined') return null
+
+  const storedToken = window.localStorage.getItem(TOKEN_STORAGE_KEY)
+  if (!storedToken) return null
+
+  setAccessToken(storedToken)
+  return accessToken
+}
+
+function clearAccessTokenEverywhere() {
+  setAccessToken(null)
+  if (typeof window !== 'undefined') {
+    window.localStorage.removeItem(TOKEN_STORAGE_KEY)
+  }
 }
 
 export interface ApiError {
@@ -69,8 +89,11 @@ export async function apiRequest<T>(
   }
 
   // Add Authorization header if token exists and not skipped
-  if (!skipAuth && accessToken) {
-    headers.set('Authorization', `Bearer ${accessToken}`)
+  if (!skipAuth) {
+    const token = getAccessToken() || hydrateAccessTokenFromStorage()
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`)
+    }
   }
 
   // Include credentials to send/receive cookies
@@ -118,7 +141,7 @@ export async function apiRequest<T>(
         throw new ApiException(errorMessage, 401, errorErrors)
       }
       // For other endpoints, 401 means unauthorized - clear token
-      setAccessToken(null)
+      clearAccessTokenEverywhere()
       throw new ApiException('Unauthorized', 401)
     }
 

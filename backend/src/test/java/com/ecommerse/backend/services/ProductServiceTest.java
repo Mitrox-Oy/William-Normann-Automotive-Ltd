@@ -38,6 +38,9 @@ class ProductServiceTest {
     @Mock
     private CategoryRepository categoryRepository;
 
+    @Mock
+    private CategoryService categoryService;
+
     @InjectMocks
     private ProductService productService;
 
@@ -150,7 +153,8 @@ class ProductServiceTest {
         // Given
         when(productRepository.existsBySku(testProductDTO.getSku())).thenReturn(false);
         when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
-        // Return the saved entity so assertions can observe service-side mutations (e.g., generated SKU).
+        // Return the saved entity so assertions can observe service-side mutations
+        // (e.g., generated SKU).
         when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
@@ -392,5 +396,45 @@ class ProductServiceTest {
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getStockQuantity()).isLessThan(threshold);
         verify(productRepository).findByActiveTrueAndStockQuantityLessThanOrderByStockQuantityAsc(threshold);
+    }
+
+    @Test
+    void createProduct_WithPartsTaxonomyAndBranchFields_ShouldPersistAndMapToDto() {
+        ProductDTO partDto = new ProductDTO();
+        partDto.setName("N54 Turbo Upgrade");
+        partDto.setDescription("High flow turbo upgrade");
+        partDto.setPrice(new BigDecimal("1299.00"));
+        partDto.setStockQuantity(8);
+        partDto.setSku("TURBO-N54-STG2");
+        partDto.setCategoryId(1L);
+        partDto.setProductType("part");
+        partDto.setPartsMainCategory("wheels-tires");
+        partDto.setPartsSubCategory("wheels");
+        partDto.setPartsDeepCategory("forged");
+        partDto.setWheelDiameterInch(new BigDecimal("19.0"));
+        partDto.setWheelWidthInch(new BigDecimal("9.5"));
+        partDto.setWheelBoltPattern("5x112");
+        partDto.setWheelOffsetEt(35);
+        partDto.setEngineType("i6");
+        partDto.setEngineDisplacementCc(2998);
+        partDto.setEnginePowerHp(420);
+
+        when(productRepository.existsBySku("TURBO-N54-STG2")).thenReturn(false);
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
+        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ProductDTO result = productService.createProduct(partDto);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getPartsMainCategory()).isEqualTo("wheels-tires");
+        assertThat(result.getPartsSubCategory()).isEqualTo("wheels");
+        assertThat(result.getPartsDeepCategory()).isEqualTo("forged");
+        assertThat(result.getWheelDiameterInch()).isEqualByComparingTo("19.0");
+        assertThat(result.getWheelWidthInch()).isEqualByComparingTo("9.5");
+        assertThat(result.getWheelBoltPattern()).isEqualTo("5x112");
+        assertThat(result.getWheelOffsetEt()).isEqualTo(35);
+        assertThat(result.getEngineType()).isEqualTo("i6");
+        assertThat(result.getEngineDisplacementCc()).isEqualTo(2998);
+        assertThat(result.getEnginePowerHp()).isEqualTo(420);
     }
 }

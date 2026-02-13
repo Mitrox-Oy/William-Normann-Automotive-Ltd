@@ -116,7 +116,9 @@ export function normalizeCsvToken(value?: string | null): string {
 export interface CategoryLike {
   id: number
   slug: string
-  parentId?: number | null
+  parentId?: number | string | null
+  parent_id?: number | string | null
+  parent?: { id?: number | string | null } | null
 }
 
 export function resolveProductTypeFromCategory(categoryId: number | string | undefined | null, categories: CategoryLike[]): ProductType | undefined {
@@ -124,21 +126,38 @@ export function resolveProductTypeFromCategory(categoryId: number | string | und
   const id = typeof categoryId === "string" ? Number.parseInt(categoryId, 10) : categoryId
   if (!id || Number.isNaN(id)) return undefined
 
+  const parseParentId = (category?: CategoryLike): number | undefined => {
+    if (!category) return undefined
+    const rawParentId = category.parentId ?? category.parent_id ?? category.parent?.id
+    if (rawParentId === null || rawParentId === undefined || rawParentId === "") return undefined
+    const parsed = typeof rawParentId === "number" ? rawParentId : Number.parseInt(String(rawParentId), 10)
+    return Number.isFinite(parsed) ? parsed : undefined
+  }
+
+  const inferTypeFromSlug = (slug?: string): ProductType | undefined => {
+    const normalizedSlug = (slug || "").toLowerCase()
+    if (!normalizedSlug) return undefined
+    if (normalizedSlug === "cars" || normalizedSlug.startsWith("cars-")) return "car"
+    if (normalizedSlug === "parts" || normalizedSlug.startsWith("parts-")) return "part"
+    if (normalizedSlug === "tools" || normalizedSlug.startsWith("tools-")) return "tool"
+    if (normalizedSlug === "custom" || normalizedSlug.startsWith("custom-")) return "custom"
+    return undefined
+  }
+
   const byId = new Map<number, CategoryLike>()
   categories.forEach((category) => byId.set(category.id, category))
 
   let current = byId.get(id)
-  while (current && current.parentId) {
-    const parent = byId.get(current.parentId)
+  while (current) {
+    const inferredType = inferTypeFromSlug(current.slug)
+    if (inferredType) return inferredType
+
+    const parentId = parseParentId(current)
+    if (!parentId) break
+
+    const parent = byId.get(parentId)
     if (!parent) break
     current = parent
   }
-
-  if (!current) return undefined
-  const slug = (current.slug || "").toLowerCase()
-  if (slug === "cars") return "car"
-  if (slug === "parts") return "part"
-  if (slug === "tools") return "tool"
-  if (slug === "custom") return "custom"
   return undefined
 }

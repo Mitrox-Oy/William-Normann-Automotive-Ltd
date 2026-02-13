@@ -221,6 +221,21 @@ export default function ProductDetailPage({ slug }: ProductDetailPageProps) {
   const normalizedProductType = product.productType?.toLowerCase()
   const isCarProduct = normalizedProductType === "car"
 
+  const topicBackTarget = (() => {
+    switch (normalizedProductType) {
+      case "car":
+        return { href: "/shop/cars", label: "Back to Cars" }
+      case "part":
+        return { href: "/shop/parts", label: "Back to Parts" }
+      case "tool":
+        return { href: "/shop/tools", label: "Back to Tools" }
+      case "custom":
+        return { href: "/shop/custom", label: "Back to Custom" }
+      default:
+        return { href: "/shop", label: "Shop Home" }
+    }
+  })()
+
   const formatEnumValue = (value?: string) => {
     if (!value) return undefined
     return value
@@ -303,11 +318,11 @@ export default function ProductDetailPage({ slug }: ProductDetailPageProps) {
         {/* Breadcrumb */}
         <div className="mb-8">
           <Link
-            href="/shop"
+            href={topicBackTarget.href}
             className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Shop Home
+            {topicBackTarget.label}
           </Link>
         </div>
 

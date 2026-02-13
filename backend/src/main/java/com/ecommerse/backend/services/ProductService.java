@@ -251,7 +251,8 @@ public class ProductService {
         product.setDescription(dto.getDescription());
         product.setPrice(dto.getPrice());
         product.setStockQuantity(dto.getStockQuantity() != null ? dto.getStockQuantity() : 0);
-        // SKU is resolved explicitly by createProduct (and preserved on update unless manually overridden).
+        // SKU is resolved explicitly by createProduct (and preserved on update unless
+        // manually overridden).
         // Do not normalize-case SKUs here.
         product.setSku(trimToNull(dto.getSku()));
         product.setImageUrl(dto.getImageUrl());
@@ -281,8 +282,32 @@ public class ProductService {
         product.setColor(dto.getColor());
         product.setWarrantyIncluded(dto.getWarrantyIncluded());
         product.setPartCategory(dto.getPartCategory());
+        product.setPartsMainCategory(normalizeExact(dto.getPartsMainCategory()));
+        product.setPartsSubCategory(normalizeExact(dto.getPartsSubCategory()));
+        product.setPartsDeepCategory(normalizeExact(dto.getPartsDeepCategory()));
         product.setPartNumber(dto.getPartNumber());
         product.setPartPosition(listToCsv(dto.getPartPosition()));
+        product.setWheelDiameterInch(dto.getWheelDiameterInch());
+        product.setWheelWidthInch(dto.getWheelWidthInch());
+        product.setWheelBoltPattern(normalizeExact(dto.getWheelBoltPattern()));
+        product.setWheelOffsetEt(dto.getWheelOffsetEt());
+        product.setWheelMaterial(normalizeExact(dto.getWheelMaterial()));
+        product.setWheelColor(normalizeExact(dto.getWheelColor()));
+        product.setCenterBore(dto.getCenterBore());
+        product.setHubCentricRingsNeeded(dto.getHubCentricRingsNeeded());
+        product.setEngineType(normalizeExact(dto.getEngineType()));
+        product.setEngineDisplacementCc(dto.getEngineDisplacementCc());
+        product.setEngineCylinders(dto.getEngineCylinders());
+        product.setEnginePowerHp(dto.getEnginePowerHp());
+        product.setTurboType(normalizeExact(dto.getTurboType()));
+        product.setTurboFlangeType(normalizeExact(dto.getTurboFlangeType()));
+        product.setWastegateType(normalizeExact(dto.getWastegateType()));
+        product.setRotorDiameterMm(dto.getRotorDiameterMm());
+        product.setPadCompound(normalizeExact(dto.getPadCompound()));
+        product.setSuspensionAdjustableHeight(dto.getSuspensionAdjustableHeight());
+        product.setSuspensionAdjustableDamping(dto.getSuspensionAdjustableDamping());
+        product.setLightingVoltage(normalizeExact(dto.getLightingVoltage()));
+        product.setBulbType(normalizeExact(dto.getBulbType()));
         product.setMaterial(dto.getMaterial());
         product.setReconditioned(dto.getReconditioned());
         product.setToolCategory(dto.getToolCategory());
@@ -346,7 +371,8 @@ public class ProductService {
         product.setDescription(dto.getDescription());
         product.setPrice(dto.getPrice());
         product.setStockQuantity(dto.getStockQuantity() != null ? dto.getStockQuantity() : 0);
-        // Do not auto-regenerate or clear SKU on update. Manual SKU overrides are handled in updateProduct().
+        // Do not auto-regenerate or clear SKU on update. Manual SKU overrides are
+        // handled in updateProduct().
         product.setImageUrl(dto.getImageUrl());
         product.setActive(dto.getActive() != null ? dto.getActive() : true);
         product.setFeatured(dto.getFeatured() != null ? dto.getFeatured() : false);
@@ -374,8 +400,32 @@ public class ProductService {
         product.setColor(dto.getColor());
         product.setWarrantyIncluded(dto.getWarrantyIncluded());
         product.setPartCategory(dto.getPartCategory());
+        product.setPartsMainCategory(normalizeExact(dto.getPartsMainCategory()));
+        product.setPartsSubCategory(normalizeExact(dto.getPartsSubCategory()));
+        product.setPartsDeepCategory(normalizeExact(dto.getPartsDeepCategory()));
         product.setPartNumber(dto.getPartNumber());
         product.setPartPosition(listToCsv(dto.getPartPosition()));
+        product.setWheelDiameterInch(dto.getWheelDiameterInch());
+        product.setWheelWidthInch(dto.getWheelWidthInch());
+        product.setWheelBoltPattern(normalizeExact(dto.getWheelBoltPattern()));
+        product.setWheelOffsetEt(dto.getWheelOffsetEt());
+        product.setWheelMaterial(normalizeExact(dto.getWheelMaterial()));
+        product.setWheelColor(normalizeExact(dto.getWheelColor()));
+        product.setCenterBore(dto.getCenterBore());
+        product.setHubCentricRingsNeeded(dto.getHubCentricRingsNeeded());
+        product.setEngineType(normalizeExact(dto.getEngineType()));
+        product.setEngineDisplacementCc(dto.getEngineDisplacementCc());
+        product.setEngineCylinders(dto.getEngineCylinders());
+        product.setEnginePowerHp(dto.getEnginePowerHp());
+        product.setTurboType(normalizeExact(dto.getTurboType()));
+        product.setTurboFlangeType(normalizeExact(dto.getTurboFlangeType()));
+        product.setWastegateType(normalizeExact(dto.getWastegateType()));
+        product.setRotorDiameterMm(dto.getRotorDiameterMm());
+        product.setPadCompound(normalizeExact(dto.getPadCompound()));
+        product.setSuspensionAdjustableHeight(dto.getSuspensionAdjustableHeight());
+        product.setSuspensionAdjustableDamping(dto.getSuspensionAdjustableDamping());
+        product.setLightingVoltage(normalizeExact(dto.getLightingVoltage()));
+        product.setBulbType(normalizeExact(dto.getBulbType()));
         product.setMaterial(dto.getMaterial());
         product.setReconditioned(dto.getReconditioned());
         product.setToolCategory(dto.getToolCategory());
@@ -468,8 +518,32 @@ public class ProductService {
         dto.setColor(product.getColor());
         dto.setWarrantyIncluded(product.getWarrantyIncluded());
         dto.setPartCategory(product.getPartCategory());
+        dto.setPartsMainCategory(product.getPartsMainCategory());
+        dto.setPartsSubCategory(product.getPartsSubCategory());
+        dto.setPartsDeepCategory(product.getPartsDeepCategory());
         dto.setPartNumber(product.getPartNumber());
         dto.setPartPosition(csvToList(product.getPartPosition()));
+        dto.setWheelDiameterInch(product.getWheelDiameterInch());
+        dto.setWheelWidthInch(product.getWheelWidthInch());
+        dto.setWheelBoltPattern(product.getWheelBoltPattern());
+        dto.setWheelOffsetEt(product.getWheelOffsetEt());
+        dto.setWheelMaterial(product.getWheelMaterial());
+        dto.setWheelColor(product.getWheelColor());
+        dto.setCenterBore(product.getCenterBore());
+        dto.setHubCentricRingsNeeded(product.getHubCentricRingsNeeded());
+        dto.setEngineType(product.getEngineType());
+        dto.setEngineDisplacementCc(product.getEngineDisplacementCc());
+        dto.setEngineCylinders(product.getEngineCylinders());
+        dto.setEnginePowerHp(product.getEnginePowerHp());
+        dto.setTurboType(product.getTurboType());
+        dto.setTurboFlangeType(product.getTurboFlangeType());
+        dto.setWastegateType(product.getWastegateType());
+        dto.setRotorDiameterMm(product.getRotorDiameterMm());
+        dto.setPadCompound(product.getPadCompound());
+        dto.setSuspensionAdjustableHeight(product.getSuspensionAdjustableHeight());
+        dto.setSuspensionAdjustableDamping(product.getSuspensionAdjustableDamping());
+        dto.setLightingVoltage(product.getLightingVoltage());
+        dto.setBulbType(product.getBulbType());
         dto.setMaterial(product.getMaterial());
         dto.setReconditioned(product.getReconditioned());
         dto.setToolCategory(product.getToolCategory());
@@ -579,7 +653,8 @@ public class ProductService {
             }
             generated = bumpSkuSuffix(generated);
         }
-        throw new IllegalStateException("Failed to generate a unique SKU after " + SKU_GENERATION_MAX_ATTEMPTS + " attempts");
+        throw new IllegalStateException(
+                "Failed to generate a unique SKU after " + SKU_GENERATION_MAX_ATTEMPTS + " attempts");
     }
 
     /**
@@ -601,8 +676,7 @@ public class ProductService {
             derived = joinSkuSegments(
                     "PART",
                     firstNonBlank(category, nameHint),
-                    makeOrBrand
-            );
+                    makeOrBrand);
         } else if ("car".equals(type)) {
             // Example: MERC-AMG-C63-S-2020-ABC123
             String make = abbreviateWord(dto.getMake(), 4);
@@ -613,8 +687,7 @@ public class ProductService {
             derived = joinSkuSegments(
                     firstNonBlank(make, nameHint),
                     model,
-                    year
-            );
+                    year);
         } else {
             // Fallback for tools/custom/etc.
             String nameHint = abbreviateWords(dto.getName(), 5, 12);
@@ -630,7 +703,8 @@ public class ProductService {
         int maxBaseLen = Math.max(1, MAX_SKU_LENGTH - (1 + SKU_SUFFIX_LENGTH));
         if (base.length() > maxBaseLen) {
             base = base.substring(0, maxBaseLen).replaceAll("-+$", "");
-            if (base.isBlank()) base = "PROD";
+            if (base.isBlank())
+                base = "PROD";
         }
 
         return base + "-" + suffix;
@@ -644,7 +718,8 @@ public class ProductService {
         int maxBaseLen = Math.max(1, MAX_SKU_LENGTH - (1 + SKU_SUFFIX_LENGTH));
         if (base.length() > maxBaseLen) {
             base = base.substring(0, maxBaseLen).replaceAll("-+$", "");
-            if (base.isBlank()) base = "PROD";
+            if (base.isBlank())
+                base = "PROD";
         }
         return base + "-" + suffix;
     }
@@ -662,19 +737,24 @@ public class ProductService {
         }
     }
 
-    private void validatePublishAttributes(ProductDTO dto, String resolvedProductType, boolean isCreate, Product existingProduct) {
+    private void validatePublishAttributes(ProductDTO dto, String resolvedProductType, boolean isCreate,
+            Product existingProduct) {
         // Only enforce completeness when product is being published.
         boolean willBeActive = dto.getActive() != null ? Boolean.TRUE.equals(dto.getActive())
                 : (existingProduct != null ? Boolean.TRUE.equals(existingProduct.getActive()) : true);
 
-        if (!willBeActive) return;
-        if (resolvedProductType == null) return;
+        if (!willBeActive)
+            return;
+        if (resolvedProductType == null)
+            return;
 
         String type = resolvedProductType.trim().toLowerCase(Locale.ROOT);
         if ("car".equals(type)) {
-            // Avoid breaking legacy updates: enforce on create, and on updates only when explicit active=true is sent.
+            // Avoid breaking legacy updates: enforce on create, and on updates only when
+            // explicit active=true is sent.
             boolean enforce = isCreate || (dto.getActive() != null && Boolean.TRUE.equals(dto.getActive()));
-            if (!enforce) return;
+            if (!enforce)
+                return;
 
             if (isBlank(dto.getMake()) || isBlank(dto.getModel()) || dto.getYear() == null) {
                 throw new IllegalArgumentException("Cars require make, model and year when active");
@@ -687,15 +767,18 @@ public class ProductService {
     }
 
     private static String trimToNull(String value) {
-        if (value == null) return null;
+        if (value == null)
+            return null;
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
     }
 
     private static String firstNonBlank(String... values) {
-        if (values == null) return null;
+        if (values == null)
+            return null;
         for (String v : values) {
-            if (v != null && !v.trim().isEmpty()) return v.trim();
+            if (v != null && !v.trim().isEmpty())
+                return v.trim();
         }
         return null;
     }
@@ -707,7 +790,8 @@ public class ProductService {
     }
 
     private static String normalizeSkuBase(String value) {
-        if (value == null) return "";
+        if (value == null)
+            return "";
         String normalized = Normalizer.normalize(value, Normalizer.Form.NFD)
                 .replaceAll("\\p{M}+", "");
         normalized = normalized.toUpperCase(Locale.ROOT);
@@ -725,30 +809,41 @@ public class ProductService {
     }
 
     private static String abbreviateWord(String value, int maxLen) {
-        if (value == null) return null;
+        if (value == null)
+            return null;
         String trimmed = value.trim();
-        if (trimmed.isEmpty()) return null;
+        if (trimmed.isEmpty())
+            return null;
         // Keep alnum chunks only for abbreviation logic; normalize later.
         String chunk = trimmed.replaceAll("[^A-Za-z0-9]+", "");
-        if (chunk.isEmpty()) chunk = trimmed;
-        if (chunk.length() <= maxLen) return chunk;
+        if (chunk.isEmpty())
+            chunk = trimmed;
+        if (chunk.length() <= maxLen)
+            return chunk;
         return chunk.substring(0, maxLen);
     }
 
     private static String abbreviateWords(String value, int maxWords, int maxWordLen) {
-        if (value == null) return null;
+        if (value == null)
+            return null;
         String[] parts = value.trim().split("\\s+");
-        if (parts.length == 0) return null;
+        if (parts.length == 0)
+            return null;
         StringBuilder sb = new StringBuilder();
         int used = 0;
         for (String part : parts) {
-            if (part == null) continue;
+            if (part == null)
+                continue;
             String p = part.trim();
-            if (p.isEmpty()) continue;
-            if (used >= maxWords) break;
+            if (p.isEmpty())
+                continue;
+            if (used >= maxWords)
+                break;
             String abbr = abbreviateWord(p, maxWordLen);
-            if (abbr == null || abbr.isEmpty()) continue;
-            if (sb.length() > 0) sb.append("-");
+            if (abbr == null || abbr.isEmpty())
+                continue;
+            if (sb.length() > 0)
+                sb.append("-");
             sb.append(abbr);
             used++;
         }
@@ -805,8 +900,22 @@ public class ProductService {
         String oemTypeValue = normalizeExact(resolved.getOemType());
 
         String partCategoryPattern = toContainsPattern(resolved.getPartCategory());
+        String partsMainCategoryValue = normalizeExact(resolved.getPartsMainCategory());
+        String partsSubCategoryValue = normalizeExact(resolved.getPartsSubCategory());
+        String partsDeepCategoryValue = normalizeExact(resolved.getPartsDeepCategory());
         String partNumberPattern = toContainsPattern(resolved.getPartNumber());
         String partPositionPattern = toCsvTokenPattern(firstValue(resolved.getPartPosition()));
+
+        String wheelBoltPatternValue = normalizeExact(resolved.getWheelBoltPattern());
+        String wheelMaterialValue = normalizeExact(resolved.getWheelMaterial());
+        String wheelColorValue = normalizeExact(resolved.getWheelColor());
+        String engineTypeValue = normalizeExact(resolved.getEngineType());
+        String turboTypeValue = normalizeExact(resolved.getTurboType());
+        String flangeTypeValue = normalizeExact(resolved.getFlangeType());
+        String wastegateTypeValue = normalizeExact(resolved.getWastegateType());
+        String padCompoundValue = normalizeExact(resolved.getPadCompound());
+        String lightingVoltageValue = normalizeExact(resolved.getLightingVoltage());
+        String bulbTypeValue = normalizeExact(resolved.getBulbType());
 
         String toolCategoryPattern = toContainsPattern(resolved.getToolCategory());
         String powerSourceValue = normalizeExact(resolved.getPowerSource());
@@ -830,7 +939,20 @@ public class ProductService {
                     fuelTypeValue, transmissionValue, bodyTypeValue, driveTypeValue,
                     resolved.getPowerMin(), resolved.getPowerMax(), resolved.getWarrantyIncluded(),
                     compatibilityModeValue, compatibleMakePattern, compatibleModelPattern, resolved.getCompatibleYear(),
-                    oemTypeValue, partCategoryPattern, partNumberPattern, partPositionPattern,
+                    oemTypeValue, partCategoryPattern, partsMainCategoryValue, partsSubCategoryValue,
+                    partsDeepCategoryValue,
+                    partNumberPattern, partPositionPattern,
+                    resolved.getWheelDiameterMin(), resolved.getWheelDiameterMax(),
+                    resolved.getWheelWidthMin(), resolved.getWheelWidthMax(),
+                    resolved.getWheelOffsetMin(), resolved.getWheelOffsetMax(),
+                    resolved.getCenterBoreMin(), resolved.getCenterBoreMax(),
+                    wheelBoltPatternValue, wheelMaterialValue, wheelColorValue, resolved.getHubCentricRingsNeeded(),
+                    engineTypeValue, resolved.getEngineDisplacementMin(), resolved.getEngineDisplacementMax(),
+                    resolved.getEngineCylinders(), resolved.getEnginePowerMin(), resolved.getEnginePowerMax(),
+                    turboTypeValue, flangeTypeValue, wastegateTypeValue,
+                    resolved.getRotorDiameterMin(), resolved.getRotorDiameterMax(),
+                    padCompoundValue, resolved.getAdjustableHeight(), resolved.getAdjustableDamping(),
+                    lightingVoltageValue, bulbTypeValue,
                     toolCategoryPattern, powerSourceValue, resolved.getVoltageMin(), resolved.getVoltageMax(),
                     resolved.getTorqueMin(), resolved.getTorqueMax(), driveSizeValue,
                     resolved.getProfessionalGrade(), resolved.getIsKit(),
@@ -845,7 +967,20 @@ public class ProductService {
                     fuelTypeValue, transmissionValue, bodyTypeValue, driveTypeValue,
                     resolved.getPowerMin(), resolved.getPowerMax(), resolved.getWarrantyIncluded(),
                     compatibilityModeValue, compatibleMakePattern, compatibleModelPattern, resolved.getCompatibleYear(),
-                    oemTypeValue, partCategoryPattern, partNumberPattern, partPositionPattern,
+                    oemTypeValue, partCategoryPattern, partsMainCategoryValue, partsSubCategoryValue,
+                    partsDeepCategoryValue,
+                    partNumberPattern, partPositionPattern,
+                    resolved.getWheelDiameterMin(), resolved.getWheelDiameterMax(),
+                    resolved.getWheelWidthMin(), resolved.getWheelWidthMax(),
+                    resolved.getWheelOffsetMin(), resolved.getWheelOffsetMax(),
+                    resolved.getCenterBoreMin(), resolved.getCenterBoreMax(),
+                    wheelBoltPatternValue, wheelMaterialValue, wheelColorValue, resolved.getHubCentricRingsNeeded(),
+                    engineTypeValue, resolved.getEngineDisplacementMin(), resolved.getEngineDisplacementMax(),
+                    resolved.getEngineCylinders(), resolved.getEnginePowerMin(), resolved.getEnginePowerMax(),
+                    turboTypeValue, flangeTypeValue, wastegateTypeValue,
+                    resolved.getRotorDiameterMin(), resolved.getRotorDiameterMax(),
+                    padCompoundValue, resolved.getAdjustableHeight(), resolved.getAdjustableDamping(),
+                    lightingVoltageValue, bulbTypeValue,
                     toolCategoryPattern, powerSourceValue, resolved.getVoltageMin(), resolved.getVoltageMax(),
                     resolved.getTorqueMin(), resolved.getTorqueMax(), driveSizeValue,
                     resolved.getProfessionalGrade(), resolved.getIsKit(),

@@ -19,7 +19,7 @@ import { getAdminProducts, deleteProduct, getAllCategories, getAdminCategories, 
 import { formatCurrency, SHOP_TOPICS, TOPIC_INFO, type ShopTopic } from "@/lib/shopApi"
 import { Plus, Search, Edit, Trash2, ChevronLeft, ChevronRight, Package, FolderTree, Car, Wrench, Settings, Sparkles } from "lucide-react"
 import Link from "next/link"
- 
+
 
 // Topic icons mapping
 const TOPIC_ICONS: Record<ShopTopic, React.ReactNode> = {
@@ -31,11 +31,11 @@ const TOPIC_ICONS: Record<ShopTopic, React.ReactNode> = {
 
 function AdminProductsContent() {
   const [activeTab, setActiveTab] = useState("products")
-  
-  // Topic state - default to 'parts'
-  const [selectedTopic, setSelectedTopic] = useState<ShopTopic>("parts")
+
+  // Topic state - default to 'cars'
+  const [selectedTopic, setSelectedTopic] = useState<ShopTopic>("cars")
   const [topicRootCategoryId, setTopicRootCategoryId] = useState<number | null>(null)
-  
+
   // Products state
   const [products, setProducts] = useState<AdminProduct[]>([])
   const [productsLoading, setProductsLoading] = useState(true)
@@ -43,7 +43,7 @@ function AdminProductsContent() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
-  
+
   // Categories state
   const [categories, setCategories] = useState<AdminCategory[]>([])
   const [allTopicCategories, setAllTopicCategories] = useState<AdminCategory[]>([])  // For parent dropdown
@@ -81,7 +81,7 @@ function AdminProductsContent() {
   // Products functions
   async function loadProducts() {
     if (!topicRootCategoryId) return
-    
+
     try {
       setProductsLoading(true)
       const response = await getAdminProducts({
@@ -103,7 +103,7 @@ function AdminProductsContent() {
 
   async function handleDeleteProduct(id: string, name: string) {
     if (!confirm(`Delete product "${name}"?`)) return
-    
+
     try {
       await deleteProduct(id)
       await loadProducts()
@@ -194,7 +194,7 @@ function AdminProductsContent() {
 
   async function handleDeleteCategory(id: string, name: string) {
     if (!confirm(`Delete category "${name}"? This will also delete all subcategories.`)) return
-    
+
     try {
       await deleteCategory(id)
       await loadCategories()
@@ -214,12 +214,64 @@ function AdminProductsContent() {
 
   const filteredProducts = products && Array.isArray(products)
     ? (searchQuery
-        ? products.filter((p) =>
-            p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            p.sku.toLowerCase().includes(searchQuery.toLowerCase())
-          )
-        : products)
+      ? products.filter((p) =>
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.sku.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+      : products)
     : []
+
+  const parentCategoryOptions = (() => {
+    if (!topicRootCategoryId || allTopicCategories.length === 0) return [] as Array<{ id: number; label: string }>
+
+    const categoryMap = new Map<number, AdminCategory>()
+    const childrenByParent = new Map<number, AdminCategory[]>()
+
+    allTopicCategories.forEach((category) => {
+      categoryMap.set(category.id, category)
+      const parentId = typeof category.parentId === "number"
+        ? category.parentId
+        : Number.parseInt(String(category.parentId), 10)
+      if (!Number.isFinite(parentId)) return
+      const children = childrenByParent.get(parentId) || []
+      children.push(category)
+      childrenByParent.set(parentId, children)
+    })
+
+    const blockedIds = new Set<number>()
+    if (editingCategory) {
+      blockedIds.add(editingCategory.id)
+
+      const collectDescendants = (parentId: number) => {
+        const children = childrenByParent.get(parentId) || []
+        children.forEach((child) => {
+          if (blockedIds.has(child.id)) return
+          blockedIds.add(child.id)
+          collectDescendants(child.id)
+        })
+      }
+
+      collectDescendants(editingCategory.id)
+    }
+
+    const sortByName = (left: AdminCategory, right: AdminCategory) =>
+      left.name.localeCompare(right.name, undefined, { sensitivity: "base" })
+
+    const flattened: Array<{ id: number; label: string }> = []
+
+    const walk = (parentId: number, depth: number) => {
+      const children = [...(childrenByParent.get(parentId) || [])].sort(sortByName)
+      children.forEach((child) => {
+        if (blockedIds.has(child.id)) return
+        const prefix = depth === 1 ? "└ " : `${"— ".repeat(depth - 1)}└ `
+        flattened.push({ id: child.id, label: `${prefix}${child.name}` })
+        walk(child.id, depth + 1)
+      })
+    }
+
+    walk(topicRootCategoryId, 1)
+    return flattened
+  })()
 
   return (
     <section className="py-24 lg:py-32">
@@ -232,9 +284,9 @@ function AdminProductsContent() {
         </div>
 
         <div className="mb-8 flex items-center justify-between">
-          <SectionHeading 
-            title={`Products & Categories — ${TOPIC_INFO[selectedTopic].label}`} 
-            subtitle={`Manage ${TOPIC_INFO[selectedTopic].label.toLowerCase()} catalog and categories`} 
+          <SectionHeading
+            title={`Products & Categories — ${TOPIC_INFO[selectedTopic].label}`}
+            subtitle={`Manage ${TOPIC_INFO[selectedTopic].label.toLowerCase()} catalog and categories`}
           />
           {activeTab === "products" && (
             <Button asChild>
@@ -360,8 +412,8 @@ function AdminProductsContent() {
                                   product.status === "active"
                                     ? "default"
                                     : product.status === "draft"
-                                    ? "secondary"
-                                    : "outline"
+                                      ? "secondary"
+                                      : "outline"
                                 }
                               >
                                 {product.status}
@@ -490,8 +542,8 @@ function AdminProductsContent() {
             <DialogHeader>
               <DialogTitle>{editingCategory ? "Edit Category" : `Create Category — ${TOPIC_INFO[selectedTopic].label}`}</DialogTitle>
               <DialogDescription>
-                {editingCategory 
-                  ? "Update category information" 
+                {editingCategory
+                  ? "Update category information"
                   : `Add a new category under ${TOPIC_INFO[selectedTopic].label.toLowerCase()} topic`}
               </DialogDescription>
             </DialogHeader>
@@ -538,14 +590,12 @@ function AdminProductsContent() {
                         {TOPIC_INFO[selectedTopic].label} (Root)
                       </SelectItem>
                     )}
-                    {/* Subcategories within this topic */}
-                    {allTopicCategories
-                      .filter(c => c.slug !== selectedTopic && c.id !== editingCategory?.id)
-                      .map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id.toString()}>
-                          └ {cat.name}
-                        </SelectItem>
-                      ))}
+                    {/* Hierarchical subcategories within this topic */}
+                    {parentCategoryOptions.map((option) => (
+                      <SelectItem key={option.id} value={option.id.toString()}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">

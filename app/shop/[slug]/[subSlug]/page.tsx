@@ -17,6 +17,25 @@ import {
 } from "@/lib/shopApi"
 import { TopicProductListing } from "@/components/topic-product-listing"
 
+const CARS_CATEGORY_DISPLAY_NAMES: Record<string, string> = {
+  "cars-bmw": "JDM",
+  "cars-jdm": "JDM",
+  "cars-audi": "Euro",
+  "cars-euro": "Euro",
+  "cars-mercedes": "Luxury",
+  "cars-luxury": "Luxury",
+  "cars-porsche": "Super Cars",
+  "cars-super-cars": "Super Cars",
+}
+
+function getSubcategoryDisplayName(topicSlug: string, subcategory: Category): string {
+  if (topicSlug !== "cars") {
+    return subcategory.name
+  }
+
+  return CARS_CATEGORY_DISPLAY_NAMES[subcategory.slug] ?? subcategory.name
+}
+
 /**
  * Subcategory page for /shop/[slug]/[subSlug]
  * - First validates that [slug] is a valid topic
@@ -135,6 +154,8 @@ export default function TopicSubcategoryPage() {
     )
   }
 
+  const subcategoryDisplayName = getSubcategoryDisplayName(topicSlug, subcategory)
+
   return (
     <section className="py-16 lg:py-24">
       <Container>
@@ -143,7 +164,7 @@ export default function TopicSubcategoryPage() {
           <ol className="flex items-center gap-2">
             <li>
               <Link href="/shop" className="hover:text-foreground transition-colors">
-                Shop
+                SHOP
               </Link>
             </li>
             <li>/</li>
@@ -154,7 +175,7 @@ export default function TopicSubcategoryPage() {
             </li>
             <li>/</li>
             <li className="text-foreground font-medium">
-              {subcategory.name}
+              {subcategoryDisplayName}
             </li>
           </ol>
         </nav>
@@ -162,7 +183,7 @@ export default function TopicSubcategoryPage() {
         {/* Category Header */}
         <div className="mb-12 space-y-4">
           <h1 className="text-4xl font-bold lg:text-5xl">
-            {subcategory.name}
+            {subcategoryDisplayName}
           </h1>
           {subcategory.description && (
             <p className="text-lg text-muted-foreground max-w-2xl">
@@ -176,6 +197,7 @@ export default function TopicSubcategoryPage() {
           rootCategoryId={rootCategory.id}
           topicSlug={topicSlug}
           defaultCategoryId={subcategory.id}
+          defaultCategorySlug={subcategory.slug}
           showBackLink={false}
         />
       </Container>

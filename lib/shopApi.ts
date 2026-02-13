@@ -121,6 +121,28 @@ export interface Product {
   finish?: string
   streetLegal?: boolean
   installationDifficulty?: string
+  partsMainCategory?: string
+  partsSubCategory?: string
+  partsDeepCategory?: string
+  wheelDiameterInch?: number
+  wheelWidthInch?: number
+  wheelBoltPattern?: string
+  wheelOffsetEt?: number
+  wheelMaterial?: string
+  centerBore?: number
+  engineType?: string
+  engineDisplacementCc?: number
+  engineCylinders?: number
+  enginePowerHp?: number
+  turboType?: string
+  turboFlangeType?: string
+  wastegateType?: string
+  rotorDiameterMm?: number
+  padCompound?: string
+  suspensionAdjustableHeight?: boolean
+  suspensionAdjustableDamping?: boolean
+  lightingVoltage?: string
+  bulbType?: string
   weight?: number
   specifications?: Record<string, string>
   compatibleVehicles?: string[]
@@ -180,6 +202,9 @@ export interface SearchParams {
   compatibleMake?: string
   compatibleModel?: string
   compatibleYear?: number
+  partsMain?: string
+  partsSub?: string
+  partsDeep?: string
   oemType?: string
   partCategory?: string
   partNumber?: string
@@ -197,6 +222,34 @@ export interface SearchParams {
   finish?: string
   streetLegal?: boolean
   installationDifficulty?: string
+  wheelDiameterMin?: number
+  wheelDiameterMax?: number
+  wheelWidthMin?: number
+  wheelWidthMax?: number
+  wheelOffsetMin?: number
+  wheelOffsetMax?: number
+  centerBoreMin?: number
+  centerBoreMax?: number
+  wheelBoltPattern?: string
+  wheelMaterial?: string
+  wheelColor?: string
+  hubCentricRingsNeeded?: boolean
+  engineType?: string
+  engineDisplacementMin?: number
+  engineDisplacementMax?: number
+  engineCylinders?: number
+  enginePowerMin?: number
+  enginePowerMax?: number
+  turboType?: string
+  flangeType?: string
+  wastegateType?: string
+  rotorDiameterMin?: number
+  rotorDiameterMax?: number
+  padCompound?: string
+  adjustableHeight?: boolean
+  adjustableDamping?: boolean
+  lightingVoltage?: string
+  bulbType?: string
   customCategory?: string
   availability?: string
   sortBy?: 'price_asc' | 'price_desc' | 'name_asc' | 'name_desc' | 'newest'
@@ -331,6 +384,9 @@ export async function fetchProducts(params: SearchParams = {}): Promise<Products
   if (params.compatibleMake) searchParams.set('compatibleMake', params.compatibleMake)
   if (params.compatibleModel) searchParams.set('compatibleModel', params.compatibleModel)
   if (params.compatibleYear !== undefined) searchParams.set('compatibleYear', params.compatibleYear.toString())
+  if (params.partsMain) searchParams.set('partsMain', params.partsMain)
+  if (params.partsSub) searchParams.set('partsSub', params.partsSub)
+  if (params.partsDeep) searchParams.set('partsDeep', params.partsDeep)
   if (params.oemType) searchParams.set('oemType', params.oemType)
   if (params.partCategory) searchParams.set('partCategory', params.partCategory)
   if (params.partNumber) searchParams.set('partNumber', params.partNumber)
@@ -348,6 +404,34 @@ export async function fetchProducts(params: SearchParams = {}): Promise<Products
   if (params.finish) searchParams.set('finish', params.finish)
   if (params.streetLegal !== undefined) searchParams.set('streetLegal', String(params.streetLegal))
   if (params.installationDifficulty) searchParams.set('installationDifficulty', params.installationDifficulty)
+  if (params.wheelDiameterMin !== undefined) searchParams.set('wheelDiameterMin', params.wheelDiameterMin.toString())
+  if (params.wheelDiameterMax !== undefined) searchParams.set('wheelDiameterMax', params.wheelDiameterMax.toString())
+  if (params.wheelWidthMin !== undefined) searchParams.set('wheelWidthMin', params.wheelWidthMin.toString())
+  if (params.wheelWidthMax !== undefined) searchParams.set('wheelWidthMax', params.wheelWidthMax.toString())
+  if (params.wheelOffsetMin !== undefined) searchParams.set('wheelOffsetMin', params.wheelOffsetMin.toString())
+  if (params.wheelOffsetMax !== undefined) searchParams.set('wheelOffsetMax', params.wheelOffsetMax.toString())
+  if (params.centerBoreMin !== undefined) searchParams.set('centerBoreMin', params.centerBoreMin.toString())
+  if (params.centerBoreMax !== undefined) searchParams.set('centerBoreMax', params.centerBoreMax.toString())
+  if (params.wheelBoltPattern) searchParams.set('wheelBoltPattern', params.wheelBoltPattern)
+  if (params.wheelMaterial) searchParams.set('wheelMaterial', params.wheelMaterial)
+  if (params.wheelColor) searchParams.set('wheelColor', params.wheelColor)
+  if (params.hubCentricRingsNeeded !== undefined) searchParams.set('hubCentricRingsNeeded', String(params.hubCentricRingsNeeded))
+  if (params.engineType) searchParams.set('engineType', params.engineType)
+  if (params.engineDisplacementMin !== undefined) searchParams.set('engineDisplacementMin', params.engineDisplacementMin.toString())
+  if (params.engineDisplacementMax !== undefined) searchParams.set('engineDisplacementMax', params.engineDisplacementMax.toString())
+  if (params.engineCylinders !== undefined) searchParams.set('engineCylinders', params.engineCylinders.toString())
+  if (params.enginePowerMin !== undefined) searchParams.set('enginePowerMin', params.enginePowerMin.toString())
+  if (params.enginePowerMax !== undefined) searchParams.set('enginePowerMax', params.enginePowerMax.toString())
+  if (params.turboType) searchParams.set('turboType', params.turboType)
+  if (params.flangeType) searchParams.set('flangeType', params.flangeType)
+  if (params.wastegateType) searchParams.set('wastegateType', params.wastegateType)
+  if (params.rotorDiameterMin !== undefined) searchParams.set('rotorDiameterMin', params.rotorDiameterMin.toString())
+  if (params.rotorDiameterMax !== undefined) searchParams.set('rotorDiameterMax', params.rotorDiameterMax.toString())
+  if (params.padCompound) searchParams.set('padCompound', params.padCompound)
+  if (params.adjustableHeight !== undefined) searchParams.set('adjustableHeight', String(params.adjustableHeight))
+  if (params.adjustableDamping !== undefined) searchParams.set('adjustableDamping', String(params.adjustableDamping))
+  if (params.lightingVoltage) searchParams.set('lightingVoltage', params.lightingVoltage)
+  if (params.bulbType) searchParams.set('bulbType', params.bulbType)
   if (params.customCategory) searchParams.set('customCategory', params.customCategory)
   if (params.availability === 'in_stock') {
     searchParams.set('inStockOnly', 'true')
@@ -420,6 +504,9 @@ export async function fetchProducts(params: SearchParams = {}): Promise<Products
         compatibleModels: p.compatibleModels || undefined,
         compatibleYearStart: p.compatibleYearStart ?? undefined,
         compatibleYearEnd: p.compatibleYearEnd ?? undefined,
+        partsMainCategory: p.partsMainCategory || undefined,
+        partsSubCategory: p.partsSubCategory || undefined,
+        partsDeepCategory: p.partsDeepCategory || undefined,
         vinCompatible: parseBooleanFlag(p.vinCompatible),
         make: p.make || undefined,
         model: p.model || undefined,
@@ -450,6 +537,25 @@ export async function fetchProducts(params: SearchParams = {}): Promise<Products
         finish: p.finish || undefined,
         streetLegal: p.streetLegal ?? undefined,
         installationDifficulty: p.installationDifficulty || undefined,
+        wheelDiameterInch: p.wheelDiameterInch ?? undefined,
+        wheelWidthInch: p.wheelWidthInch ?? undefined,
+        wheelBoltPattern: p.wheelBoltPattern || undefined,
+        wheelOffsetEt: p.wheelOffsetEt ?? undefined,
+        wheelMaterial: p.wheelMaterial || undefined,
+        centerBore: p.centerBore ?? undefined,
+        engineType: p.engineType || undefined,
+        engineDisplacementCc: p.engineDisplacementCc ?? undefined,
+        engineCylinders: p.engineCylinders ?? undefined,
+        enginePowerHp: p.enginePowerHp ?? undefined,
+        turboType: p.turboType || undefined,
+        turboFlangeType: p.turboFlangeType || undefined,
+        wastegateType: p.wastegateType || undefined,
+        rotorDiameterMm: p.rotorDiameterMm ?? undefined,
+        padCompound: p.padCompound || undefined,
+        suspensionAdjustableHeight: p.suspensionAdjustableHeight ?? undefined,
+        suspensionAdjustableDamping: p.suspensionAdjustableDamping ?? undefined,
+        lightingVoltage: p.lightingVoltage || undefined,
+        bulbType: p.bulbType || undefined,
         weight: typeof p.weight === 'number' ? p.weight : p.weight ? parseFloat(p.weight) : undefined,
         stockLevel: stockQty,
         createdAt: p.createdDate || new Date().toISOString(),
@@ -553,6 +659,9 @@ export async function fetchProductBySlug(slug: string): Promise<Product | null> 
       compatibleModels: data.compatibleModels || undefined,
       compatibleYearStart: data.compatibleYearStart ?? undefined,
       compatibleYearEnd: data.compatibleYearEnd ?? undefined,
+      partsMainCategory: data.partsMainCategory || undefined,
+      partsSubCategory: data.partsSubCategory || undefined,
+      partsDeepCategory: data.partsDeepCategory || undefined,
       vinCompatible: parseBooleanFlag(data.vinCompatible),
       make: data.make || undefined,
       model: data.model || undefined,
@@ -583,6 +692,25 @@ export async function fetchProductBySlug(slug: string): Promise<Product | null> 
       finish: data.finish || undefined,
       streetLegal: data.streetLegal ?? undefined,
       installationDifficulty: data.installationDifficulty || undefined,
+      wheelDiameterInch: data.wheelDiameterInch ?? undefined,
+      wheelWidthInch: data.wheelWidthInch ?? undefined,
+      wheelBoltPattern: data.wheelBoltPattern || undefined,
+      wheelOffsetEt: data.wheelOffsetEt ?? undefined,
+      wheelMaterial: data.wheelMaterial || undefined,
+      centerBore: data.centerBore ?? undefined,
+      engineType: data.engineType || undefined,
+      engineDisplacementCc: data.engineDisplacementCc ?? undefined,
+      engineCylinders: data.engineCylinders ?? undefined,
+      enginePowerHp: data.enginePowerHp ?? undefined,
+      turboType: data.turboType || undefined,
+      turboFlangeType: data.turboFlangeType || undefined,
+      wastegateType: data.wastegateType || undefined,
+      rotorDiameterMm: data.rotorDiameterMm ?? undefined,
+      padCompound: data.padCompound || undefined,
+      suspensionAdjustableHeight: data.suspensionAdjustableHeight ?? undefined,
+      suspensionAdjustableDamping: data.suspensionAdjustableDamping ?? undefined,
+      lightingVoltage: data.lightingVoltage || undefined,
+      bulbType: data.bulbType || undefined,
       weight: typeof data.weight === 'number' ? data.weight : data.weight ? parseFloat(data.weight) : undefined,
       specifications: data.specifications || undefined,
       compatibleVehicles: data.compatibleVehicles || undefined,

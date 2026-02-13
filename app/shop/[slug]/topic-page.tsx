@@ -23,6 +23,25 @@ interface TopicPageProps {
   topic: ShopTopic
 }
 
+const CARS_CATEGORY_DISPLAY_NAMES: Record<string, string> = {
+  "cars-bmw": "JDM",
+  "cars-jdm": "JDM",
+  "cars-audi": "Euro",
+  "cars-euro": "Euro",
+  "cars-mercedes": "Luxury",
+  "cars-luxury": "Luxury",
+  "cars-porsche": "Super Cars",
+  "cars-super-cars": "Super Cars",
+}
+
+function getCategoryDisplayName(topic: string, category: Category): string {
+  if (topic !== "cars") {
+    return category.name
+  }
+
+  return CARS_CATEGORY_DISPLAY_NAMES[category.slug] ?? category.name
+}
+
 export default function TopicPage({ topic }: TopicPageProps) {
   const [rootCategory, setRootCategory] = useState<Category | null>(null)
   const [subcategories, setSubcategories] = useState<Category[]>([])
@@ -44,7 +63,7 @@ export default function TopicPage({ topic }: TopicPageProps) {
           return
         }
         setRootCategory(category)
-        
+
         const children = await fetchCategoryChildren(category.id)
         setSubcategories(children)
         setLoading(false)
@@ -122,8 +141,8 @@ export default function TopicPage({ topic }: TopicPageProps) {
     <section className="py-24 lg:py-32">
       <Container>
         {/* Back Link */}
-        <Link 
-          href="/shop" 
+        <Link
+          href="/shop"
           className="inline-flex items-center text-sm text-muted-foreground hover:text-primary mb-6"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -143,11 +162,11 @@ export default function TopicPage({ topic }: TopicPageProps) {
             <h3 className="text-lg font-semibold mb-4">Browse by Category</h3>
             <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
               {subcategories.map((subcat, i) => (
-                <SubcategoryTile 
-                  key={subcat.id} 
-                  category={subcat} 
-                  topic={topic} 
-                  index={i} 
+                <SubcategoryTile
+                  key={subcat.id}
+                  category={subcat}
+                  topic={topic}
+                  index={i}
                 />
               ))}
             </div>
@@ -176,7 +195,8 @@ interface SubcategoryTileProps {
 function SubcategoryTile({ category, topic, index }: SubcategoryTileProps) {
   // Default image if category doesn't have one
   const imageUrl = category.imageUrl || `/images/categories/${category.slug}.jpg`
-  
+  const displayName = getCategoryDisplayName(topic, category)
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
@@ -192,7 +212,7 @@ function SubcategoryTile({ category, topic, index }: SubcategoryTileProps) {
         <div className="absolute inset-0">
           <Image
             src={imageUrl}
-            alt={category.name}
+            alt={displayName}
             fill
             className="object-cover transition-transform duration-300 group-hover:scale-110"
             sizes="192px"
@@ -207,7 +227,7 @@ function SubcategoryTile({ category, topic, index }: SubcategoryTileProps) {
         {/* Label */}
         <div className="absolute inset-0 flex items-center justify-center">
           <span className="text-white font-semibold text-center px-2 drop-shadow-md">
-            {category.name}
+            {displayName}
           </span>
         </div>
 

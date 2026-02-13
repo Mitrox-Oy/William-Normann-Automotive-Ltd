@@ -162,9 +162,48 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                         "(:oemTypeValue IS NULL OR LOWER(COALESCE(p.oemType, '')) = :oemTypeValue) AND " +
                         "(:partCategoryPattern IS NULL OR LOWER(COALESCE(p.partCategory, '')) LIKE :partCategoryPattern) AND "
                         +
-                        "(:partNumberPattern IS NULL OR LOWER(COALESCE(p.partNumber, '')) LIKE :partNumberPattern) AND " +
+                        "(:partsMainCategoryValue IS NULL OR LOWER(COALESCE(p.partsMainCategory, '')) = :partsMainCategoryValue) AND "
+                        +
+                        "(:partsSubCategoryValue IS NULL OR LOWER(COALESCE(p.partsSubCategory, '')) = :partsSubCategoryValue) AND "
+                        +
+                        "(:partsDeepCategoryValue IS NULL OR LOWER(COALESCE(p.partsDeepCategory, '')) = :partsDeepCategoryValue) AND "
+                        +
+                        "(:partNumberPattern IS NULL OR LOWER(COALESCE(p.partNumber, '')) LIKE :partNumberPattern) AND "
+                        +
                         "(:partPositionPattern IS NULL OR LOWER(CONCAT(',', COALESCE(p.partPosition, ''), ',')) LIKE :partPositionPattern) AND "
                         +
+                        "(:wheelDiameterMin IS NULL OR p.wheelDiameterInch >= :wheelDiameterMin) AND " +
+                        "(:wheelDiameterMax IS NULL OR p.wheelDiameterInch <= :wheelDiameterMax) AND " +
+                        "(:wheelWidthMin IS NULL OR p.wheelWidthInch >= :wheelWidthMin) AND " +
+                        "(:wheelWidthMax IS NULL OR p.wheelWidthInch <= :wheelWidthMax) AND " +
+                        "(:wheelOffsetMin IS NULL OR p.wheelOffsetEt >= :wheelOffsetMin) AND " +
+                        "(:wheelOffsetMax IS NULL OR p.wheelOffsetEt <= :wheelOffsetMax) AND " +
+                        "(:centerBoreMin IS NULL OR p.centerBore >= :centerBoreMin) AND " +
+                        "(:centerBoreMax IS NULL OR p.centerBore <= :centerBoreMax) AND " +
+                        "(:wheelBoltPatternValue IS NULL OR LOWER(COALESCE(p.wheelBoltPattern, '')) = :wheelBoltPatternValue) AND "
+                        +
+                        "(:wheelMaterialValue IS NULL OR LOWER(COALESCE(p.wheelMaterial, '')) = :wheelMaterialValue) AND "
+                        +
+                        "(:wheelColorValue IS NULL OR LOWER(COALESCE(p.wheelColor, '')) = :wheelColorValue) AND " +
+                        "(:hubCentricRingsNeeded IS NULL OR p.hubCentricRingsNeeded = :hubCentricRingsNeeded) AND " +
+                        "(:engineTypeValue IS NULL OR LOWER(COALESCE(p.engineType, '')) = :engineTypeValue) AND " +
+                        "(:engineDisplacementMin IS NULL OR p.engineDisplacementCc >= :engineDisplacementMin) AND " +
+                        "(:engineDisplacementMax IS NULL OR p.engineDisplacementCc <= :engineDisplacementMax) AND " +
+                        "(:engineCylinders IS NULL OR p.engineCylinders = :engineCylinders) AND " +
+                        "(:enginePowerMin IS NULL OR p.enginePowerHp >= :enginePowerMin) AND " +
+                        "(:enginePowerMax IS NULL OR p.enginePowerHp <= :enginePowerMax) AND " +
+                        "(:turboTypeValue IS NULL OR LOWER(COALESCE(p.turboType, '')) = :turboTypeValue) AND " +
+                        "(:flangeTypeValue IS NULL OR LOWER(COALESCE(p.turboFlangeType, '')) = :flangeTypeValue) AND " +
+                        "(:wastegateTypeValue IS NULL OR LOWER(COALESCE(p.wastegateType, '')) = :wastegateTypeValue) AND "
+                        +
+                        "(:rotorDiameterMin IS NULL OR p.rotorDiameterMm >= :rotorDiameterMin) AND " +
+                        "(:rotorDiameterMax IS NULL OR p.rotorDiameterMm <= :rotorDiameterMax) AND " +
+                        "(:padCompoundValue IS NULL OR LOWER(COALESCE(p.padCompound, '')) = :padCompoundValue) AND " +
+                        "(:adjustableHeight IS NULL OR p.suspensionAdjustableHeight = :adjustableHeight) AND " +
+                        "(:adjustableDamping IS NULL OR p.suspensionAdjustableDamping = :adjustableDamping) AND " +
+                        "(:lightingVoltageValue IS NULL OR LOWER(COALESCE(p.lightingVoltage, '')) = :lightingVoltageValue) AND "
+                        +
+                        "(:bulbTypeValue IS NULL OR LOWER(COALESCE(p.bulbType, '')) = :bulbTypeValue) AND " +
                         "(:toolCategoryPattern IS NULL OR LOWER(COALESCE(p.toolCategory, '')) LIKE :toolCategoryPattern) AND "
                         +
                         "(:powerSourceValue IS NULL OR LOWER(COALESCE(p.powerSource, '')) = :powerSourceValue) AND " +
@@ -212,8 +251,39 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                         @Param("compatibleYear") Integer compatibleYear,
                         @Param("oemTypeValue") String oemTypeValue,
                         @Param("partCategoryPattern") String partCategoryPattern,
+                        @Param("partsMainCategoryValue") String partsMainCategoryValue,
+                        @Param("partsSubCategoryValue") String partsSubCategoryValue,
+                        @Param("partsDeepCategoryValue") String partsDeepCategoryValue,
                         @Param("partNumberPattern") String partNumberPattern,
                         @Param("partPositionPattern") String partPositionPattern,
+                        @Param("wheelDiameterMin") BigDecimal wheelDiameterMin,
+                        @Param("wheelDiameterMax") BigDecimal wheelDiameterMax,
+                        @Param("wheelWidthMin") BigDecimal wheelWidthMin,
+                        @Param("wheelWidthMax") BigDecimal wheelWidthMax,
+                        @Param("wheelOffsetMin") Integer wheelOffsetMin,
+                        @Param("wheelOffsetMax") Integer wheelOffsetMax,
+                        @Param("centerBoreMin") BigDecimal centerBoreMin,
+                        @Param("centerBoreMax") BigDecimal centerBoreMax,
+                        @Param("wheelBoltPatternValue") String wheelBoltPatternValue,
+                        @Param("wheelMaterialValue") String wheelMaterialValue,
+                        @Param("wheelColorValue") String wheelColorValue,
+                        @Param("hubCentricRingsNeeded") Boolean hubCentricRingsNeeded,
+                        @Param("engineTypeValue") String engineTypeValue,
+                        @Param("engineDisplacementMin") Integer engineDisplacementMin,
+                        @Param("engineDisplacementMax") Integer engineDisplacementMax,
+                        @Param("engineCylinders") Integer engineCylinders,
+                        @Param("enginePowerMin") Integer enginePowerMin,
+                        @Param("enginePowerMax") Integer enginePowerMax,
+                        @Param("turboTypeValue") String turboTypeValue,
+                        @Param("flangeTypeValue") String flangeTypeValue,
+                        @Param("wastegateTypeValue") String wastegateTypeValue,
+                        @Param("rotorDiameterMin") Integer rotorDiameterMin,
+                        @Param("rotorDiameterMax") Integer rotorDiameterMax,
+                        @Param("padCompoundValue") String padCompoundValue,
+                        @Param("adjustableHeight") Boolean adjustableHeight,
+                        @Param("adjustableDamping") Boolean adjustableDamping,
+                        @Param("lightingVoltageValue") String lightingVoltageValue,
+                        @Param("bulbTypeValue") String bulbTypeValue,
                         @Param("toolCategoryPattern") String toolCategoryPattern,
                         @Param("powerSourceValue") String powerSourceValue,
                         @Param("voltageMin") Integer voltageMin,
@@ -287,9 +357,48 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                         "(:oemTypeValue IS NULL OR LOWER(COALESCE(p.oemType, '')) = :oemTypeValue) AND " +
                         "(:partCategoryPattern IS NULL OR LOWER(COALESCE(p.partCategory, '')) LIKE :partCategoryPattern) AND "
                         +
-                        "(:partNumberPattern IS NULL OR LOWER(COALESCE(p.partNumber, '')) LIKE :partNumberPattern) AND " +
+                        "(:partsMainCategoryValue IS NULL OR LOWER(COALESCE(p.partsMainCategory, '')) = :partsMainCategoryValue) AND "
+                        +
+                        "(:partsSubCategoryValue IS NULL OR LOWER(COALESCE(p.partsSubCategory, '')) = :partsSubCategoryValue) AND "
+                        +
+                        "(:partsDeepCategoryValue IS NULL OR LOWER(COALESCE(p.partsDeepCategory, '')) = :partsDeepCategoryValue) AND "
+                        +
+                        "(:partNumberPattern IS NULL OR LOWER(COALESCE(p.partNumber, '')) LIKE :partNumberPattern) AND "
+                        +
                         "(:partPositionPattern IS NULL OR LOWER(CONCAT(',', COALESCE(p.partPosition, ''), ',')) LIKE :partPositionPattern) AND "
                         +
+                        "(:wheelDiameterMin IS NULL OR p.wheelDiameterInch >= :wheelDiameterMin) AND " +
+                        "(:wheelDiameterMax IS NULL OR p.wheelDiameterInch <= :wheelDiameterMax) AND " +
+                        "(:wheelWidthMin IS NULL OR p.wheelWidthInch >= :wheelWidthMin) AND " +
+                        "(:wheelWidthMax IS NULL OR p.wheelWidthInch <= :wheelWidthMax) AND " +
+                        "(:wheelOffsetMin IS NULL OR p.wheelOffsetEt >= :wheelOffsetMin) AND " +
+                        "(:wheelOffsetMax IS NULL OR p.wheelOffsetEt <= :wheelOffsetMax) AND " +
+                        "(:centerBoreMin IS NULL OR p.centerBore >= :centerBoreMin) AND " +
+                        "(:centerBoreMax IS NULL OR p.centerBore <= :centerBoreMax) AND " +
+                        "(:wheelBoltPatternValue IS NULL OR LOWER(COALESCE(p.wheelBoltPattern, '')) = :wheelBoltPatternValue) AND "
+                        +
+                        "(:wheelMaterialValue IS NULL OR LOWER(COALESCE(p.wheelMaterial, '')) = :wheelMaterialValue) AND "
+                        +
+                        "(:wheelColorValue IS NULL OR LOWER(COALESCE(p.wheelColor, '')) = :wheelColorValue) AND " +
+                        "(:hubCentricRingsNeeded IS NULL OR p.hubCentricRingsNeeded = :hubCentricRingsNeeded) AND " +
+                        "(:engineTypeValue IS NULL OR LOWER(COALESCE(p.engineType, '')) = :engineTypeValue) AND " +
+                        "(:engineDisplacementMin IS NULL OR p.engineDisplacementCc >= :engineDisplacementMin) AND " +
+                        "(:engineDisplacementMax IS NULL OR p.engineDisplacementCc <= :engineDisplacementMax) AND " +
+                        "(:engineCylinders IS NULL OR p.engineCylinders = :engineCylinders) AND " +
+                        "(:enginePowerMin IS NULL OR p.enginePowerHp >= :enginePowerMin) AND " +
+                        "(:enginePowerMax IS NULL OR p.enginePowerHp <= :enginePowerMax) AND " +
+                        "(:turboTypeValue IS NULL OR LOWER(COALESCE(p.turboType, '')) = :turboTypeValue) AND " +
+                        "(:flangeTypeValue IS NULL OR LOWER(COALESCE(p.turboFlangeType, '')) = :flangeTypeValue) AND " +
+                        "(:wastegateTypeValue IS NULL OR LOWER(COALESCE(p.wastegateType, '')) = :wastegateTypeValue) AND "
+                        +
+                        "(:rotorDiameterMin IS NULL OR p.rotorDiameterMm >= :rotorDiameterMin) AND " +
+                        "(:rotorDiameterMax IS NULL OR p.rotorDiameterMm <= :rotorDiameterMax) AND " +
+                        "(:padCompoundValue IS NULL OR LOWER(COALESCE(p.padCompound, '')) = :padCompoundValue) AND " +
+                        "(:adjustableHeight IS NULL OR p.suspensionAdjustableHeight = :adjustableHeight) AND " +
+                        "(:adjustableDamping IS NULL OR p.suspensionAdjustableDamping = :adjustableDamping) AND " +
+                        "(:lightingVoltageValue IS NULL OR LOWER(COALESCE(p.lightingVoltage, '')) = :lightingVoltageValue) AND "
+                        +
+                        "(:bulbTypeValue IS NULL OR LOWER(COALESCE(p.bulbType, '')) = :bulbTypeValue) AND " +
                         "(:toolCategoryPattern IS NULL OR LOWER(COALESCE(p.toolCategory, '')) LIKE :toolCategoryPattern) AND "
                         +
                         "(:powerSourceValue IS NULL OR LOWER(COALESCE(p.powerSource, '')) = :powerSourceValue) AND " +
@@ -337,8 +446,39 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                         @Param("compatibleYear") Integer compatibleYear,
                         @Param("oemTypeValue") String oemTypeValue,
                         @Param("partCategoryPattern") String partCategoryPattern,
+                        @Param("partsMainCategoryValue") String partsMainCategoryValue,
+                        @Param("partsSubCategoryValue") String partsSubCategoryValue,
+                        @Param("partsDeepCategoryValue") String partsDeepCategoryValue,
                         @Param("partNumberPattern") String partNumberPattern,
                         @Param("partPositionPattern") String partPositionPattern,
+                        @Param("wheelDiameterMin") BigDecimal wheelDiameterMin,
+                        @Param("wheelDiameterMax") BigDecimal wheelDiameterMax,
+                        @Param("wheelWidthMin") BigDecimal wheelWidthMin,
+                        @Param("wheelWidthMax") BigDecimal wheelWidthMax,
+                        @Param("wheelOffsetMin") Integer wheelOffsetMin,
+                        @Param("wheelOffsetMax") Integer wheelOffsetMax,
+                        @Param("centerBoreMin") BigDecimal centerBoreMin,
+                        @Param("centerBoreMax") BigDecimal centerBoreMax,
+                        @Param("wheelBoltPatternValue") String wheelBoltPatternValue,
+                        @Param("wheelMaterialValue") String wheelMaterialValue,
+                        @Param("wheelColorValue") String wheelColorValue,
+                        @Param("hubCentricRingsNeeded") Boolean hubCentricRingsNeeded,
+                        @Param("engineTypeValue") String engineTypeValue,
+                        @Param("engineDisplacementMin") Integer engineDisplacementMin,
+                        @Param("engineDisplacementMax") Integer engineDisplacementMax,
+                        @Param("engineCylinders") Integer engineCylinders,
+                        @Param("enginePowerMin") Integer enginePowerMin,
+                        @Param("enginePowerMax") Integer enginePowerMax,
+                        @Param("turboTypeValue") String turboTypeValue,
+                        @Param("flangeTypeValue") String flangeTypeValue,
+                        @Param("wastegateTypeValue") String wastegateTypeValue,
+                        @Param("rotorDiameterMin") Integer rotorDiameterMin,
+                        @Param("rotorDiameterMax") Integer rotorDiameterMax,
+                        @Param("padCompoundValue") String padCompoundValue,
+                        @Param("adjustableHeight") Boolean adjustableHeight,
+                        @Param("adjustableDamping") Boolean adjustableDamping,
+                        @Param("lightingVoltageValue") String lightingVoltageValue,
+                        @Param("bulbTypeValue") String bulbTypeValue,
                         @Param("toolCategoryPattern") String toolCategoryPattern,
                         @Param("powerSourceValue") String powerSourceValue,
                         @Param("voltageMin") Integer voltageMin,

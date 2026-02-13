@@ -63,8 +63,32 @@ export interface ProductCreateInput {
   color?: string
   warrantyIncluded?: boolean
   partCategory?: string
+  partsMainCategory?: string
+  partsSubCategory?: string
+  partsDeepCategory?: string
   partNumber?: string
   partPosition?: string[]
+  wheelDiameterInch?: number
+  wheelWidthInch?: number
+  wheelBoltPattern?: string
+  wheelOffsetEt?: number
+  wheelMaterial?: string
+  wheelColor?: string
+  centerBore?: number
+  hubCentricRingsNeeded?: boolean
+  engineType?: string
+  engineDisplacementCc?: number
+  engineCylinders?: number
+  enginePowerHp?: number
+  turboType?: string
+  turboFlangeType?: string
+  wastegateType?: string
+  rotorDiameterMm?: number
+  padCompound?: string
+  suspensionAdjustableHeight?: boolean
+  suspensionAdjustableDamping?: boolean
+  lightingVoltage?: string
+  bulbType?: string
   material?: string
   reconditioned?: boolean
   toolCategory?: string
@@ -201,8 +225,32 @@ function mapBackendProductToAdminProduct(p: any): AdminProduct {
     color: p.color,
     warrantyIncluded: p.warrantyIncluded,
     partCategory: p.partCategory,
+    partsMainCategory: p.partsMainCategory,
+    partsSubCategory: p.partsSubCategory,
+    partsDeepCategory: p.partsDeepCategory,
     partNumber: p.partNumber,
     partPosition: p.partPosition,
+    wheelDiameterInch: p.wheelDiameterInch,
+    wheelWidthInch: p.wheelWidthInch,
+    wheelBoltPattern: p.wheelBoltPattern,
+    wheelOffsetEt: p.wheelOffsetEt,
+    wheelMaterial: p.wheelMaterial,
+    wheelColor: p.wheelColor,
+    centerBore: p.centerBore,
+    hubCentricRingsNeeded: p.hubCentricRingsNeeded,
+    engineType: p.engineType,
+    engineDisplacementCc: p.engineDisplacementCc,
+    engineCylinders: p.engineCylinders,
+    enginePowerHp: p.enginePowerHp,
+    turboType: p.turboType,
+    turboFlangeType: p.turboFlangeType,
+    wastegateType: p.wastegateType,
+    rotorDiameterMm: p.rotorDiameterMm,
+    padCompound: p.padCompound,
+    suspensionAdjustableHeight: p.suspensionAdjustableHeight,
+    suspensionAdjustableDamping: p.suspensionAdjustableDamping,
+    lightingVoltage: p.lightingVoltage,
+    bulbType: p.bulbType,
     material: p.material,
     reconditioned: p.reconditioned,
     toolCategory: p.toolCategory,
@@ -336,7 +384,17 @@ export async function getAllCategories(): Promise<Category[]> {
     throw new Error(`Failed to fetch categories: ${response.status}`)
   }
 
-  return response.json()
+  const categories = await response.json()
+  return (categories || []).map((category: any) => ({
+    id: typeof category.id === 'number' ? category.id : Number.parseInt(String(category.id || '0'), 10),
+    slug: category.slug || '',
+    name: category.name || '',
+    description: category.description || undefined,
+    imageUrl: category.imageUrl || undefined,
+    productCount: category.productCount ?? undefined,
+    parentId: category.parentId ?? category.parent_id ?? category.parent?.id ?? undefined,
+    children: category.children ?? undefined,
+  }))
 }
 
 /**

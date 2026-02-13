@@ -45,6 +45,7 @@ import {
     resolveProductTypeFromCategory,
     type ProductType,
 } from "@/lib/filterAttributes"
+import { PARTS_MAIN_CATEGORIES, getPartsDeepCategories, getPartsSubcategories, resolvePartsBranch } from "@/lib/partsTaxonomy"
 
 import {
     DndContext,
@@ -74,6 +75,62 @@ interface Category {
     name: string
     slug: string
     description?: string
+    parentId?: number | string | null
+    parent_id?: number | string | null
+    parent?: { id?: number | string | null } | null
+}
+
+function resolvePartsMainFromCategory(categoryId: string, categories: Category[]): string {
+    if (!categoryId) return ""
+
+    const selectedId = Number.parseInt(categoryId, 10)
+    if (!Number.isFinite(selectedId)) return ""
+
+    const categoryMap = new Map<number, Category>()
+    categories.forEach((category) => categoryMap.set(category.id, category))
+
+    const resolveParentId = (category?: Category): number | undefined => {
+        if (!category) return undefined
+
+        const rawParentId = category.parentId ?? category.parent_id ?? category.parent?.id
+        if (rawParentId === null || rawParentId === undefined || rawParentId === "") {
+            return undefined
+        }
+
+        const parsedParentId = typeof rawParentId === "number" ? rawParentId : Number.parseInt(String(rawParentId), 10)
+        return Number.isFinite(parsedParentId) ? parsedParentId : undefined
+    }
+
+    const matchMainBySlug = (slug?: string): string => {
+        const normalizedSlug = (slug || "").toLowerCase()
+        if (!normalizedSlug) return ""
+
+        const matchedMain = PARTS_MAIN_CATEGORIES.find(
+            (mainCategory) =>
+                !mainCategory.hidden &&
+                (normalizedSlug === `parts-${mainCategory.slug}` || normalizedSlug.startsWith(`parts-${mainCategory.slug}-`)),
+        )
+
+        return matchedMain?.slug || ""
+    }
+
+    let current: Category | undefined = categoryMap.get(selectedId)
+    while (current) {
+        const matchedBySlug = matchMainBySlug(current.slug)
+        if (matchedBySlug) {
+            return matchedBySlug
+        }
+
+        const parentId = resolveParentId(current)
+        if (!parentId) {
+            break
+        }
+
+        current = categoryMap.get(parentId)
+    }
+
+    const selectedCategory = categoryMap.get(selectedId)
+    return matchMainBySlug(selectedCategory?.slug)
 }
 
 interface InfoSection {
@@ -147,10 +204,20 @@ export default function EditProductPage() {
     const [warrantyIncluded, setWarrantyIncluded] = useState(false)
 
     const [partCategory, setPartCategory] = useState("")
+    const [partsMainCategory, setPartsMainCategory] = useState("")
+    const [partsSubCategory, setPartsSubCategory] = useState("")
+    const [partsDeepCategory, setPartsDeepCategory] = useState("")
     const [partNumber, setPartNumber] = useState("")
     const [partPositionInput, setPartPositionInput] = useState("")
     const [partMaterial, setPartMaterial] = useState("")
     const [reconditioned, setReconditioned] = useState(false)
+    const [wheelDiameterInch, setWheelDiameterInch] = useState("")
+    const [wheelWidthInch, setWheelWidthInch] = useState("")
+    const [wheelBoltPattern, setWheelBoltPattern] = useState("")
+    const [wheelOffsetEt, setWheelOffsetEt] = useState("")
+    const [engineType, setEngineType] = useState("")
+    const [engineDisplacementCc, setEngineDisplacementCc] = useState("")
+    const [enginePowerHp, setEnginePowerHp] = useState("")
 
     const [toolCategory, setToolCategory] = useState("")
     const [powerSource, setPowerSource] = useState("all")
@@ -222,7 +289,20 @@ export default function EditProductPage() {
         if (resolvedType) {
             setProductType(resolvedType)
         }
-    }, [categoryId, categories])
+
+        if (resolvedType === "part") {
+            const resolvedMain = resolvePartsMainFromCategory(categoryId, categories)
+            if (resolvedMain && resolvedMain !== partsMainCategory) {
+                setPartsMainCategory(resolvedMain)
+                setPartsSubCategory("")
+                setPartsDeepCategory("")
+            }
+        } else if (partsMainCategory) {
+            setPartsMainCategory("")
+            setPartsSubCategory("")
+            setPartsDeepCategory("")
+        }
+    }, [categoryId, categories, partsMainCategory])
 
     async function loadCategories() {
         try {
@@ -301,8 +381,18 @@ export default function EditProductPage() {
                 setVehicleColor((product as any).color || "")
                 setWarrantyIncluded(Boolean((product as any).warrantyIncluded))
                 setPartCategory((product as any).partCategory || "")
+                setPartsMainCategory((product as any).partsMainCategory || "")
+                setPartsSubCategory((product as any).partsSubCategory || "")
+                setPartsDeepCategory((product as any).partsDeepCategory || "")
                 setPartNumber((product as any).partNumber || "")
                 setPartPositionInput(((product as any).partPosition || []).join(", "))
+                setWheelDiameterInch((product as any).wheelDiameterInch?.toString() || "")
+                setWheelWidthInch((product as any).wheelWidthInch?.toString() || "")
+                setWheelBoltPattern((product as any).wheelBoltPattern || "")
+                setWheelOffsetEt((product as any).wheelOffsetEt?.toString() || "")
+                setEngineType((product as any).engineType || "")
+                setEngineDisplacementCc((product as any).engineDisplacementCc?.toString() || "")
+                setEnginePowerHp((product as any).enginePowerHp?.toString() || "")
                 setPartMaterial((product as any).material || "")
                 setReconditioned(Boolean((product as any).reconditioned))
                 setToolCategory((product as any).toolCategory || "")
@@ -757,13 +847,13 @@ export default function EditProductPage() {
 
         setImages((prev) => {
             const next = [...prev]
-            ;[next[index], next[targetIndex]] = [next[targetIndex], next[index]]
+                ;[next[index], next[targetIndex]] = [next[targetIndex], next[index]]
             return next
         })
 
         setImageUrls((prev) => {
             const next = [...prev]
-            ;[next[index], next[targetIndex]] = [next[targetIndex], next[index]]
+                ;[next[index], next[targetIndex]] = [next[targetIndex], next[index]]
             return next
         })
 
@@ -846,8 +936,18 @@ export default function EditProductPage() {
                 color: vehicleColor || undefined,
                 warrantyIncluded: productType === "car" ? warrantyIncluded : undefined,
                 partCategory: partCategory || undefined,
+                partsMainCategory: partsMainCategory || undefined,
+                partsSubCategory: partsSubCategory || undefined,
+                partsDeepCategory: partsDeepCategory || undefined,
                 partNumber: partNumber || undefined,
                 partPosition: partPositionInput ? csvToArray(partPositionInput) : undefined,
+                wheelDiameterInch: wheelDiameterInch ? parseFloat(wheelDiameterInch) : undefined,
+                wheelWidthInch: wheelWidthInch ? parseFloat(wheelWidthInch) : undefined,
+                wheelBoltPattern: wheelBoltPattern || undefined,
+                wheelOffsetEt: wheelOffsetEt ? parseInt(wheelOffsetEt, 10) : undefined,
+                engineType: engineType || undefined,
+                engineDisplacementCc: engineDisplacementCc ? parseInt(engineDisplacementCc, 10) : undefined,
+                enginePowerHp: enginePowerHp ? parseInt(enginePowerHp, 10) : undefined,
                 material: partMaterial || undefined,
                 reconditioned: reconditioned || undefined,
                 toolCategory: toolCategory || undefined,
@@ -1001,6 +1101,9 @@ export default function EditProductPage() {
     const isCarProduct = productType === "car"
     const showVehicleTab = productType === "part" || productType === "custom"
     const namePlaceholder = getProductNamePlaceholder(productType)
+    const partsSubOptions = getPartsSubcategories(partsMainCategory)
+    const partsDeepOptions = getPartsDeepCategories(partsMainCategory, partsSubCategory)
+    const partsBranch = resolvePartsBranch(partsMainCategory, partsSubCategory)
 
 
     return (
@@ -1122,6 +1225,7 @@ export default function EditProductPage() {
                                             </Select>
                                         </div>
                                     </div>
+
                                 </CardContent>
                             </Card>
 
@@ -1429,9 +1533,46 @@ export default function EditProductPage() {
                                             <Input value={partNumber} onChange={(e) => setPartNumber(e.target.value)} placeholder="Part number" />
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
+                                            <Select value={partsSubCategory || "all"} onValueChange={(value) => {
+                                                const next = value === "all" ? "" : value
+                                                setPartsSubCategory(next)
+                                                setPartsDeepCategory("")
+                                            }}>
+                                                <SelectTrigger><SelectValue placeholder="Subcategory" /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">Select subcategory</SelectItem>
+                                                    {partsSubOptions.map((sub) => <SelectItem key={sub} value={sub}>{sub.replace(/-/g, " ")}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
+                                            <Select value={partsDeepCategory || "all"} onValueChange={(value) => setPartsDeepCategory(value === "all" ? "" : value)}>
+                                                <SelectTrigger><SelectValue placeholder="Deep category (optional)" /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">Deep category (optional)</SelectItem>
+                                                    {partsDeepOptions.map((deep) => <SelectItem key={deep} value={deep}>{deep.replace(/-/g, " ")}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
                                             <Input value={partPositionInput} onChange={(e) => setPartPositionInput(e.target.value)} placeholder="Position tags (front,left)" />
                                             <Input value={partMaterial} onChange={(e) => setPartMaterial(e.target.value)} placeholder="Material" />
                                         </div>
+
+                                        {partsBranch === "wheels" && (
+                                            <div className="grid grid-cols-4 gap-4">
+                                                <Input type="number" value={wheelDiameterInch} onChange={(e) => setWheelDiameterInch(e.target.value)} placeholder="Diameter (inch)" />
+                                                <Input type="number" value={wheelWidthInch} onChange={(e) => setWheelWidthInch(e.target.value)} placeholder="Width (inch)" />
+                                                <Input value={wheelBoltPattern} onChange={(e) => setWheelBoltPattern(e.target.value)} placeholder="Bolt pattern" />
+                                                <Input type="number" value={wheelOffsetEt} onChange={(e) => setWheelOffsetEt(e.target.value)} placeholder="Offset ET" />
+                                            </div>
+                                        )}
+
+                                        {partsBranch === "engines" && (
+                                            <div className="grid grid-cols-3 gap-4">
+                                                <Input value={engineType} onChange={(e) => setEngineType(e.target.value)} placeholder="Engine type" />
+                                                <Input type="number" value={engineDisplacementCc} onChange={(e) => setEngineDisplacementCc(e.target.value)} placeholder="Displacement (cc)" />
+                                                <Input type="number" value={enginePowerHp} onChange={(e) => setEnginePowerHp(e.target.value)} placeholder="Power (hp)" />
+                                            </div>
+                                        )}
                                         <div className="flex items-center space-x-2">
                                             <Switch checked={reconditioned} onCheckedChange={setReconditioned} />
                                             <Label>Reconditioned</Label>

@@ -91,10 +91,41 @@ public class ProductController {
             @Parameter(description = "Compatible make") @RequestParam(required = false) String compatibleMake,
             @Parameter(description = "Compatible model") @RequestParam(required = false) String compatibleModel,
             @Parameter(description = "Compatible year") @RequestParam(required = false) Integer compatibleYear,
+            @Parameter(description = "Parts main category slug") @RequestParam(required = false) String partsMain,
+            @Parameter(description = "Parts sub category slug") @RequestParam(required = false) String partsSub,
+            @Parameter(description = "Parts deep category slug") @RequestParam(required = false) String partsDeep,
             @Parameter(description = "OEM type") @RequestParam(required = false) String oemType,
             @Parameter(description = "Part category") @RequestParam(required = false) String partCategory,
             @Parameter(description = "Part number") @RequestParam(required = false) String partNumber,
             @Parameter(description = "Part position list (comma-separated)") @RequestParam(required = false) String partPosition,
+            @Parameter(description = "Wheel diameter minimum") @RequestParam(required = false) BigDecimal wheelDiameterMin,
+            @Parameter(description = "Wheel diameter maximum") @RequestParam(required = false) BigDecimal wheelDiameterMax,
+            @Parameter(description = "Wheel width minimum") @RequestParam(required = false) BigDecimal wheelWidthMin,
+            @Parameter(description = "Wheel width maximum") @RequestParam(required = false) BigDecimal wheelWidthMax,
+            @Parameter(description = "Wheel offset ET minimum") @RequestParam(required = false) Integer wheelOffsetMin,
+            @Parameter(description = "Wheel offset ET maximum") @RequestParam(required = false) Integer wheelOffsetMax,
+            @Parameter(description = "Center bore minimum") @RequestParam(required = false) BigDecimal centerBoreMin,
+            @Parameter(description = "Center bore maximum") @RequestParam(required = false) BigDecimal centerBoreMax,
+            @Parameter(description = "Wheel bolt pattern") @RequestParam(required = false) String wheelBoltPattern,
+            @Parameter(description = "Wheel material") @RequestParam(required = false) String wheelMaterial,
+            @Parameter(description = "Wheel color") @RequestParam(required = false) String wheelColor,
+            @Parameter(description = "Hub centric rings needed") @RequestParam(required = false) Boolean hubCentricRingsNeeded,
+            @Parameter(description = "Engine type") @RequestParam(required = false) String engineType,
+            @Parameter(description = "Engine displacement minimum cc") @RequestParam(required = false) Integer engineDisplacementMin,
+            @Parameter(description = "Engine displacement maximum cc") @RequestParam(required = false) Integer engineDisplacementMax,
+            @Parameter(description = "Engine cylinders") @RequestParam(required = false) Integer engineCylinders,
+            @Parameter(description = "Engine power minimum hp") @RequestParam(required = false) Integer enginePowerMin,
+            @Parameter(description = "Engine power maximum hp") @RequestParam(required = false) Integer enginePowerMax,
+            @Parameter(description = "Turbo type") @RequestParam(required = false) String turboType,
+            @Parameter(description = "Flange type") @RequestParam(required = false) String flangeType,
+            @Parameter(description = "Wastegate type") @RequestParam(required = false) String wastegateType,
+            @Parameter(description = "Rotor diameter minimum mm") @RequestParam(required = false) Integer rotorDiameterMin,
+            @Parameter(description = "Rotor diameter maximum mm") @RequestParam(required = false) Integer rotorDiameterMax,
+            @Parameter(description = "Pad compound") @RequestParam(required = false) String padCompound,
+            @Parameter(description = "Suspension adjustable height") @RequestParam(required = false) Boolean adjustableHeight,
+            @Parameter(description = "Suspension adjustable damping") @RequestParam(required = false) Boolean adjustableDamping,
+            @Parameter(description = "Lighting voltage") @RequestParam(required = false) String lightingVoltage,
+            @Parameter(description = "Bulb type") @RequestParam(required = false) String bulbType,
             @Parameter(description = "Tool category") @RequestParam(required = false) String toolCategory,
             @Parameter(description = "Power source") @RequestParam(required = false) String powerSource,
             @Parameter(description = "Voltage min") @RequestParam(required = false) Integer voltageMin,
@@ -147,10 +178,41 @@ public class ProductController {
         criteria.setCompatibleMake(compatibleMake);
         criteria.setCompatibleModel(compatibleModel);
         criteria.setCompatibleYear(compatibleYear);
+        criteria.setPartsMainCategory(partsMain);
+        criteria.setPartsSubCategory(partsSub);
+        criteria.setPartsDeepCategory(partsDeep);
         criteria.setOemType(oemType);
         criteria.setPartCategory(partCategory);
         criteria.setPartNumber(partNumber);
         criteria.setPartPosition(splitCsv(partPosition));
+        criteria.setWheelDiameterMin(wheelDiameterMin);
+        criteria.setWheelDiameterMax(wheelDiameterMax);
+        criteria.setWheelWidthMin(wheelWidthMin);
+        criteria.setWheelWidthMax(wheelWidthMax);
+        criteria.setWheelOffsetMin(wheelOffsetMin);
+        criteria.setWheelOffsetMax(wheelOffsetMax);
+        criteria.setCenterBoreMin(centerBoreMin);
+        criteria.setCenterBoreMax(centerBoreMax);
+        criteria.setWheelBoltPattern(wheelBoltPattern);
+        criteria.setWheelMaterial(wheelMaterial);
+        criteria.setWheelColor(wheelColor);
+        criteria.setHubCentricRingsNeeded(hubCentricRingsNeeded);
+        criteria.setEngineType(engineType);
+        criteria.setEngineDisplacementMin(engineDisplacementMin);
+        criteria.setEngineDisplacementMax(engineDisplacementMax);
+        criteria.setEngineCylinders(engineCylinders);
+        criteria.setEnginePowerMin(enginePowerMin);
+        criteria.setEnginePowerMax(enginePowerMax);
+        criteria.setTurboType(turboType);
+        criteria.setFlangeType(flangeType);
+        criteria.setWastegateType(wastegateType);
+        criteria.setRotorDiameterMin(rotorDiameterMin);
+        criteria.setRotorDiameterMax(rotorDiameterMax);
+        criteria.setPadCompound(padCompound);
+        criteria.setAdjustableHeight(adjustableHeight);
+        criteria.setAdjustableDamping(adjustableDamping);
+        criteria.setLightingVoltage(lightingVoltage);
+        criteria.setBulbType(bulbType);
         criteria.setToolCategory(toolCategory);
         criteria.setPowerSource(powerSource);
         criteria.setVoltageMin(voltageMin);
@@ -170,16 +232,19 @@ public class ProductController {
         if (rootCategoryId != null) {
             boolean useAdvanced = categoryId != null || criteria.hasAdvancedFilters();
             if (useAdvanced) {
-                Page<ProductDTO> products = productService.searchWithFilters(rootCategoryId, normalizedSearch, categoryId, criteria, false, pageable);
+                Page<ProductDTO> products = productService.searchWithFilters(rootCategoryId, normalizedSearch,
+                        categoryId, criteria, false, pageable);
                 return ResponseEntity.ok(products);
             }
-            Page<ProductDTO> products = productService.getProductsByRootCategory(rootCategoryId, normalizedSearch, pageable);
+            Page<ProductDTO> products = productService.getProductsByRootCategory(rootCategoryId, normalizedSearch,
+                    pageable);
             return ResponseEntity.ok(products);
         }
 
         boolean useAdvanced = criteria.hasAdvancedFilters();
         if (useAdvanced) {
-            Page<ProductDTO> products = productService.searchWithFilters(null, normalizedSearch, categoryId, criteria, false, pageable);
+            Page<ProductDTO> products = productService.searchWithFilters(null, normalizedSearch, categoryId, criteria,
+                    false, pageable);
             return ResponseEntity.ok(products);
         }
 
@@ -422,7 +487,8 @@ public class ProductController {
         criteria.setCondition(condition);
         criteria.setInStockOnly(inStockOnly);
 
-        Page<ProductDTO> products = productService.searchWithFilters(null, query, categoryId, criteria, featuredOnly, pageable);
+        Page<ProductDTO> products = productService.searchWithFilters(null, query, categoryId, criteria, featuredOnly,
+                pageable);
         return ResponseEntity.ok(products);
     }
 
