@@ -26,8 +26,10 @@ interface TopicPageProps {
 const CARS_CATEGORY_DISPLAY_NAMES: Record<string, string> = {
   "cars-bmw": "JDM",
   "cars-jdm": "JDM",
-  "cars-audi": "Euro",
-  "cars-euro": "Euro",
+  "cars-audi": "Euro-spec",
+  "cars-euro": "Euro-spec",
+  "cars-euro-spec": "Euro-spec",
+  "cars-us-spec": "Us-Spec",
   "cars-mercedes": "Luxury",
   "cars-luxury": "Luxury",
   "cars-porsche": "Super Cars",
@@ -160,7 +162,7 @@ export default function TopicPage({ topic }: TopicPageProps) {
         {subcategories.length > 0 && (
           <div className="mb-12">
             <h3 className="text-lg font-semibold mb-4">Browse by Category</h3>
-            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
               {subcategories.map((subcat, i) => (
                 <SubcategoryTile
                   key={subcat.id}
@@ -202,11 +204,11 @@ function SubcategoryTile({ category, topic, index }: SubcategoryTileProps) {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.05, duration: 0.3 }}
-      className="flex-shrink-0"
+      className="w-full"
     >
       <Link
         href={`/shop/${topic}/${category.slug}`}
-        className="group block relative w-48 h-32 overflow-hidden rounded-xl bg-muted"
+        className="group block relative w-full h-32 overflow-hidden rounded-xl bg-muted"
       >
         {/* Background Image */}
         <div className="absolute inset-0">
@@ -215,7 +217,7 @@ function SubcategoryTile({ category, topic, index }: SubcategoryTileProps) {
             alt={displayName}
             fill
             className="object-cover transition-transform duration-300 group-hover:scale-110"
-            sizes="192px"
+            sizes="(min-width: 1024px) 20vw, (min-width: 640px) 33vw, 50vw"
             onError={(e) => {
               // Fallback if image doesn't exist
               e.currentTarget.src = '/images/placeholder-category.jpg'
