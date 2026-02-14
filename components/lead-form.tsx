@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { siteConfig } from "@/content/site"
+import { openLeadInWhatsApp } from "@/lib/whatsappLead"
 import { CheckCircle2 } from "lucide-react"
 
 interface LeadFormProps {
@@ -38,20 +39,18 @@ export function LeadForm({ source = "general" }: LeadFormProps) {
     }
 
     try {
-      const response = await fetch("/api/lead", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+      openLeadInWhatsApp({
+        source,
+        name: String(data.name || ""),
+        email: String(data.email || ""),
+        phone: data.phone ? String(data.phone) : null,
+        interest: data.interest ? String(data.interest) : null,
+        message: data.message ? String(data.message) : null,
       })
 
-      if (response.ok) {
-        setFormState("success")
-        // Reset form
-        e.currentTarget.reset()
-        setConsent(false)
-      } else {
-        setFormState("error")
-      }
+      setFormState("success")
+      e.currentTarget.reset()
+      setConsent(false)
     } catch (error) {
       console.error("[v0] Lead form submission error:", error)
       setFormState("error")
@@ -64,7 +63,7 @@ export function LeadForm({ source = "general" }: LeadFormProps) {
         <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-primary" />
         <h3 className="mb-2 text-xl font-semibold">Thank you for your inquiry!</h3>
         <p className="text-muted-foreground">
-          We've received your message and will get back to you within 24 hours on business days.
+          Your inquiry has been prepared for WhatsApp and shared with our team.
         </p>
       </div>
     )

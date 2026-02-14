@@ -7,8 +7,8 @@ export function AnnouncementBar() {
     const announcements = [
         {
             icon: <MessageCircle className="h-4 w-4" />,
-            text: "WhatsApp: +44 20 1234 5678",
-            href: "https://wa.me/442012345678",
+            text: "WhatsApp: +971 58 534 7970",
+            href: "https://wa.me/971585347970",
         },
         {
             icon: <Instagram className="h-4 w-4" />,

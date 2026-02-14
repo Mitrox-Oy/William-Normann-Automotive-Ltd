@@ -25,6 +25,7 @@ import {
   getAvailabilityBadge,
   type Product
 } from "@/lib/shopApi"
+import { openLeadInWhatsApp } from "@/lib/whatsappLead"
 import { getImageUrl } from "@/lib/utils"
 import { ShoppingCart, Minus, Plus, ArrowLeft, Package, Truck, Shield, FileText, CheckCircle2 } from "lucide-react"
 import Image from "next/image"
@@ -147,17 +148,18 @@ export default function ProductDetailPage({ slug }: ProductDetailPageProps) {
     }
 
     try {
-      const response = await fetch("/api/lead", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+      openLeadInWhatsApp({
+        source: "product_quote",
+        name: String(data.name || ""),
+        email: String(data.email || ""),
+        phone: data.phone ? String(data.phone) : null,
+        message: data.message ? String(data.message) : null,
+        product: data.product ? String(data.product) : null,
+        partNumber: data.partNumber ? String(data.partNumber) : null,
+        quantity: data.quantity ? String(data.quantity) : null,
       })
 
-      if (response.ok) {
-        setQuoteFormState("success")
-      } else {
-        setQuoteFormState("error")
-      }
+      setQuoteFormState("success")
     } catch (error) {
       console.error("Quote form submission error:", error)
       setQuoteFormState("error")
@@ -828,7 +830,7 @@ export default function ProductDetailPage({ slug }: ProductDetailPageProps) {
               <CheckCircle2 className="mx-auto mb-4 h-16 w-16 text-primary" />
               <h3 className="mb-3 text-xl font-bold">Quote Request Received</h3>
               <p className="mb-6 text-muted-foreground">
-                Thank you for your inquiry. Our team will respond with a detailed quote within 24 hours.
+                Your quote details were prepared for WhatsApp and sent to our team channel.
               </p>
               <Button onClick={() => setShowQuoteDialog(false)}>Close</Button>
             </div>

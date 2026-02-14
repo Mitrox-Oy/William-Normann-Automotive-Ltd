@@ -66,8 +66,11 @@ public class ProductService {
         String searchPattern = toContainsPattern(searchTerm);
 
         Page<Product> page;
-        if (categoryId != null || searchPattern != null) {
-            page = productRepository.findActiveForCatalog(categoryId, searchPattern, pageable);
+        if (categoryId != null) {
+            List<Long> categoryIds = categoryService.getAllDescendantCategoryIds(categoryId);
+            page = productRepository.findByCategoryIdsAndSearch(categoryIds, searchPattern, pageable);
+        } else if (searchPattern != null) {
+            page = productRepository.findActiveForCatalog(null, searchPattern, pageable);
         } else {
             page = productRepository.findAllByActiveTrue(pageable);
         }
@@ -928,11 +931,16 @@ public class ProductService {
 
         boolean inStockOnly = Boolean.TRUE.equals(resolved.getInStockOnly());
         boolean featuredOnlyResolved = Boolean.TRUE.equals(featuredOnly);
+        boolean applyCategoryFilter = categoryId != null;
+        List<Long> categoryFilterIds = applyCategoryFilter
+            ? categoryService.getAllDescendantCategoryIds(categoryId)
+            : List.of(-1L);
 
         Page<Product> products;
         if (rootCategoryId != null) {
             List<Long> categoryIds = categoryService.getAllDescendantCategoryIds(rootCategoryId);
-            products = productRepository.findWithFiltersAndRootScope(categoryIds, queryPattern, categoryId,
+            products = productRepository.findWithFiltersAndRootScope(categoryIds, queryPattern,
+                applyCategoryFilter, categoryFilterIds,
                     resolved.getMinPrice(), resolved.getMaxPrice(), brandPattern,
                     conditionValue, productTypeValue, makePattern, modelPattern,
                     resolved.getYearMin(), resolved.getYearMax(), resolved.getMileageMin(), resolved.getMileageMax(),
@@ -960,7 +968,7 @@ public class ProductService {
                     installationDifficultyValue, customCategoryPattern,
                     inStockOnly, featuredOnlyResolved, pageable);
         } else {
-            products = productRepository.findWithFilters(queryPattern, categoryId,
+                    products = productRepository.findWithFilters(queryPattern, applyCategoryFilter, categoryFilterIds,
                     resolved.getMinPrice(), resolved.getMaxPrice(), brandPattern,
                     conditionValue, productTypeValue, makePattern, modelPattern,
                     resolved.getYearMin(), resolved.getYearMax(), resolved.getMileageMin(), resolved.getMileageMax(),

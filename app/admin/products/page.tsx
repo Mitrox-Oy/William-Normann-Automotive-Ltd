@@ -53,6 +53,7 @@ function AdminProductsContent() {
   const [categoriesLoading, setCategoriesLoading] = useState(true)
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false)
   const [editingCategory, setEditingCategory] = useState<AdminCategory | null>(null)
+  const [categorySlugTouched, setCategorySlugTouched] = useState(false)
   const [categoryForm, setCategoryForm] = useState({
     name: "",
     slug: "",
@@ -185,6 +186,7 @@ function AdminProductsContent() {
   function openCategoryDialog(category?: AdminCategory) {
     if (category) {
       setEditingCategory(category)
+      setCategorySlugTouched(true)
       setCategoryForm({
         name: category.name,
         slug: category.slug,
@@ -194,6 +196,7 @@ function AdminProductsContent() {
       })
     } else {
       setEditingCategory(null)
+      setCategorySlugTouched(false)
       // Default parent to topic root when creating new category
       setCategoryForm({
         name: "",
@@ -207,16 +210,25 @@ function AdminProductsContent() {
   }
 
   async function handleSaveCategory() {
-    if (!categoryForm.name || !categoryForm.slug) {
+    const computedSlug = editingCategory
+      ? categoryForm.slug
+      : composeCategorySlug(categoryForm.slug || categoryForm.name, categoryForm.parentId)
+
+    if (!categoryForm.name || !computedSlug) {
       alert("Name and slug are required")
       return
     }
 
+    const payload = {
+      ...categoryForm,
+      slug: computedSlug,
+    }
+
     try {
       if (editingCategory) {
-        await updateCategory(editingCategory.id.toString(), categoryForm)
+        await updateCategory(editingCategory.id.toString(), payload)
       } else {
-        await createCategory(categoryForm)
+        await createCategory(payload)
       }
       setCategoryDialogOpen(false)
       await loadCategories()
@@ -244,6 +256,30 @@ function AdminProductsContent() {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "")
+  }
+
+  function composeCategorySlug(value: string, parentIdRaw?: string) {
+    const childSlug = generateSlug(value)
+    const parentId = Number.parseInt(String(parentIdRaw || topicRootCategoryId || ""), 10)
+    const parentSlug = Number.isFinite(parentId)
+      ? allTopicCategories.find((category) => category.id === parentId)?.slug
+      : ""
+
+    const normalizedParentSlug = generateSlug(parentSlug || "")
+
+    if (!normalizedParentSlug) {
+      return childSlug
+    }
+
+    if (!childSlug) {
+      return normalizedParentSlug
+    }
+
+    if (childSlug === normalizedParentSlug || childSlug.startsWith(`${normalizedParentSlug}-`)) {
+      return childSlug
+    }
+
+    return `${normalizedParentSlug}-${childSlug}`
   }
 
   const filteredProducts = products && Array.isArray(products)
@@ -626,11 +662,14 @@ function AdminProductsContent() {
                   id="category-name"
                   value={categoryForm.name}
                   onChange={(e) => {
-                    setCategoryForm({
-                      ...categoryForm,
-                      name: e.target.value,
-                      slug: categoryForm.slug || generateSlug(e.target.value),
-                    })
+                    const nextName = e.target.value
+                    setCategoryForm((prev) => ({
+                      ...prev,
+                      name: nextName,
+                      slug: !editingCategory && !categorySlugTouched
+                        ? composeCategorySlug(nextName, prev.parentId)
+                        : (prev.slug || generateSlug(nextName)),
+                    }))
                   }}
                   placeholder="e.g., Engine Parts"
                   required
@@ -641,7 +680,10 @@ function AdminProductsContent() {
                 <Input
                   id="category-slug"
                   value={categoryForm.slug}
-                  onChange={(e) => setCategoryForm({ ...categoryForm, slug: e.target.value })}
+                  onChange={(e) => {
+                    setCategorySlugTouched(true)
+                    setCategoryForm({ ...categoryForm, slug: e.target.value })
+                  }}
                   placeholder="e.g., engine-parts"
                   required
                 />
@@ -650,7 +692,15 @@ function AdminProductsContent() {
                 <Label htmlFor="category-parent">Parent Category</Label>
                 <Select
                   value={categoryForm.parentId || topicRootCategoryId?.toString() || ""}
-                  onValueChange={(value) => setCategoryForm({ ...categoryForm, parentId: value })}
+                  onValueChange={(value) => {
+                    setCategoryForm((prev) => ({
+                      ...prev,
+                      parentId: value,
+                      slug: !editingCategory && !categorySlugTouched
+                        ? composeCategorySlug(prev.name, value)
+                        : prev.slug,
+                    }))
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select parent category" />

@@ -3,6 +3,7 @@ package com.ecommerse.backend.services;
 import com.ecommerse.backend.dto.CategoryDTO;
 import com.ecommerse.backend.entities.Category;
 import com.ecommerse.backend.repositories.CategoryRepository;
+import com.ecommerse.backend.repositories.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,6 +24,9 @@ public class CategoryService {
 
     @Autowired
     private CategoryRepository categoryRepository;
+
+    @Autowired
+    private ProductRepository productRepository;
 
     /**
      * Get all root categories (categories without parent)
@@ -141,14 +145,23 @@ public class CategoryService {
         // Auto-generate slug if not provided
         if (categoryDTO.getSlug() == null || categoryDTO.getSlug().trim().isEmpty()) {
             categoryDTO.setSlug(generateSlug(categoryDTO.getName()));
+        } else {
+            categoryDTO.setSlug(generateSlug(categoryDTO.getSlug()));
         }
 
         // Validate parent category if specified
+        Optional<Category> parentCategory = Optional.empty();
         if (categoryDTO.getParentId() != null) {
-            Optional<Category> parent = categoryRepository.findByIdAndActiveTrue(categoryDTO.getParentId());
-            if (parent.isEmpty()) {
+            parentCategory = categoryRepository.findByIdAndActiveTrue(categoryDTO.getParentId());
+            if (parentCategory.isEmpty()) {
                 throw new IllegalArgumentException("Parent category not found with ID: " + categoryDTO.getParentId());
             }
+        }
+
+        if (parentCategory.isPresent()) {
+            String parentSlug = generateSlug(parentCategory.get().getSlug());
+            String childSlug = generateSlug(categoryDTO.getSlug());
+            categoryDTO.setSlug(ensureParentSlugPrefix(parentSlug, childSlug));
         }
 
         // Check for duplicate slug
@@ -310,7 +323,7 @@ public class CategoryService {
         dto.setSortOrder(category.getSortOrder());
         dto.setActive(category.isActive());
         dto.setLevel(category.getLevel());
-        dto.setProductCount((long) category.getProducts().size());
+        dto.setProductCount(countActiveProductsInCategoryTree(category.getId()));
         dto.setCreatedDate(category.getCreatedDate());
         dto.setUpdatedDate(category.getUpdatedDate());
 
@@ -320,6 +333,11 @@ public class CategoryService {
         }
 
         return dto;
+    }
+
+    private Long countActiveProductsInCategoryTree(Long categoryId) {
+        List<Long> categoryIds = getAllDescendantCategoryIds(categoryId);
+        return productRepository.countByActiveTrueAndCategoryIdIn(categoryIds);
     }
 
     /**
@@ -424,5 +442,24 @@ public class CategoryService {
         }
 
         return slug;
+    }
+
+    private String ensureParentSlugPrefix(String parentSlug, String childSlug) {
+        String normalizedParent = generateSlug(parentSlug);
+        String normalizedChild = generateSlug(childSlug);
+
+        if (normalizedParent.isBlank()) {
+            return normalizedChild;
+        }
+
+        if (normalizedChild.isBlank()) {
+            return normalizedParent;
+        }
+
+        if (normalizedChild.equals(normalizedParent) || normalizedChild.startsWith(normalizedParent + "-")) {
+            return normalizedChild;
+        }
+
+        return normalizedParent + "-" + normalizedChild;
     }
 }

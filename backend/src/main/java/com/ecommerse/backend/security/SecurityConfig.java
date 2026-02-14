@@ -75,11 +75,13 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/register").permitAll()
                         .requestMatchers("/api/auth/owner/login").permitAll()
+                        .requestMatchers("/api/lead").permitAll()
                         .requestMatchers("/api/checkout/**", "/api/stripe/webhook").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
                         .requestMatchers("/api/images/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
-                        // Actuator: keep only basic health/info public (for uptime checks). Everything else must be protected.
+                        // Actuator: keep only basic health/info public (for uptime checks). Everything
+                        // else must be protected.
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         // Public read access to products and categories
                         .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()

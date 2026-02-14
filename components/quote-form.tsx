@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { siteConfig } from "@/content/site"
+import { openLeadInWhatsApp } from "@/lib/whatsappLead"
 import { CheckCircle2, FileText, Clock, Mail, CheckCheck } from "lucide-react"
 import { GlassPanel } from "./glass-panel"
 
@@ -43,20 +44,19 @@ export function QuoteForm({ source = "general" }: QuoteFormProps) {
     }
 
     try {
-      const response = await fetch("/api/lead", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+      openLeadInWhatsApp({
+        source,
+        name: String(data.name || ""),
+        email: String(data.email || ""),
+        phone: data.phone ? String(data.phone) : null,
+        interest: data.interest ? String(data.interest) : null,
+        message: data.message ? String(data.message) : null,
       })
 
-      if (response.ok) {
-        setFormState("success")
-        e.currentTarget.reset()
-        setConsent(false)
-        setFileName(null)
-      } else {
-        setFormState("error")
-      }
+      setFormState("success")
+      e.currentTarget.reset()
+      setConsent(false)
+      setFileName(null)
     } catch (error) {
       console.error("[v0] Quote form submission error:", error)
       setFormState("error")
@@ -69,11 +69,10 @@ export function QuoteForm({ source = "general" }: QuoteFormProps) {
         <CheckCircle2 className="mx-auto mb-4 h-16 w-16 text-primary" />
         <h3 className="mb-3 text-2xl font-bold">Quote Request Received</h3>
         <p className="mb-6 text-muted-foreground leading-relaxed">
-          Thank you for your inquiry. Our team is reviewing your requirements and will respond with a detailed quote
-          within 24 hours.
+          Thank you for your inquiry. Your request has been prepared for WhatsApp and sent to our team chat channel.
         </p>
         <div className="rounded-lg p-4 text-sm text-muted-foreground">
-          Check your email for confirmation and next steps.
+          If WhatsApp did not open automatically, please enable pop-ups and try again.
         </div>
       </GlassPanel>
     )

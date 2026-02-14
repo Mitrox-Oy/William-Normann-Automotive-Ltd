@@ -129,9 +129,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
          */
         @EntityGraph(attributePaths = { "images", "variants" })
         @Query("SELECT DISTINCT p FROM Product p WHERE " +
-                        "(:queryPattern IS NULL OR LOWER(p.name) LIKE :queryPattern OR LOWER(p.description) LIKE :queryPattern) AND "
-                        +
-                        "(:categoryId IS NULL OR p.category.id = :categoryId) AND " +
+                        "(:queryPattern IS NULL OR LOWER(p.name) LIKE :queryPattern OR LOWER(p.description) LIKE :queryPattern) AND " +
+                        "(:applyCategoryFilter = false OR p.category.id IN :categoryFilterIds) AND " +
                         "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
                         "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
                         "(:brandPattern IS NULL OR LOWER(p.brand) LIKE :brandPattern) AND " +
@@ -226,7 +225,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                         "(:featuredOnly = false OR p.featured = true) AND " +
                         "p.active = true")
         Page<Product> findWithFilters(@Param("queryPattern") String queryPattern,
-                        @Param("categoryId") Long categoryId,
+                        @Param("applyCategoryFilter") Boolean applyCategoryFilter,
+                        @Param("categoryFilterIds") List<Long> categoryFilterIds,
                         @Param("minPrice") BigDecimal minPrice,
                         @Param("maxPrice") BigDecimal maxPrice,
                         @Param("brandPattern") String brandPattern,
@@ -326,7 +326,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                         "p.category.id IN :categoryIds AND " +
                         "(:queryPattern IS NULL OR LOWER(p.name) LIKE :queryPattern OR LOWER(p.description) LIKE :queryPattern) AND "
                         +
-                        "(:categoryId IS NULL OR p.category.id = :categoryId) AND " +
+                        "(:applyCategoryFilter = false OR p.category.id IN :categoryFilterIds) AND " +
                         "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
                         "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
                         "(:brandPattern IS NULL OR LOWER(p.brand) LIKE :brandPattern) AND " +
@@ -421,7 +421,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                         "(:featuredOnly = false OR p.featured = true)")
         Page<Product> findWithFiltersAndRootScope(@Param("categoryIds") List<Long> categoryIds,
                         @Param("queryPattern") String queryPattern,
-                        @Param("categoryId") Long categoryId,
+                        @Param("applyCategoryFilter") Boolean applyCategoryFilter,
+                        @Param("categoryFilterIds") List<Long> categoryFilterIds,
                         @Param("minPrice") BigDecimal minPrice,
                         @Param("maxPrice") BigDecimal maxPrice,
                         @Param("brandPattern") String brandPattern,
@@ -503,4 +504,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
          */
         @Query("SELECT DISTINCT p.brand FROM Product p WHERE p.active = true AND p.brand IS NOT NULL AND p.category.id IN :categoryIds ORDER BY p.brand")
         List<String> findBrandsByCategoryIds(@Param("categoryIds") List<Long> categoryIds);
+
+        Long countByActiveTrueAndCategoryIdIn(List<Long> categoryIds);
 }
