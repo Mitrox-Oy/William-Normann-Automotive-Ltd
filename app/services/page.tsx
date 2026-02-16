@@ -6,11 +6,27 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Check } from "lucide-react"
+import type { Metadata } from 'next'
+import { canonicalUrl, SITE_NAME, LOGO_URL } from '@/lib/seo/config'
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Services",
   description:
     "Comprehensive automotive solutions including parts sourcing, wholesale distribution, market connections, and technical consulting.",
+  alternates: { canonical: canonicalUrl('/services') },
+  openGraph: {
+    type: 'website',
+    url: canonicalUrl('/services'),
+    title: `Services | ${SITE_NAME}`,
+    description: 'Comprehensive automotive solutions including parts sourcing, wholesale distribution, market connections, and technical consulting.',
+    siteName: SITE_NAME,
+    images: [LOGO_URL],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `Services | ${SITE_NAME}`,
+    description: 'Comprehensive automotive solutions including parts sourcing, wholesale distribution, market connections, and technical consulting.',
+  },
 }
 
 export default function ServicesPage() {

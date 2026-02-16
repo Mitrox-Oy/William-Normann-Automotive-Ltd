@@ -10,6 +10,8 @@ import { CartProvider } from "@/components/CartContext"
 import { AuthProvider } from "@/components/AuthProvider"
 import { siteConfig } from "@/content/site"
 import { withBasePath } from "@/lib/base-path"
+import { OrganizationJsonLd, WebSiteJsonLd } from "@/lib/seo/json-ld"
+import { SITE_URL } from "@/lib/seo/config"
 import "./globals.css"
 
 import { Inter, Geist_Mono, Source_Serif_4, Inter as V0_Font_Inter, Geist_Mono as V0_Font_Geist_Mono, Source_Serif_4 as V0_Font_Source_Serif_4 } from 'next/font/google'
@@ -35,11 +37,14 @@ const sourceSerif4 = Source_Serif_4({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
     default: siteConfig.company.name,
     template: `%s | ${siteConfig.company.name}`,
   },
   description: siteConfig.company.description,
+  manifest: '/manifest.webmanifest',
+  alternates: { canonical: '/' },
   keywords: [
     "automotive parts sourcing",
     "hard to find car parts",
@@ -89,6 +94,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} ${geistMono.variable} ${sourceSerif4.variable} font-sans antialiased`}>
+        <OrganizationJsonLd />
+        <WebSiteJsonLd />
         <AuthProvider>
           <CartProvider>
             <div className="fixed inset-0 z-0">

@@ -7,10 +7,26 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Calendar, Clock, ArrowRight } from "lucide-react"
+import type { Metadata } from 'next'
+import { canonicalUrl, SITE_NAME, LOGO_URL } from '@/lib/seo/config'
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Blog",
   description: "Latest insights on automotive parts sourcing, international trade, and industry trends.",
+  alternates: { canonical: canonicalUrl('/blog') },
+  openGraph: {
+    type: 'website',
+    url: canonicalUrl('/blog'),
+    title: `Blog | ${SITE_NAME}`,
+    description: 'Latest insights on automotive parts sourcing, international trade, and industry trends.',
+    siteName: SITE_NAME,
+    images: [LOGO_URL],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `Blog | ${SITE_NAME}`,
+    description: 'Latest insights on automotive parts sourcing, international trade, and industry trends.',
+  },
 }
 
 export default function BlogPage() {

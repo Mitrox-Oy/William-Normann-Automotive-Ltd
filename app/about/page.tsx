@@ -4,11 +4,27 @@ import { LeadForm } from "@/components/lead-form"
 import { siteConfig } from "@/content/site"
 import { Card, CardContent } from "@/components/ui/card"
 import { Mail, Phone, MapPin, Package, Shield, Star, Zap, Globe, Instagram, MessageCircle, User } from "lucide-react"
+import type { Metadata } from 'next'
+import { canonicalUrl, SITE_NAME, LOGO_URL } from '@/lib/seo/config'
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "About & Contact",
   description:
     "Learn about William Automotive and get in touch with our team for automotive parts sourcing and global market connections.",
+  alternates: { canonical: canonicalUrl('/about') },
+  openGraph: {
+    type: 'website',
+    url: canonicalUrl('/about'),
+    title: `About & Contact | ${SITE_NAME}`,
+    description: 'Learn about William Automotive and get in touch with our team for automotive parts sourcing and global market connections.',
+    siteName: SITE_NAME,
+    images: [LOGO_URL],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `About & Contact | ${SITE_NAME}`,
+    description: 'Learn about William Automotive and get in touch with our team for automotive parts sourcing and global market connections.',
+  },
 }
 
 export default function AboutPage() {

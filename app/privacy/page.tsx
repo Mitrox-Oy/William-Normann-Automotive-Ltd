@@ -1,9 +1,13 @@
 import { Container } from "@/components/container"
 import { SectionHeading } from "@/components/section-heading"
+import type { Metadata } from 'next'
+import { canonicalUrl, SITE_NAME } from '@/lib/seo/config'
 
-export const metadata = {
+export const metadata: Metadata = {
     title: "Privacy Policy",
     description: "Privacy policy for William Automotive.",
+    alternates: { canonical: canonicalUrl('/privacy') },
+    robots: { index: true, follow: true },
 }
 
 export default function PrivacyPage() {

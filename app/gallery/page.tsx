@@ -5,10 +5,26 @@ import { Instagram, Linkedin, Twitter } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import Link from "next/link"
+import type { Metadata } from 'next'
+import { canonicalUrl, SITE_NAME, LOGO_URL } from '@/lib/seo/config'
 
-export const metadata = {
+export const metadata: Metadata = {
     title: "Gallery",
     description: "Explore our automotive work and follow us on social media for more.",
+    alternates: { canonical: canonicalUrl('/gallery') },
+    openGraph: {
+        type: 'website',
+        url: canonicalUrl('/gallery'),
+        title: `Gallery | ${SITE_NAME}`,
+        description: 'Explore our automotive work and follow us on social media for more.',
+        siteName: SITE_NAME,
+        images: [LOGO_URL],
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: `Gallery | ${SITE_NAME}`,
+        description: 'Explore our automotive work and follow us on social media for more.',
+    },
 }
 
 // Gallery images - you can replace these with actual image paths

@@ -1,17 +1,24 @@
 import type { MetadataRoute } from "next"
+import { SITE_URL } from "@/lib/seo/config"
 
 export const dynamic = "force-static"
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://williamnormann.com"
-  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ""
-  
   return {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/api/"],
+      disallow: [
+        "/api/",
+        "/admin/",
+        "/account/",
+        "/cart",
+        "/checkout/",
+        "/login",
+        "/register",
+        "/forgot-password",
+      ],
     },
-    sitemap: `${baseUrl}${basePath}/sitemap.xml`,
+    sitemap: `${SITE_URL}/sitemap.xml`,
   }
 }
