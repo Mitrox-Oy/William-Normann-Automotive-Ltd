@@ -223,7 +223,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                         +
                         "(:inStockOnly = false OR p.stockQuantity > 0) AND " +
                         "(:featuredOnly = false OR p.featured = true) AND " +
-                        "p.active = true")
+                        "(:activeFilter IS NULL OR p.active = :activeFilter)")
         Page<Product> findWithFilters(@Param("queryPattern") String queryPattern,
                         @Param("applyCategoryFilter") Boolean applyCategoryFilter,
                         @Param("categoryFilterIds") List<Long> categoryFilterIds,
@@ -300,6 +300,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                         @Param("customCategoryPattern") String customCategoryPattern,
                         @Param("inStockOnly") Boolean inStockOnly,
                         @Param("featuredOnly") Boolean featuredOnly,
+                        @Param("activeFilter") Boolean activeFilter,
                         Pageable pageable);
 
         /**
@@ -307,13 +308,15 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
          * Used when filtering by a root category and all its descendants
          */
         @EntityGraph(attributePaths = { "images", "variants" })
-        @Query("SELECT DISTINCT p FROM Product p WHERE p.active = true AND " +
+        @Query("SELECT DISTINCT p FROM Product p WHERE " +
                         "p.category.id IN :categoryIds AND " +
+                        "(:activeFilter IS NULL OR p.active = :activeFilter) AND " +
                         "(:searchPattern IS NULL OR " +
                         "LOWER(p.name) LIKE :searchPattern OR " +
                         "LOWER(COALESCE(p.description, '')) LIKE :searchPattern OR " +
                         "LOWER(COALESCE(p.brand, '')) LIKE :searchPattern)")
         Page<Product> findByCategoryIdsAndSearch(@Param("categoryIds") List<Long> categoryIds,
+                        @Param("activeFilter") Boolean activeFilter,
                         @Param("searchPattern") String searchPattern,
                         Pageable pageable);
 
@@ -322,8 +325,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
          * subtree)
          */
         @EntityGraph(attributePaths = { "images", "variants" })
-        @Query("SELECT DISTINCT p FROM Product p WHERE p.active = true AND " +
+        @Query("SELECT DISTINCT p FROM Product p WHERE " +
                         "p.category.id IN :categoryIds AND " +
+                        "(:activeFilter IS NULL OR p.active = :activeFilter) AND " +
                         "(:queryPattern IS NULL OR LOWER(p.name) LIKE :queryPattern OR LOWER(p.description) LIKE :queryPattern) AND "
                         +
                         "(:applyCategoryFilter = false OR p.category.id IN :categoryFilterIds) AND " +
@@ -496,6 +500,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                         @Param("customCategoryPattern") String customCategoryPattern,
                         @Param("inStockOnly") Boolean inStockOnly,
                         @Param("featuredOnly") Boolean featuredOnly,
+                        @Param("activeFilter") Boolean activeFilter,
                         Pageable pageable);
 
         /**

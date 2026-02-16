@@ -230,7 +230,7 @@ export default function ProductDetailPage({ slug }: ProductDetailPageProps) {
       case "part":
         return { href: "/shop/parts", label: "Back to Parts" }
       case "tool":
-        return { href: "/shop/tools", label: "Back to Tools" }
+        return { href: "/shop/parts", label: "Back to Parts" }
       case "custom":
         return { href: "/shop/custom", label: "Back to Custom" }
       default:
@@ -267,17 +267,6 @@ export default function ProductDetailPage({ slug }: ProductDetailPageProps) {
     hasValue(product.material) ||
     hasValue(product.reconditioned)
 
-  const hasToolsTab =
-    normalizedProductType === "tool" ||
-    hasValue(product.toolCategory) ||
-    hasValue(product.powerSource) ||
-    hasValue(product.voltage) ||
-    hasValue(product.torqueMinNm) ||
-    hasValue(product.torqueMaxNm) ||
-    hasValue(product.driveSize) ||
-    hasValue(product.professionalGrade) ||
-    hasValue(product.isKit)
-
   const hasCustomTab =
     normalizedProductType === "custom" ||
     hasValue(product.customCategory) ||
@@ -307,11 +296,6 @@ export default function ProductDetailPage({ slug }: ProductDetailPageProps) {
   const compatibilityYearRange =
     hasValue(product.compatibleYearStart) || hasValue(product.compatibleYearEnd)
       ? `${product.compatibleYearStart ?? "Any"} - ${product.compatibleYearEnd ?? "Any"}`
-      : undefined
-
-  const toolTorqueRange =
-    hasValue(product.torqueMinNm) || hasValue(product.torqueMaxNm)
-      ? `${product.torqueMinNm ?? "Any"} - ${product.torqueMaxNm ?? "Any"} Nm`
       : undefined
 
   return (
@@ -579,7 +563,6 @@ export default function ProductDetailPage({ slug }: ProductDetailPageProps) {
               <TabsTrigger className="!flex-none min-w-[120px] px-4" value="description">Description</TabsTrigger>
               {hasVehicleTab && <TabsTrigger className="!flex-none min-w-[120px] px-4" value="vehicle">Vehicle</TabsTrigger>}
               {hasPartsTab && <TabsTrigger className="!flex-none min-w-[120px] px-4" value="parts">Parts</TabsTrigger>}
-              {hasToolsTab && <TabsTrigger className="!flex-none min-w-[120px] px-4" value="tools">Tools</TabsTrigger>}
               {hasCustomTab && <TabsTrigger className="!flex-none min-w-[120px] px-4" value="custom">Custom</TabsTrigger>}
               {infoSections.map((section, index) => (
                 <TabsTrigger className="!flex-none min-w-[120px] px-4" key={`${section.title}-${index}`} value={`info-${index}`}>
@@ -697,52 +680,6 @@ export default function ProductDetailPage({ slug }: ProductDetailPageProps) {
                       {product.reconditioned !== undefined && (
                         <div>
                           <span className="font-medium text-foreground">Reconditioned:</span> {product.reconditioned ? "Yes" : "No"}
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            )}
-
-            {hasToolsTab && (
-              <TabsContent value="tools" className="mt-6">
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
-                      {product.toolCategory && (
-                        <div>
-                          <span className="font-medium text-foreground">Tool Category:</span> {product.toolCategory}
-                        </div>
-                      )}
-                      {product.powerSource && (
-                        <div>
-                          <span className="font-medium text-foreground">Power Source:</span> {formatEnumValue(product.powerSource)}
-                        </div>
-                      )}
-                      {product.voltage !== undefined && (
-                        <div>
-                          <span className="font-medium text-foreground">Voltage:</span> {product.voltage} V
-                        </div>
-                      )}
-                      {toolTorqueRange && (
-                        <div>
-                          <span className="font-medium text-foreground">Torque Range:</span> {toolTorqueRange}
-                        </div>
-                      )}
-                      {product.driveSize && (
-                        <div>
-                          <span className="font-medium text-foreground">Drive Size:</span> {product.driveSize}
-                        </div>
-                      )}
-                      {product.professionalGrade !== undefined && (
-                        <div>
-                          <span className="font-medium text-foreground">Professional Grade:</span> {product.professionalGrade ? "Yes" : "No"}
-                        </div>
-                      )}
-                      {product.isKit !== undefined && (
-                        <div>
-                          <span className="font-medium text-foreground">Kit:</span> {product.isKit ? "Yes" : "No"}
                         </div>
                       )}
                     </div>

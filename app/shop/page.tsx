@@ -5,7 +5,7 @@ import ShopOverview from './shop-overview'
 export const metadata: Metadata = {
   title: 'Shop',
   description:
-    'Browse cars, parts, tools, and custom automotive products at ' + SITE_NAME + '.',
+    'Browse cars, parts, and custom automotive products at ' + SITE_NAME + '.',
   alternates: { canonical: canonicalUrl('/shop') },
   robots: { index: true, follow: true },
   openGraph: {
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     url: canonicalUrl('/shop'),
     title: `Shop | ${SITE_NAME}`,
     description:
-      'Browse cars, parts, tools, and custom automotive products at ' + SITE_NAME + '.',
+      'Browse cars, parts, and custom automotive products at ' + SITE_NAME + '.',
     siteName: SITE_NAME,
     images: [LOGO_URL],
   },
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: `Shop | ${SITE_NAME}`,
     description:
-      'Browse cars, parts, tools, and custom automotive products at ' + SITE_NAME + '.',
+      'Browse cars, parts, and custom automotive products at ' + SITE_NAME + '.',
   },
 }
 

@@ -36,7 +36,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
 export default async function ShopSlugPage({ params, searchParams }: PageProps) {
   const { slug } = await params
 
-  // Topic route (cars / parts / tools / custom)
+  // Topic route (cars / parts / custom)
   if (isValidTopic(slug)) {
     // Breadcrumb: Home → Shop → Topic
     const topicBreadcrumb: BreadcrumbItem[] = [

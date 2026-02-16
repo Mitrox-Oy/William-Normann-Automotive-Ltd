@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { RequireAuth } from "@/components/AuthProvider"
 import { getAdminProducts, deleteProduct, getAllCategories, getAdminCategories, getCategoryBySlug, createCategory, updateCategory, deleteCategory, importProductsCsv, type AdminProduct, type AdminCategory, type ProductCsvImportResult } from "@/lib/adminApi"
 import { formatCurrency, SHOP_TOPICS, TOPIC_INFO, type ShopTopic } from "@/lib/shopApi"
-import { Plus, Search, Edit, Trash2, ChevronLeft, ChevronRight, Package, FolderTree, Car, Wrench, Settings, Sparkles, Upload } from "lucide-react"
+import { Plus, Search, Edit, Trash2, ChevronLeft, ChevronRight, Package, FolderTree, Car, Settings, Sparkles, Upload } from "lucide-react"
 import Link from "next/link"
 
 
@@ -25,7 +25,6 @@ import Link from "next/link"
 const TOPIC_ICONS: Record<ShopTopic, React.ReactNode> = {
   cars: <Car className="h-5 w-5" />,
   parts: <Settings className="h-5 w-5" />,
-  tools: <Wrench className="h-5 w-5" />,
   custom: <Sparkles className="h-5 w-5" />,
 }
 
@@ -427,7 +426,6 @@ function AdminProductsContent() {
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="draft">Draft</SelectItem>
                   <SelectItem value="archived">Archived</SelectItem>
                 </SelectContent>
               </Select>
@@ -519,12 +517,10 @@ function AdminProductsContent() {
                                 variant={
                                   product.status === "active"
                                     ? "default"
-                                    : product.status === "draft"
-                                      ? "secondary"
-                                      : "outline"
+                                    : "outline"
                                 }
                               >
-                                {product.status}
+                                {product.status === "draft" ? "archived" : product.status}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right">

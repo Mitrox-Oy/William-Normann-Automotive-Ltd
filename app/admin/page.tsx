@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { RequireAuth } from "@/components/AuthProvider"
 import { getDashboardStats, loadTestCreateProducts, loadTestDeleteProducts, type DashboardStats } from "@/lib/adminApi"
 import { formatCurrency } from "@/lib/shopApi"
@@ -21,6 +22,8 @@ function AdminDashboardContent() {
   const [loadTestBusy, setLoadTestBusy] = useState(false)
   const [loadTestHardDelete, setLoadTestHardDelete] = useState(false)
   const [loadTestMessage, setLoadTestMessage] = useState<string | null>(null)
+  const [lowStockVisibility, setLowStockVisibility] = useState<"all" | "hidden">("hidden")
+  const [showDebugTools, setShowDebugTools] = useState(false)
 
   useEffect(() => {
     async function loadStats() {
@@ -188,8 +191,24 @@ function AdminDashboardContent() {
           {/* Low Stock Alerts */}
           <Card>
             <CardHeader>
-              <CardTitle>Low Stock Alerts</CardTitle>
-              <CardDescription>Products running low on inventory</CardDescription>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <CardTitle>Low Stock Alerts</CardTitle>
+                  <CardDescription>Products running low on inventory</CardDescription>
+                </div>
+                <Select
+                  value={lowStockVisibility}
+                  onValueChange={(value) => setLowStockVisibility(value as "all" | "hidden")}
+                >
+                  <SelectTrigger className="w-[190px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Show All Alerts</SelectItem>
+                    <SelectItem value="hidden">Hide Alerts</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -198,6 +217,8 @@ function AdminDashboardContent() {
                     <Skeleton key={i} className="h-16 w-full" />
                   ))}
                 </div>
+              ) : lowStockVisibility === "hidden" ? (
+                <p className="text-center text-sm text-muted-foreground py-8">Low stock alerts are hidden</p>
               ) : stats?.lowStockProducts && stats.lowStockProducts.length > 0 ? (
                 <div className="space-y-4">
                   {stats.lowStockProducts.map((product) => (
@@ -283,73 +304,93 @@ function AdminDashboardContent() {
           </Link>
         </div>
 
-        {/* Load Test Tools */}
+        {/* Debug Section */}
         <div className="mt-8">
           <Card>
-            <CardHeader>
-              <CardTitle>Load Test Tools</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Debug</CardTitle>
+                <CardDescription>Show or hide advanced admin tools</CardDescription>
+              </div>
+              <button
+                onClick={() => setShowDebugTools((prev) => !prev)}
+                className="rounded-md border border-white/30 bg-white px-4 py-2 text-sm font-medium text-black hover:bg-white/90"
+              >
+                {showDebugTools ? 'Hide Tools' : 'Show Tools'}
+              </button>
+            </CardHeader>
+          </Card>
+        </div>
+
+        {/* Load Test Tools */}
+        {showDebugTools && (
+          <div className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Load Test Tools</CardTitle>
               <CardDescription>
                 Create and delete tagged test products on the deployed backend. Requires `ADMIN_TOOLS_ENABLED=true` on backend.
               </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 lg:grid-cols-3">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Count</label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={5000}
-                    value={loadTestCount}
-                    onChange={(e) => setLoadTestCount(Number(e.target.value))}
-                    disabled={loadTestBusy}
-                  />
-                  <p className="text-xs text-muted-foreground">Creates products with SKU prefix `LT-&lt;runId&gt;-`.</p>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Run ID</label>
-                  <Input
-                    type="text"
-                    value={loadTestRunId || ''}
-                    onChange={(e) => setLoadTestRunId(e.target.value || null)}
-                    placeholder="(auto after create)"
-                    disabled={loadTestBusy}
-                  />
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={loadTestHardDelete}
-                      onChange={(e) => setLoadTestHardDelete(e.target.checked)}
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 lg:grid-cols-3">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Count</label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={5000}
+                      value={loadTestCount}
+                      onChange={(e) => setLoadTestCount(Number(e.target.value))}
                       disabled={loadTestBusy}
                     />
-                    Hard delete (falls back to soft delete if constrained)
-                  </label>
-                </div>
+                    <p className="text-xs text-muted-foreground">Creates products with SKU prefix `LT-&lt;runId&gt;-`.</p>
+                  </div>
 
-                <div className="flex flex-col gap-2">
-                  <button
-                    onClick={handleCreateLoadTestProducts}
-                    disabled={loadTestBusy}
-                    className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
-                  >
-                    {loadTestBusy ? 'Working...' : 'Create Test Products'}
-                  </button>
-                  <button
-                    onClick={handleDeleteLoadTestProducts}
-                    disabled={loadTestBusy}
-                    className="rounded-md border px-4 py-2 text-sm font-medium disabled:opacity-50"
-                  >
-                    {loadTestBusy ? 'Working...' : 'Delete Test Products'}
-                  </button>
-                  {loadTestMessage ? (
-                    <p className="text-sm text-muted-foreground">{loadTestMessage}</p>
-                  ) : null}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Run ID</label>
+                    <Input
+                      type="text"
+                      value={loadTestRunId || ''}
+                      onChange={(e) => setLoadTestRunId(e.target.value || null)}
+                      placeholder="(auto after create)"
+                      disabled={loadTestBusy}
+                    />
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={loadTestHardDelete}
+                        onChange={(e) => setLoadTestHardDelete(e.target.checked)}
+                        disabled={loadTestBusy}
+                      />
+                      Hard delete (falls back to soft delete if constrained)
+                    </label>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={handleCreateLoadTestProducts}
+                      disabled={loadTestBusy}
+                      className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+                    >
+                      {loadTestBusy ? 'Working...' : 'Create Test Products'}
+                    </button>
+                    <button
+                      onClick={handleDeleteLoadTestProducts}
+                      disabled={loadTestBusy}
+                      className="rounded-md border px-4 py-2 text-sm font-medium disabled:opacity-50"
+                    >
+                      {loadTestBusy ? 'Working...' : 'Delete Test Products'}
+                    </button>
+                    {loadTestMessage ? (
+                      <p className="text-sm text-muted-foreground">{loadTestMessage}</p>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </Container>
     </section>
   )

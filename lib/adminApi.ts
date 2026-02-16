@@ -231,7 +231,7 @@ function mapBackendProductToAdminProduct(p: any): AdminProduct {
     categoryName: p.categoryName || '',
     sku: p.sku || '',
     stockLevel: stockQuantity,
-    status: p.active ? 'active' : 'draft',
+    status: p.active ? 'active' : 'archived',
     slug: p.slug || p.sku?.toLowerCase().replace(/\s+/g, '-') || '',
     brand: p.brand || '',
     manufacturer: p.brand || p.manufacturer || '',
@@ -354,6 +354,9 @@ export async function getAdminProducts(params: ProductsListParams = {}): Promise
 
   if (params.search) {
     searchParams.append('search', params.search)
+  }
+  if (params.status) {
+    searchParams.append('status', params.status)
   }
   if (params.category) {
     searchParams.append('category', params.category)

@@ -122,8 +122,6 @@ function getProductNamePlaceholder(productType?: ProductType): string {
       return "e.g., BMW 330i M Sport"
     case "part":
       return "e.g., Brembo Front Brake Pads"
-    case "tool":
-      return "e.g., Digital Torque Wrench Set"
     case "custom":
       return "e.g., Custom Carbon Fiber Splitter"
     default:
@@ -157,7 +155,7 @@ function NewProductPageContent() {
   const [active, setActive] = useState(true)
   const [featured, setFeatured] = useState(false)
   const [quoteOnly, setQuoteOnly] = useState(selectedTopic === 'cars')
-  const [productType, setProductType] = useState<ProductType | undefined>(selectedTopic === "cars" ? "car" : selectedTopic === "parts" ? "part" : selectedTopic === "tools" ? "tool" : "custom")
+  const [productType, setProductType] = useState<ProductType | undefined>(selectedTopic === "cars" ? "car" : selectedTopic === "parts" ? "part" : "custom")
   const [condition, setCondition] = useState<string>("all")
   const [oemType, setOemType] = useState<string>("all")
 
@@ -338,7 +336,7 @@ function NewProductPageContent() {
     const maybeCondition = fieldValue("condition")
     if (maybeCondition) setCondition(maybeCondition)
     const maybeType = fieldValue("productType")
-    if (maybeType && ["car", "part", "tool", "custom"].includes(maybeType.toLowerCase())) {
+    if (maybeType && ["car", "part", "custom"].includes(maybeType.toLowerCase())) {
       setProductType(maybeType.toLowerCase() as ProductType)
     }
 
@@ -520,6 +518,11 @@ function NewProductPageContent() {
       return
     }
 
+    if (productType === "tool") {
+      showToast("Tools are no longer sold and cannot be created", "error")
+      return
+    }
+
     try {
       setLoading(true)
 
@@ -671,7 +674,6 @@ function NewProductPageContent() {
               {showVehicleTab && <TabsTrigger value="vehicle">Vehicle</TabsTrigger>}
               {productType === "car" && <TabsTrigger value="car-fields">Car Fields</TabsTrigger>}
               {productType === "part" && <TabsTrigger value="parts">Parts</TabsTrigger>}
-              {productType === "tool" && <TabsTrigger value="tools">Tools</TabsTrigger>}
               {productType === "custom" && <TabsTrigger value="custom">Custom</TabsTrigger>}
               <TabsTrigger value="images">Images</TabsTrigger>
               <TabsTrigger value="variants">Variants</TabsTrigger>
@@ -895,7 +897,7 @@ function NewProductPageContent() {
                           id="brand"
                           value={brand}
                           onChange={(e) => setBrand(e.target.value)}
-                          placeholder="e.g., Apple"
+                          placeholder="e.g., BMW, Brembo, Flow Forged"
                           maxLength={100}
                         />
                       </div>
@@ -1104,44 +1106,6 @@ function NewProductPageContent() {
               </TabsContent>
             )}
 
-            {productType === "tool" && (
-              <TabsContent value="tools" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Tool Attributes</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-3 gap-4">
-                      <Input value={toolCategory} onChange={(e) => setToolCategory(e.target.value)} placeholder="Tool category" />
-                      <Input type="number" value={voltage} onChange={(e) => setVoltage(e.target.value)} placeholder="Voltage" />
-                      <Input value={driveSize} onChange={(e) => setDriveSize(e.target.value)} placeholder='Drive size (e.g. 1/2")' />
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <Input type="number" value={torqueMinNm} onChange={(e) => setTorqueMinNm(e.target.value)} placeholder="Torque min (Nm)" />
-                      <Input type="number" value={torqueMaxNm} onChange={(e) => setTorqueMaxNm(e.target.value)} placeholder="Torque max (Nm)" />
-                      <Select value={powerSource} onValueChange={setPowerSource}>
-                        <SelectTrigger><SelectValue placeholder="Power source" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Power source</SelectItem>
-                          {POWER_SOURCES.map((value) => <SelectItem key={value} value={value}>{value.replace("_", " ")}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex items-center gap-6">
-                      <div className="flex items-center space-x-2">
-                        <Switch checked={professionalGrade} onCheckedChange={setProfessionalGrade} />
-                        <Label>Professional Grade</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch checked={isKit} onCheckedChange={setIsKit} />
-                        <Label>Kit</Label>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            )}
-
             {productType === "custom" && (
               <TabsContent value="custom" className="space-y-6">
                 <Card>
@@ -1314,7 +1278,7 @@ function NewProductPageContent() {
                               id="variant-name"
                               value={newVariant.name}
                               onChange={(e) => setNewVariant({ ...newVariant, name: e.target.value })}
-                              placeholder="e.g., Midnight / 256 GB"
+                              placeholder="e.g., 20x10.5 / Matte Black"
                             />
                           </div>
                           <div className="space-y-2">
@@ -1323,7 +1287,7 @@ function NewProductPageContent() {
                               id="variant-sku"
                               value={newVariant.sku}
                               onChange={(e) => setNewVariant({ ...newVariant, sku: e.target.value })}
-                              placeholder="e.g., IPH15P-256-MID"
+                              placeholder="e.g., FF-8018-20X105-MBLK"
                             />
                           </div>
                         </div>
@@ -1337,7 +1301,7 @@ function NewProductPageContent() {
                               min="0"
                               value={newVariant.price || ""}
                               onChange={(e) => setNewVariant({ ...newVariant, price: e.target.value ? parseFloat(e.target.value) : undefined })}
-                              placeholder="Leave empty to use product price"
+                              placeholder="Optional override for this variant"
                             />
                           </div>
                           <div className="space-y-2">
@@ -1348,6 +1312,7 @@ function NewProductPageContent() {
                               min="0"
                               value={newVariant.stockQuantity || 0}
                               onChange={(e) => setNewVariant({ ...newVariant, stockQuantity: parseInt(e.target.value) || 0 })}
+                              placeholder="e.g., 12"
                             />
                           </div>
                         </div>

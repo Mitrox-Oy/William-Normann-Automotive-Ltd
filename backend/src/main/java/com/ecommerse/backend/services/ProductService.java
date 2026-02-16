@@ -68,7 +68,7 @@ public class ProductService {
         Page<Product> page;
         if (categoryId != null) {
             List<Long> categoryIds = categoryService.getAllDescendantCategoryIds(categoryId);
-            page = productRepository.findByCategoryIdsAndSearch(categoryIds, searchPattern, pageable);
+            page = productRepository.findByCategoryIdsAndSearch(categoryIds, Boolean.TRUE, searchPattern, pageable);
         } else if (searchPattern != null) {
             page = productRepository.findActiveForCatalog(null, searchPattern, pageable);
         } else {
@@ -858,9 +858,15 @@ public class ProductService {
      */
     @Transactional(readOnly = true)
     public Page<ProductDTO> getProductsByRootCategory(Long rootCategoryId, String searchTerm, Pageable pageable) {
+        return getProductsByRootCategory(rootCategoryId, searchTerm, Boolean.TRUE, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ProductDTO> getProductsByRootCategory(Long rootCategoryId, String searchTerm, Boolean activeFilter,
+            Pageable pageable) {
         List<Long> categoryIds = categoryService.getAllDescendantCategoryIds(rootCategoryId);
         String searchPattern = toContainsPattern(searchTerm);
-        return productRepository.findByCategoryIdsAndSearch(categoryIds, searchPattern, pageable)
+        return productRepository.findByCategoryIdsAndSearch(categoryIds, activeFilter, searchPattern, pageable)
                 .map(this::convertToDTO);
     }
 
@@ -882,6 +888,12 @@ public class ProductService {
     @Transactional(readOnly = true)
     public Page<ProductDTO> searchWithFilters(Long rootCategoryId, String query, Long categoryId,
             ProductFilterCriteria criteria, Boolean featuredOnly, Pageable pageable) {
+        return searchWithFilters(rootCategoryId, query, categoryId, criteria, featuredOnly, Boolean.TRUE, pageable);
+        }
+
+        @Transactional(readOnly = true)
+        public Page<ProductDTO> searchWithFilters(Long rootCategoryId, String query, Long categoryId,
+            ProductFilterCriteria criteria, Boolean featuredOnly, Boolean activeFilter, Pageable pageable) {
         ProductFilterCriteria resolved = criteria != null ? criteria : new ProductFilterCriteria();
 
         String queryPattern = toContainsPattern(query);
@@ -966,7 +978,7 @@ public class ProductService {
                     resolved.getProfessionalGrade(), resolved.getIsKit(),
                     styleTagPattern, finishValue, resolved.getStreetLegal(),
                     installationDifficultyValue, customCategoryPattern,
-                    inStockOnly, featuredOnlyResolved, pageable);
+                    inStockOnly, featuredOnlyResolved, activeFilter, pageable);
         } else {
                     products = productRepository.findWithFilters(queryPattern, applyCategoryFilter, categoryFilterIds,
                     resolved.getMinPrice(), resolved.getMaxPrice(), brandPattern,
@@ -994,7 +1006,7 @@ public class ProductService {
                     resolved.getProfessionalGrade(), resolved.getIsKit(),
                     styleTagPattern, finishValue, resolved.getStreetLegal(),
                     installationDifficultyValue, customCategoryPattern,
-                    inStockOnly, featuredOnlyResolved, pageable);
+                    inStockOnly, featuredOnlyResolved, activeFilter, pageable);
         }
 
         return products.map(this::convertToDTO);

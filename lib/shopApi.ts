@@ -256,7 +256,7 @@ export interface SearchParams {
 }
 
 // Valid topic slugs for the shop
-export const SHOP_TOPICS = ['cars', 'parts', 'tools', 'custom'] as const
+export const SHOP_TOPICS = ['cars', 'parts', 'custom'] as const
 export type ShopTopic = typeof SHOP_TOPICS[number]
 
 export function isValidTopic(slug: string): slug is ShopTopic {
@@ -274,11 +274,6 @@ export const TOPIC_INFO: Record<ShopTopic, { label: string; description: string;
     label: 'PARTS',
     description: 'OEM and aftermarket automotive parts',
     image: '/images/topics/parts.jpg'
-  },
-  tools: {
-    label: 'TOOLS',
-    description: 'Professional automotive tools and equipment',
-    image: '/images/topics/tools.jpg'
   },
   custom: {
     label: 'CUSTOM',

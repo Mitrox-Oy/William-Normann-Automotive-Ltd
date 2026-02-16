@@ -149,7 +149,8 @@ public class ProductController {
             @Parameter(description = "Finish") @RequestParam(required = false) String finish,
             @Parameter(description = "Street legal") @RequestParam(required = false) Boolean streetLegal,
             @Parameter(description = "Installation difficulty") @RequestParam(required = false) String installationDifficulty,
-            @Parameter(description = "Custom category") @RequestParam(required = false) String customCategory) {
+            @Parameter(description = "Custom category") @RequestParam(required = false) String customCategory,
+            @Parameter(description = "Owner/admin status filter: active, draft, archived, all") @RequestParam(required = false) String status) {
 
         int pageNumber = Math.max(page, 0);
         int pageSize = Math.min(Math.max(size, 1), 50);
@@ -164,6 +165,10 @@ public class ProductController {
         Pageable pageable = PageRequest.of(pageNumber, pageSize, sort);
 
         String normalizedSearch = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean ownerOrAdmin = hasOwnerOrAdminRole(authentication);
+        Boolean activeFilter = ownerOrAdmin ? parseActiveFilter(status) : Boolean.TRUE;
+
         ProductFilterCriteria criteria = new ProductFilterCriteria();
         criteria.setMinPrice(minPrice);
         criteria.setMaxPrice(maxPrice);
@@ -243,10 +248,10 @@ public class ProductController {
             boolean useAdvanced = categoryId != null || criteria.hasAdvancedFilters();
             if (useAdvanced) {
                 Page<ProductDTO> products = productService.searchWithFilters(rootCategoryId, normalizedSearch,
-                        categoryId, criteria, false, pageable);
+                categoryId, criteria, false, activeFilter, pageable);
                 return ResponseEntity.ok(products);
             }
-            Page<ProductDTO> products = productService.getProductsByRootCategory(rootCategoryId, normalizedSearch,
+            Page<ProductDTO> products = productService.getProductsByRootCategory(rootCategoryId, normalizedSearch, activeFilter,
                     pageable);
             return ResponseEntity.ok(products);
         }
@@ -254,7 +259,7 @@ public class ProductController {
         boolean useAdvanced = criteria.hasAdvancedFilters();
         if (useAdvanced) {
             Page<ProductDTO> products = productService.searchWithFilters(null, normalizedSearch, categoryId, criteria,
-                    false, pageable);
+                false, activeFilter, pageable);
             return ResponseEntity.ok(products);
         }
 
@@ -774,6 +779,26 @@ public class ProductController {
     private boolean isNotFound(IllegalArgumentException exception) {
         String message = exception.getMessage();
         return message != null && message.toLowerCase().contains("not found");
+    }
+
+    private Boolean parseActiveFilter(String status) {
+        if (status == null || status.trim().isEmpty() || "all".equalsIgnoreCase(status)) {
+            return null;
+        }
+
+        return switch (status.trim().toLowerCase()) {
+            case "active" -> Boolean.TRUE;
+            case "draft", "archived", "inactive" -> Boolean.FALSE;
+            default -> null;
+        };
+    }
+
+    private boolean hasOwnerOrAdminRole(Authentication authentication) {
+        if (authentication == null || authentication.getAuthorities() == null) {
+            return false;
+        }
+        return authentication.getAuthorities().stream()
+                .anyMatch(auth -> "ROLE_OWNER".equals(auth.getAuthority()) || "ROLE_ADMIN".equals(auth.getAuthority()));
     }
 
     private List<String> splitCsv(String value) {
