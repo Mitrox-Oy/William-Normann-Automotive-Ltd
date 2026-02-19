@@ -15,10 +15,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { RequireAuth } from "@/components/AuthProvider"
-import { getAdminProducts, deleteProduct, getAllCategories, getAdminCategories, getCategoryBySlug, createCategory, updateCategory, deleteCategory, importProductsCsv, type AdminProduct, type AdminCategory, type ProductCsvImportResult } from "@/lib/adminApi"
+import { getAdminProducts, deleteProduct, getAllCategories, getAdminCategories, getCategoryBySlug, createCategory, updateCategory, deleteCategory, importProductsCsv, uploadCategoryImage, type AdminProduct, type AdminCategory, type ProductCsvImportResult } from "@/lib/adminApi"
 import { formatCurrency, SHOP_TOPICS, TOPIC_INFO, type ShopTopic } from "@/lib/shopApi"
 import { Plus, Search, Edit, Trash2, ChevronLeft, ChevronRight, Package, FolderTree, Car, Settings, Sparkles, Upload } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
+import { getCategoryImageUrl } from "@/lib/utils"
 
 
 // Topic icons mapping
@@ -53,10 +55,13 @@ function AdminProductsContent() {
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false)
   const [editingCategory, setEditingCategory] = useState<AdminCategory | null>(null)
   const [categorySlugTouched, setCategorySlugTouched] = useState(false)
+  const [categoryImageUploading, setCategoryImageUploading] = useState(false)
+  const categoryImageInputRef = useRef<HTMLInputElement | null>(null)
   const [categoryForm, setCategoryForm] = useState({
     name: "",
     slug: "",
     description: "",
+    imageUrl: "",
     status: "active" as "active" | "inactive",
     parentId: "",
   })
@@ -190,6 +195,7 @@ function AdminProductsContent() {
         name: category.name,
         slug: category.slug,
         description: category.description || "",
+        imageUrl: category.imageUrl || "",
         status: category.status || "active",
         parentId: category.parentId?.toString() || "",
       })
@@ -201,11 +207,32 @@ function AdminProductsContent() {
         name: "",
         slug: "",
         description: "",
+        imageUrl: "",
         status: "active",
         parentId: topicRootCategoryId?.toString() || "",
       })
     }
     setCategoryDialogOpen(true)
+  }
+
+  async function handleCategoryImageSelected(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    try {
+      setCategoryImageUploading(true)
+      const uploaded = await uploadCategoryImage(file)
+      setCategoryForm((prev) => ({
+        ...prev,
+        imageUrl: uploaded.imageUrl,
+      }))
+    } catch (error) {
+      console.error("Failed to upload category image:", error)
+      alert(error instanceof Error ? error.message : "Failed to upload category image")
+    } finally {
+      setCategoryImageUploading(false)
+      event.target.value = ""
+    }
   }
 
   async function handleSaveCategory() {
@@ -729,6 +756,46 @@ function AdminProductsContent() {
                   placeholder="Category description..."
                   rows={3}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="category-image-url">Category Image</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="category-image-url"
+                    value={categoryForm.imageUrl}
+                    onChange={(e) => setCategoryForm({ ...categoryForm, imageUrl: e.target.value })}
+                    placeholder="e.g., categories/toyota-logo.png"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => categoryImageInputRef.current?.click()}
+                    disabled={categoryImageUploading}
+                  >
+                    {categoryImageUploading ? "Uploading..." : "Upload"}
+                  </Button>
+                </div>
+                <input
+                  ref={categoryImageInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleCategoryImageSelected}
+                />
+                {categoryForm.imageUrl && (
+                  <div className="relative h-16 w-16 overflow-hidden rounded-md border">
+                    <Image
+                      src={getCategoryImageUrl(categoryForm.imageUrl)}
+                      alt="Category preview"
+                      fill
+                      className="object-cover"
+                      sizes="64px"
+                    />
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Upload a logo or background image for this category tile.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="category-status">Status</Label>

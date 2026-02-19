@@ -268,17 +268,17 @@ export const TOPIC_INFO: Record<ShopTopic, { label: string; description: string;
   cars: {
     label: 'CARS',
     description: 'Browse our selection of cars and vehicles',
-    image: '/images/topics/cars.jpg'
+    image: '/CARS.jpg'
   },
   parts: {
     label: 'PARTS',
     description: 'OEM and aftermarket automotive parts',
-    image: '/images/topics/parts.jpg'
+    image: '/PARTS.jpeg'
   },
   custom: {
     label: 'CUSTOM',
     description: 'Custom parts and modifications',
-    image: '/images/topics/custom.jpg'
+    image: '/CUSTOM.jpg'
   }
 }
 

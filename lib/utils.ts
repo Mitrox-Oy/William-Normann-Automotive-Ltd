@@ -64,3 +64,63 @@ export function getImageUrl(imageUrl: string | undefined | null | any): string {
   }
   return `${API_BASE_URL}${imageUrl}`
 }
+
+/**
+ * Resolve category image URLs from either frontend public assets
+ * (e.g. "/JDM.jpg") or backend-uploaded category files (e.g. "categories/file.jpg").
+ */
+export function getCategoryImageUrl(imageUrl: string | undefined | null | any): string {
+  if (!imageUrl) {
+    return '/placeholder.jpg'
+  }
+
+  if (typeof imageUrl === 'object' && imageUrl.imageUrl) {
+    imageUrl = imageUrl.imageUrl
+  }
+
+  if (typeof imageUrl !== 'string') {
+    console.warn('getCategoryImageUrl received non-string value:', imageUrl)
+    return '/placeholder.jpg'
+  }
+
+  const normalized = imageUrl.trim()
+  if (!normalized) {
+    return '/placeholder.jpg'
+  }
+
+  if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
+    return normalized
+  }
+
+  // Keep public assets local to Next.js (e.g. "/JDM.jpg").
+  if (
+    normalized.startsWith('/') &&
+    !normalized.startsWith('/api/images/') &&
+    !normalized.startsWith('/uploads/')
+  ) {
+    return normalized
+  }
+
+  // Category uploads are stored as "categories/<file>".
+  if (normalized.startsWith('categories/')) {
+    const fileName = normalized.split('/').filter(Boolean).pop()
+    return fileName ? getImageUrl(fileName) : '/placeholder.jpg'
+  }
+
+  if (normalized.startsWith('/categories/')) {
+    const fileName = normalized.split('/').filter(Boolean).pop()
+    return fileName ? getImageUrl(fileName) : '/placeholder.jpg'
+  }
+
+  if (normalized.startsWith('/uploads/categories/')) {
+    const fileName = normalized.split('/').filter(Boolean).pop()
+    return fileName ? getImageUrl(fileName) : '/placeholder.jpg'
+  }
+
+  if (normalized.startsWith('uploads/categories/')) {
+    const fileName = normalized.split('/').filter(Boolean).pop()
+    return fileName ? getImageUrl(fileName) : '/placeholder.jpg'
+  }
+
+  return getImageUrl(normalized)
+}

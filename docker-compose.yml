@@ -34,6 +34,10 @@ services:
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
       FRONTEND_URL: ${FRONTEND_URL}
+      # OCR Configuration - Values pulled from .env or shell
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OCR_PROVIDER: ${OCR_PROVIDER}
+      OCR_OPENAI_MODEL: ${OCR_OPENAI_MODEL}
       DDL_AUTO: update
       SHOW_SQL: "false"
       LOG_LEVEL: INFO

@@ -730,6 +730,7 @@ export interface CategoryCreateInput {
   name: string
   slug: string
   description?: string
+  imageUrl?: string
   status: 'active' | 'inactive'
   parentId?: string | number | null  // Parent category ID for topic hierarchy
 }
@@ -849,6 +850,7 @@ export async function createCategory(data: CategoryCreateInput): Promise<AdminCa
     name: data.name,
     slug: data.slug,
     description: data.description,
+    imageUrl: data.imageUrl,
     active: data.status === 'active',
     parentId: resolvedParentId,
   }
@@ -865,6 +867,7 @@ export async function updateCategory(id: string, data: Partial<CategoryCreateInp
   if (data.name !== undefined) payload.name = data.name
   if (data.slug !== undefined) payload.slug = data.slug
   if (data.description !== undefined) payload.description = data.description
+  if (data.imageUrl !== undefined) payload.imageUrl = data.imageUrl
   if (data.status !== undefined) payload.active = data.status === 'active'
   if (data.parentId !== undefined) {
     payload.parentId =
@@ -882,6 +885,36 @@ export async function updateCategory(id: string, data: Partial<CategoryCreateInp
  */
 export async function deleteCategory(id: string): Promise<void> {
   return api.delete<void>(`/api/categories/${id}`)
+}
+
+/**
+ * Upload category image
+ * Backend endpoint: POST /api/categories/upload-image
+ */
+export async function uploadCategoryImage(file: File): Promise<{ imageUrl: string; message: string }> {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const { getAccessToken } = await import('./apiClient')
+  const token = getAccessToken()
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_SHOP_API_BASE_URL || 'http://localhost:8080'
+  const response = await fetch(`${baseUrl}/api/categories/upload-image`, {
+    method: 'POST',
+    headers: token
+      ? {
+        Authorization: `Bearer ${token}`,
+      }
+      : {},
+    body: formData,
+    credentials: 'include',
+  })
+
+  const payload = await response.json().catch(() => null)
+  if (!response.ok) {
+    throw new Error(payload?.error || payload?.message || `Failed to upload category image (${response.status})`)
+  }
+
+  return payload as { imageUrl: string; message: string }
 }
 
 // ============================================================================

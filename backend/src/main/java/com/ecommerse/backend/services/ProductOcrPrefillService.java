@@ -53,50 +53,88 @@ public class ProductOcrPrefillService {
         }
     }
 
-    private ProductOcrPrefillResponse runOpenAiPrefill(MultipartFile file, String apiKey) throws IOException, InterruptedException {
-        String model = env("OCR_OPENAI_MODEL", "gpt-4o-mini");
+    private ProductOcrPrefillResponse runOpenAiPrefill(MultipartFile file, String apiKey)
+            throws IOException, InterruptedException {
+        String model = env("OCR_OPENAI_MODEL", "gpt-5-mini");
         String mimeType = file.getContentType() != null ? file.getContentType() : "image/jpeg";
         String base64Image = Base64.getEncoder().encodeToString(file.getBytes());
 
-        Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("model", model);
-        payload.put("temperature", 0.1);
+        String instruction = "Extract automotive product details from the image and return JSON with this shape: " +
+                "{\"rawText\":\"...\",\"fields\":{" +
+                "\"name\":{\"value\":\"\",\"confidence\":0.0}," +
+                "\"price\":{\"value\":\"\",\"confidence\":0.0}," +
+                "\"brand\":{\"value\":\"\",\"confidence\":0.0}," +
+                "\"description\":{\"value\":\"\",\"confidence\":0.0}," +
+                "\"condition\":{\"value\":\"\",\"confidence\":0.0}," +
+                "\"productType\":{\"value\":\"car|part|tool|custom\",\"confidence\":0.0}," +
+                "\"categorySlug\":{\"value\":\"\",\"confidence\":0.0}," +
+                "\"stockQuantity\":{\"value\":\"\",\"confidence\":0.0}," +
+                "\"quoteOnly\":{\"value\":\"\",\"confidence\":0.0}," +
+                "\"active\":{\"value\":\"\",\"confidence\":0.0}," +
+                "\"weight\":{\"value\":\"\",\"confidence\":0.0}," +
+                "\"make\":{\"value\":\"\",\"confidence\":0.0}," +
+                "\"model\":{\"value\":\"\",\"confidence\":0.0}," +
+                "\"year\":{\"value\":\"\",\"confidence\":0.0}," +
+                "\"mileage\":{\"value\":\"\",\"confidence\":0.0}," +
+                "\"powerKw\":{\"value\":\"\",\"confidence\":0.0}," +
+                "\"fuelType\":{\"value\":\"\",\"confidence\":0.0}," +
+                "\"transmission\":{\"value\":\"manual|automatic|semi-automatic\",\"confidence\":0.0}," +
+                "\"bodyType\":{\"value\":\"sedan|coupe|suv|wagon|convertible|hatchback|van|truck\",\"confidence\":0.0},"
+                +
+                "\"driveType\":{\"value\":\"fwd|rwd|awd|4wd\",\"confidence\":0.0}," +
+                "\"warrantyIncluded\":{\"value\":\"true|false\",\"confidence\":0.0}," +
+                "\"partCategory\":{\"value\":\"\",\"confidence\":0.0}," +
+                "\"partsDeepCategory\":{\"value\":\"\",\"confidence\":0.0}," +
+                "\"partPosition\":{\"value\":\"front|rear|left|right|front-left|front-right|rear-left|rear-right\",\"confidence\":0.0},"
+                +
+                "\"wheelDiameterInch\":{\"value\":\"\",\"confidence\":0.0}," +
+                "\"wheelWidthInch\":{\"value\":\"\",\"confidence\":0.0}," +
+                "\"wheelBoltPattern\":{\"value\":\"e.g. 5x112, 5x120\",\"confidence\":0.0}," +
+                "\"wheelOffsetEt\":{\"value\":\"\",\"confidence\":0.0}," +
+                "\"engineType\":{\"value\":\"e.g. inline-4, v6, v8\",\"confidence\":0.0}," +
+                "\"engineDisplacementCc\":{\"value\":\"\",\"confidence\":0.0}," +
+                "\"enginePowerHp\":{\"value\":\"\",\"confidence\":0.0}" +
+                "}}. " +
+                "Rules: Use empty strings for unknown values. Confidence must be 0-1. " +
+                "For wheels, extract diameter (e.g. 18), width (e.g. 8.5), bolt pattern (e.g. 5x112), offset/ET (e.g. 35). "
+                +
+                "For engines, extract type (inline-4/v6/v8), displacement in cc, power in hp. " +
+                "For cars, extract bodyType (sedan/coupe/suv/etc), driveType (fwd/rwd/awd), transmission type. " +
+                "For parts, identify position (front/rear/left/right) and category depth where visible.";
 
-        List<Map<String, Object>> messages = new ArrayList<>();
-        messages.add(Map.of(
-                "role", "system",
-                "content", "You extract automotive product data from images. Return strict JSON only."));
+        OpenAiCallResult responsesResult = callResponsesApi(apiKey, model, mimeType, base64Image, instruction);
+        String content = "";
+        String finalEndpoint = "responses";
+        int finalStatusCode = responsesResult.statusCode;
+        String finalErrorDetails = "";
 
-        String instruction = "Extract product details from the image and return JSON with this shape: " +
-                "{\"rawText\":\"...\",\"fields\":{\"name\":{\"value\":\"\",\"confidence\":0.0},\"price\":{\"value\":\"\",\"confidence\":0.0},\"brand\":{\"value\":\"\",\"confidence\":0.0},\"description\":{\"value\":\"\",\"confidence\":0.0},\"condition\":{\"value\":\"\",\"confidence\":0.0},\"productType\":{\"value\":\"car|part|tool|custom\",\"confidence\":0.0},\"make\":{\"value\":\"\",\"confidence\":0.0},\"model\":{\"value\":\"\",\"confidence\":0.0},\"year\":{\"value\":\"\",\"confidence\":0.0},\"mileage\":{\"value\":\"\",\"confidence\":0.0},\"powerKw\":{\"value\":\"\",\"confidence\":0.0},\"fuelType\":{\"value\":\"\",\"confidence\":0.0},\"transmission\":{\"value\":\"\",\"confidence\":0.0},\"bodyType\":{\"value\":\"\",\"confidence\":0.0},\"driveType\":{\"value\":\"\",\"confidence\":0.0},\"stockQuantity\":{\"value\":\"\",\"confidence\":0.0},\"quoteOnly\":{\"value\":\"\",\"confidence\":0.0},\"active\":{\"value\":\"\",\"confidence\":0.0},\"weight\":{\"value\":\"\",\"confidence\":0.0},\"categorySlug\":{\"value\":\"\",\"confidence\":0.0}}}. " +
-                "Use empty strings for unknown values. Confidence must be between 0 and 1.";
+        if (responsesResult.statusCode >= 200 && responsesResult.statusCode < 300) {
+            JsonNode root = objectMapper.readTree(responsesResult.body);
+            content = extractResponseContentFromResponses(root);
+        } else {
+            finalErrorDetails = extractOpenAiErrorDetails(responsesResult.body);
+            OpenAiCallResult chatResult = callChatCompletionsApi(apiKey, model, mimeType, base64Image, instruction);
+            finalEndpoint = "chat/completions";
+            finalStatusCode = chatResult.statusCode;
 
-        Map<String, Object> userMessage = new LinkedHashMap<>();
-        userMessage.put("role", "user");
-        userMessage.put("content", List.of(
-                Map.of("type", "text", "text", instruction),
-                Map.of("type", "image_url", "image_url", Map.of("url", "data:" + mimeType + ";base64," + base64Image))
-        ));
-        messages.add(userMessage);
-
-        payload.put("messages", messages);
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api.openai.com/v1/chat/completions"))
-                .timeout(Duration.ofSeconds(60))
-                .header("Authorization", "Bearer " + apiKey)
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(payload)))
-                .build();
-
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
-        if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            return notImplemented("openai", "OCR provider error (" + response.statusCode() + ").");
+            if (chatResult.statusCode >= 200 && chatResult.statusCode < 300) {
+                JsonNode root = objectMapper.readTree(chatResult.body);
+                content = root.path("choices").path(0).path("message").path("content").asText("");
+            } else {
+                String chatError = extractOpenAiErrorDetails(chatResult.body);
+                String combinedError = finalErrorDetails;
+                if (!chatError.isEmpty()) {
+                    combinedError = (combinedError.isEmpty() ? "" : combinedError + " | ") + "fallback: " + chatError;
+                }
+                String message = "OCR provider error (" + finalStatusCode + ")";
+                if (!combinedError.isEmpty()) {
+                    message += ": " + combinedError;
+                }
+                System.err.println("[OCR ERROR] " + message + " | Model: " + model + " | Endpoint: " + finalEndpoint);
+                return notImplemented("openai", message + ".");
+            }
         }
 
-        JsonNode root = objectMapper.readTree(response.body());
-        String content = root.path("choices").path(0).path("message").path("content").asText("");
         if (content.isBlank()) {
             return notImplemented("openai", "OCR returned no content.");
         }
@@ -113,6 +151,109 @@ public class ProductOcrPrefillService {
         result.setMissingRequiredFields(resolveMissingRequired(result.getFields()));
 
         return result;
+    }
+
+    private OpenAiCallResult callResponsesApi(String apiKey, String model, String mimeType, String base64Image,
+            String instruction) throws IOException, InterruptedException {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("model", model);
+        payload.put("input", List.of(
+                Map.of("role", "system", "content", List.of(
+                        Map.of("type", "input_text",
+                                "text", "You extract automotive product data from images. Return strict JSON only."))),
+                Map.of("role", "user", "content", List.of(
+                        Map.of("type", "input_text", "text", instruction),
+                        Map.of("type", "input_image", "image_url", "data:" + mimeType + ";base64," + base64Image)))));
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.openai.com/v1/responses"))
+                .timeout(Duration.ofSeconds(60))
+                .header("Authorization", "Bearer " + apiKey)
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(payload)))
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        return new OpenAiCallResult(response.statusCode(), response.body());
+    }
+
+    private OpenAiCallResult callChatCompletionsApi(String apiKey, String model, String mimeType, String base64Image,
+            String instruction) throws IOException, InterruptedException {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("model", model);
+
+        List<Map<String, Object>> messages = new ArrayList<>();
+        messages.add(Map.of(
+                "role", "system",
+                "content", "You extract automotive product data from images. Return strict JSON only."));
+
+        Map<String, Object> userMessage = new LinkedHashMap<>();
+        userMessage.put("role", "user");
+        userMessage.put("content", List.of(
+                Map.of("type", "text", "text", instruction),
+                Map.of("type", "image_url", "image_url",
+                        Map.of("url", "data:" + mimeType + ";base64," + base64Image))));
+        messages.add(userMessage);
+
+        payload.put("messages", messages);
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.openai.com/v1/chat/completions"))
+                .timeout(Duration.ofSeconds(60))
+                .header("Authorization", "Bearer " + apiKey)
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(payload)))
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        return new OpenAiCallResult(response.statusCode(), response.body());
+    }
+
+    private String extractResponseContentFromResponses(JsonNode root) {
+        String outputText = root.path("output_text").asText("");
+        if (!outputText.isBlank()) {
+            return outputText;
+        }
+
+        JsonNode output = root.path("output");
+        if (output.isArray()) {
+            for (JsonNode item : output) {
+                JsonNode content = item.path("content");
+                if (content.isArray()) {
+                    for (JsonNode contentItem : content) {
+                        String type = contentItem.path("type").asText("");
+                        if ("output_text".equals(type) || "text".equals(type)) {
+                            String text = contentItem.path("text").asText("");
+                            if (!text.isBlank()) {
+                                return text;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return "";
+    }
+
+    private String extractOpenAiErrorDetails(String body) {
+        try {
+            JsonNode errorNode = objectMapper.readTree(body);
+            String message = errorNode.path("error").path("message").asText("");
+            return message.isBlank() ? body : message;
+        } catch (Exception e) {
+            return body;
+        }
+    }
+
+    private static class OpenAiCallResult {
+        private final int statusCode;
+        private final String body;
+
+        private OpenAiCallResult(int statusCode, String body) {
+            this.statusCode = statusCode;
+            this.body = body;
+        }
     }
 
     private Map<String, ProductOcrFieldSuggestion> parseFields(JsonNode fieldsNode) {

@@ -1,0 +1,2 @@
+"name","price","categorySlug","description","sku","imageUrl","brand","condition","productType","partCategory","oemType","partNumber","color","stockQuantity","active","featured","weight"
+"Example Miscellaneous Part","99.99","parts-others","Example part for the Others category","MISC-001","","Generic","new","part","miscellaneous","","","","","true","false",""

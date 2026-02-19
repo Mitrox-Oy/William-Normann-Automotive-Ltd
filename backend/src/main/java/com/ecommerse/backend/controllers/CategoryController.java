@@ -1,6 +1,7 @@
 package com.ecommerse.backend.controllers;
 
 import com.ecommerse.backend.dto.CategoryDTO;
+import com.ecommerse.backend.services.FileService;
 import com.ecommerse.backend.services.CategoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -13,8 +14,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -27,9 +32,11 @@ import java.util.Optional;
 public class CategoryController {
 
     private final CategoryService categoryService;
+    private final FileService fileService;
 
-    public CategoryController(CategoryService categoryService) {
+    public CategoryController(CategoryService categoryService, FileService fileService) {
         this.categoryService = categoryService;
+        this.fileService = fileService;
     }
 
     @Operation(summary = "Get all categories", description = "Retrieve all active categories in tree structure. Available to all users.")
@@ -198,6 +205,37 @@ public class CategoryController {
             return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @Operation(summary = "Upload category image", description = "Upload an image for category create/edit forms. Requires OWNER role.", security = @SecurityRequirement(name = "Bearer Authentication"))
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Image uploaded successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid file"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - requires OWNER role"),
+            @ApiResponse(responseCode = "500", description = "File upload failed")
+    })
+    @PostMapping("/upload-image")
+    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN')")
+    public ResponseEntity<Map<String, String>> uploadCategoryImage(
+            @Parameter(description = "Image file to upload", required = true) @RequestParam("file") MultipartFile file) {
+        try {
+            String relativePath = fileService.uploadCategoryImage(file);
+
+            Map<String, String> response = new HashMap<>();
+            response.put("imageUrl", relativePath);
+            response.put("message", "Category image uploaded successfully");
+
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        } catch (IOException e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("error", "Failed to upload file: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 }

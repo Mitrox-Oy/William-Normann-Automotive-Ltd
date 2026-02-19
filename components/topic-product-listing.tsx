@@ -108,14 +108,8 @@ function resolvePartsMainFromCategorySlug(categorySlug?: string): string {
 
   const mainCandidates = [
     "engine-drivetrain",
-    "suspension-steering",
-    "brakes",
-    "wheels-tires",
-    "electrical-lighting",
-    "exterior-body",
-    "interior",
-    "cooling-hvac",
-    "maintenance-service",
+    "wheels",
+    "others",
   ]
 
   const matchedMain = mainCandidates.find(
@@ -1015,14 +1009,8 @@ export function TopicProductListing({
                         <SelectContent>
                           <SelectItem value="all">All main categories</SelectItem>
                           <SelectItem value="engine-drivetrain">Engine & Drivetrain</SelectItem>
-                          <SelectItem value="suspension-steering">Suspension & Steering</SelectItem>
-                          <SelectItem value="brakes">Brakes</SelectItem>
-                          <SelectItem value="wheels-tires">Wheels & Tires</SelectItem>
-                          <SelectItem value="electrical-lighting">Electrical & Lighting</SelectItem>
-                          <SelectItem value="exterior-body">Exterior & Body</SelectItem>
-                          <SelectItem value="interior">Interior</SelectItem>
-                          <SelectItem value="cooling-hvac">Cooling & HVAC</SelectItem>
-                          <SelectItem value="maintenance-service">Maintenance & Service</SelectItem>
+                          <SelectItem value="wheels">Wheels</SelectItem>
+                          <SelectItem value="others">Others</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1103,43 +1091,7 @@ export function TopicProductListing({
                       </>
                     )}
 
-                    {partsBranch === "brakes" && (
-                      <>
-                        <div className="grid grid-cols-2 gap-2">
-                          <Input type="number" value={rotorDiameterMin} onChange={(e) => setRotorDiameterMin(e.target.value)} placeholder="Rotor dia min" />
-                          <Input type="number" value={rotorDiameterMax} onChange={(e) => setRotorDiameterMax(e.target.value)} placeholder="Rotor dia max" />
-                        </div>
-                        <Input value={padCompound} onChange={(e) => setPadCompound(e.target.value)} placeholder="Pad compound" />
-                      </>
-                    )}
-
-                    {partsBranch === "suspension" && (
-                      <>
-                        <Select value={adjustableHeight} onValueChange={setAdjustableHeight}>
-                          <SelectTrigger><SelectValue placeholder="Adjustable height" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Any height adjustability</SelectItem>
-                            <SelectItem value="true">Height adjustable</SelectItem>
-                            <SelectItem value="false">Fixed height</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Select value={adjustableDamping} onValueChange={setAdjustableDamping}>
-                          <SelectTrigger><SelectValue placeholder="Adjustable damping" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Any damping adjustability</SelectItem>
-                            <SelectItem value="true">Damping adjustable</SelectItem>
-                            <SelectItem value="false">Fixed damping</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </>
-                    )}
-
-                    {partsBranch === "electrical-lighting" && (
-                      <>
-                        <Input value={lightingVoltage} onChange={(e) => setLightingVoltage(e.target.value)} placeholder="Voltage (e.g. 12V)" />
-                        <Input value={bulbType} onChange={(e) => setBulbType(e.target.value)} placeholder="Bulb type (e.g. H7)" />
-                      </>
-                    )}
+                    {/* Special branch filters removed for simplified category structure */}
                   </>
                 )}
 
@@ -1375,14 +1327,8 @@ export function TopicProductListing({
                     <SelectContent>
                       <SelectItem value="all">All main categories</SelectItem>
                       <SelectItem value="engine-drivetrain">Engine & Drivetrain</SelectItem>
-                      <SelectItem value="suspension-steering">Suspension & Steering</SelectItem>
-                      <SelectItem value="brakes">Brakes</SelectItem>
-                      <SelectItem value="wheels-tires">Wheels & Tires</SelectItem>
-                      <SelectItem value="electrical-lighting">Electrical & Lighting</SelectItem>
-                      <SelectItem value="exterior-body">Exterior & Body</SelectItem>
-                      <SelectItem value="interior">Interior</SelectItem>
-                      <SelectItem value="cooling-hvac">Cooling & HVAC</SelectItem>
-                      <SelectItem value="maintenance-service">Maintenance & Service</SelectItem>
+                      <SelectItem value="wheels">Wheels</SelectItem>
+                      <SelectItem value="others">Others</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

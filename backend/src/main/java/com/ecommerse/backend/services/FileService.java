@@ -68,6 +68,26 @@ public class FileService {
     }
 
     /**
+     * Upload a category image
+     */
+    public String uploadCategoryImage(MultipartFile file) throws IOException {
+        validateFile(file);
+
+        String fileName = generateFileName(file);
+        uploadedImageService.save(fileName, file);
+
+        try {
+            Path uploadPath = createUploadDirectory("categories");
+            Path filePath = uploadPath.resolve(fileName);
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            System.err.println("File-system cache write failed for category image " + fileName + ": " + e.getMessage());
+        }
+
+        return "categories/" + fileName;
+    }
+
+    /**
      * Upload multiple product images
      */
     public List<String> uploadMultipleProductImages(List<MultipartFile> files) throws IOException {

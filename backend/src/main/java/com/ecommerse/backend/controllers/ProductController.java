@@ -248,10 +248,11 @@ public class ProductController {
             boolean useAdvanced = categoryId != null || criteria.hasAdvancedFilters();
             if (useAdvanced) {
                 Page<ProductDTO> products = productService.searchWithFilters(rootCategoryId, normalizedSearch,
-                categoryId, criteria, false, activeFilter, pageable);
+                        categoryId, criteria, false, activeFilter, pageable);
                 return ResponseEntity.ok(products);
             }
-            Page<ProductDTO> products = productService.getProductsByRootCategory(rootCategoryId, normalizedSearch, activeFilter,
+            Page<ProductDTO> products = productService.getProductsByRootCategory(rootCategoryId, normalizedSearch,
+                    activeFilter,
                     pageable);
             return ResponseEntity.ok(products);
         }
@@ -259,7 +260,7 @@ public class ProductController {
         boolean useAdvanced = criteria.hasAdvancedFilters();
         if (useAdvanced) {
             Page<ProductDTO> products = productService.searchWithFilters(null, normalizedSearch, categoryId, criteria,
-                false, activeFilter, pageable);
+                    false, activeFilter, pageable);
             return ResponseEntity.ok(products);
         }
 

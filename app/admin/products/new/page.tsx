@@ -378,6 +378,32 @@ function NewProductPageContent() {
     const maybeWarranty = asBoolean("warrantyIncluded")
     if (maybeWarranty !== undefined) setWarrantyIncluded(maybeWarranty)
 
+    // Parts-specific fields
+    const maybePartCategory = fieldValue("partCategory")
+    if (maybePartCategory) setPartCategory(maybePartCategory)
+    const maybePartsDeep = fieldValue("partsDeepCategory")
+    if (maybePartsDeep) setPartsDeepCategory(maybePartsDeep)
+    const maybePartPosition = fieldValue("partPosition")
+    if (maybePartPosition) setPartPositionInput(maybePartPosition)
+
+    // Wheel-specific fields
+    const maybeWheelDiameter = asNumberString("wheelDiameterInch")
+    if (maybeWheelDiameter) setWheelDiameterInch(maybeWheelDiameter)
+    const maybeWheelWidth = asNumberString("wheelWidthInch")
+    if (maybeWheelWidth) setWheelWidthInch(maybeWheelWidth)
+    const maybeWheelBolt = fieldValue("wheelBoltPattern")
+    if (maybeWheelBolt) setWheelBoltPattern(maybeWheelBolt)
+    const maybeWheelOffset = asNumberString("wheelOffsetEt")
+    if (maybeWheelOffset) setWheelOffsetEt(maybeWheelOffset)
+
+    // Engine-specific fields
+    const maybeEngineType = fieldValue("engineType")
+    if (maybeEngineType) setEngineType(maybeEngineType)
+    const maybeEngineDisplacement = asNumberString("engineDisplacementCc")
+    if (maybeEngineDisplacement) setEngineDisplacementCc(maybeEngineDisplacement)
+    const maybeEnginePower = asNumberString("enginePowerHp")
+    if (maybeEnginePower) setEnginePowerHp(maybeEnginePower)
+
     showToast("OCR suggestions applied. Please review before saving.", "success")
   }
 

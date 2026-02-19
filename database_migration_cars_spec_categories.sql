@@ -71,31 +71,36 @@ SET
 WHERE slug = 'cars-euro'
   AND EXISTS (SELECT 1 FROM categories WHERE slug = 'cars-euro-spec');
 
--- 5) Normalize target group sort order.
+-- 5) Normalize target group sort order and images.
 UPDATE categories
 SET sort_order = 1,
+    image_url = '/JDM.jpg',
     updated_date = NOW()
 WHERE slug = 'cars-jdm';
 
 UPDATE categories
 SET sort_order = 2,
     active = true,
+    image_url = '/Euro-Spec.jpg',
     updated_date = NOW()
 WHERE slug = 'cars-euro-spec';
 
 UPDATE categories
 SET sort_order = 3,
     active = true,
+    image_url = '/US-Spec.jpg',
     updated_date = NOW()
 WHERE slug = 'cars-us-spec';
 
 UPDATE categories
 SET sort_order = 4,
+    image_url = '/Luxury.jpg',
     updated_date = NOW()
 WHERE slug = 'cars-luxury';
 
 UPDATE categories
 SET sort_order = 5,
+    image_url = '/Supercars.jpg',
     updated_date = NOW()
 WHERE slug = 'cars-super-cars';
 
