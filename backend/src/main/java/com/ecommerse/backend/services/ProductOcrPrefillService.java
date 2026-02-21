@@ -7,7 +7,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageOutputStream;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
@@ -15,6 +19,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.net.http.HttpTimeoutException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -66,7 +71,7 @@ public class ProductOcrPrefillService {
         int requestTimeoutSeconds = parseTimeoutSeconds(env("OCR_OPENAI_TIMEOUT_SECONDS", "22"));
         PreparedImage preparedImage = prepareImageForOcr(file);
         String mimeType = preparedImage.mimeType;
-        String base64Image = preparedImage.base64;
+        String base64Image = Base64.getEncoder().encodeToString(preparedImage.bytes);
 
         String instruction = "Extract automotive product details from the image and return JSON with this shape: " +
                 "{\"rawText\":\"...\",\"fields\":{" +
@@ -111,21 +116,13 @@ public class ProductOcrPrefillService {
                 "For cars, extract bodyType (sedan/coupe/suv/etc), driveType (fwd/rwd/awd), transmission type. " +
                 "For parts, identify position (front/rear/left/right) and category depth where visible.";
 
-        String effectiveModel = model;
         OpenAiCallResult responsesResult;
         try {
-            responsesResult = callResponsesApi(apiKey, effectiveModel, mimeType, base64Image, instruction,
-                    requestTimeoutSeconds);
-        } catch (IOException e) {
-            if (isTimeoutException(e) && fallbackModel != null && !fallbackModel.isBlank()
-                    && !fallbackModel.equalsIgnoreCase(model)) {
-                effectiveModel = fallbackModel.trim();
-                System.err.println("[OCR WARN] Primary model timed out, retrying with fallback model: " + effectiveModel);
-                responsesResult = callResponsesApi(apiKey, effectiveModel, mimeType, base64Image, instruction,
-                        requestTimeoutSeconds);
-            } else {
-                throw e;
-            }
+            responsesResult = callResponsesApi(apiKey, model, mimeType, base64Image, instruction,
+                requestTimeoutSeconds);
+        } catch (HttpTimeoutException timeoutException) {
+            responsesResult = new OpenAiCallResult(598,
+                "{\"error\":{\"message\":\"responses timeout for model " + model + "\"}}");
         }
         String content = "";
         String finalEndpoint = "responses";
@@ -137,8 +134,14 @@ public class ProductOcrPrefillService {
             content = extractResponseContentFromResponses(root);
         } else {
             finalErrorDetails = extractOpenAiErrorDetails(responsesResult.body);
-                OpenAiCallResult chatResult = callChatCompletionsApi(apiKey, effectiveModel, mimeType, base64Image, instruction,
-                    requestTimeoutSeconds);
+                        OpenAiCallResult chatResult;
+                        try {
+                        chatResult = callChatCompletionsApi(apiKey, model, mimeType, base64Image, instruction,
+                            requestTimeoutSeconds);
+                        } catch (HttpTimeoutException timeoutException) {
+                        chatResult = new OpenAiCallResult(598,
+                            "{\"error\":{\"message\":\"chat/completions timeout for model " + model + "\"}}");
+                        }
             finalEndpoint = "chat/completions";
             finalStatusCode = chatResult.statusCode;
 
@@ -151,12 +154,42 @@ public class ProductOcrPrefillService {
                 if (!chatError.isEmpty()) {
                     combinedError = (combinedError.isEmpty() ? "" : combinedError + " | ") + "fallback: " + chatError;
                 }
+
+                boolean shouldTryFallbackModel = !fallbackModel.equals(model)
+                        && (finalStatusCode == 408 || finalStatusCode == 429 || finalStatusCode == 500
+                                || finalStatusCode == 502 || finalStatusCode == 503 || finalStatusCode == 504
+                                || finalStatusCode == 598);
+
+                if (shouldTryFallbackModel) {
+                    try {
+                        OpenAiCallResult fallbackModelResult = callChatCompletionsApi(apiKey, fallbackModel, mimeType,
+                                base64Image, instruction, requestTimeoutSeconds);
+                        if (fallbackModelResult.statusCode >= 200 && fallbackModelResult.statusCode < 300) {
+                            JsonNode root = objectMapper.readTree(fallbackModelResult.body);
+                            content = root.path("choices").path(0).path("message").path("content").asText("");
+                        } else {
+                            String fallbackModelError = extractOpenAiErrorDetails(fallbackModelResult.body);
+                            if (!fallbackModelError.isBlank()) {
+                                combinedError = (combinedError.isEmpty() ? "" : combinedError + " | ")
+                                        + "fallback model " + fallbackModel + ": " + fallbackModelError;
+                            }
+                        }
+                    } catch (HttpTimeoutException timeoutException) {
+                        combinedError = (combinedError.isEmpty() ? "" : combinedError + " | ")
+                                + "fallback model " + fallbackModel + " timed out";
+                    }
+                }
+
+                if (!content.isBlank()) {
+                    // fallback model succeeded
+                } else {
                 String message = "OCR provider error (" + finalStatusCode + ")";
                 if (!combinedError.isEmpty()) {
                     message += ": " + combinedError;
                 }
-                System.err.println("[OCR ERROR] " + message + " | Model: " + effectiveModel + " | Endpoint: " + finalEndpoint);
+                System.err.println("[OCR ERROR] " + message + " | Model: " + model + " | Endpoint: " + finalEndpoint);
                 return notImplemented("openai", message + ".");
+                }
             }
         }
 
@@ -182,17 +215,13 @@ public class ProductOcrPrefillService {
             String instruction, int requestTimeoutSeconds) throws IOException, InterruptedException {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("model", model);
-        payload.put("max_output_tokens", 900);
         payload.put("input", List.of(
                 Map.of("role", "system", "content", List.of(
                         Map.of("type", "input_text",
                                 "text", "You extract automotive product data from images. Return strict JSON only."))),
                 Map.of("role", "user", "content", List.of(
                         Map.of("type", "input_text", "text", instruction),
-                Map.of(
-                    "type", "input_image",
-                    "image_url", "data:" + mimeType + ";base64," + base64Image,
-                    "detail", "low")))));
+                        Map.of("type", "input_image", "image_url", "data:" + mimeType + ";base64," + base64Image)))));
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://api.openai.com/v1/responses"))
@@ -221,9 +250,7 @@ public class ProductOcrPrefillService {
         userMessage.put("content", List.of(
                 Map.of("type", "text", "text", instruction),
                 Map.of("type", "image_url", "image_url",
-                Map.of(
-                    "url", "data:" + mimeType + ";base64," + base64Image,
-                    "detail", "low"))));
+                        Map.of("url", "data:" + mimeType + ";base64," + base64Image))));
         messages.add(userMessage);
 
         payload.put("messages", messages);
@@ -286,59 +313,90 @@ public class ProductOcrPrefillService {
         }
     }
 
-    private boolean isTimeoutException(IOException exception) {
-        if (exception == null) {
-            return false;
-        }
-        String message = exception.getMessage() == null ? "" : exception.getMessage().toLowerCase(Locale.ROOT);
-        return message.contains("timed out") || exception.getClass().getSimpleName().toLowerCase(Locale.ROOT).contains("timeout");
-    }
-
     private PreparedImage prepareImageForOcr(MultipartFile file) throws IOException {
-        byte[] original = file.getBytes();
-        int maxDimension = parseImageMaxDimension(env("OCR_IMAGE_MAX_DIMENSION", "1400"));
+        String inputMimeType = file.getContentType() != null ? file.getContentType() : "image/jpeg";
+        String normalizedMimeType = inputMimeType.toLowerCase(Locale.ROOT);
+        byte[] originalBytes = file.getBytes();
 
-        BufferedImage image = ImageIO.read(new ByteArrayInputStream(original));
-        if (image == null) {
-            String originalMimeType = file.getContentType() != null ? file.getContentType() : "image/jpeg";
-            return new PreparedImage(originalMimeType, Base64.getEncoder().encodeToString(original));
+        int maxDimension = parseDimension(env("OCR_OPENAI_IMAGE_MAX_DIMENSION", "1400"));
+        long maxBytes = parseMaxBytes(env("OCR_OPENAI_IMAGE_MAX_BYTES", "900000"));
+
+        if (originalBytes.length <= maxBytes) {
+            return new PreparedImage(originalBytes, normalizedMimeType.startsWith("image/") ? normalizedMimeType : "image/jpeg");
         }
 
-        int width = image.getWidth();
-        int height = image.getHeight();
-        int largest = Math.max(width, height);
-        if (largest <= maxDimension) {
-            return new PreparedImage("image/jpeg", Base64.getEncoder().encodeToString(reencodeJpeg(image)));
+        BufferedImage inputImage = ImageIO.read(new ByteArrayInputStream(originalBytes));
+        if (inputImage == null) {
+            return new PreparedImage(originalBytes, normalizedMimeType.startsWith("image/") ? normalizedMimeType : "image/jpeg");
         }
 
-        double ratio = (double) maxDimension / (double) largest;
-        int targetWidth = Math.max(1, (int) Math.round(width * ratio));
-        int targetHeight = Math.max(1, (int) Math.round(height * ratio));
+        int width = inputImage.getWidth();
+        int height = inputImage.getHeight();
+        double scale = Math.min(1.0, (double) maxDimension / Math.max(width, height));
 
-        BufferedImage scaled = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
-        Graphics2D graphics = scaled.createGraphics();
+        int targetWidth = Math.max(1, (int) Math.round(width * scale));
+        int targetHeight = Math.max(1, (int) Math.round(height * scale));
+
+        BufferedImage outputImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
+        Graphics2D graphics = outputImage.createGraphics();
         graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
         graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
         graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        graphics.drawImage(image, 0, 0, targetWidth, targetHeight, null);
+        graphics.drawImage(inputImage, 0, 0, targetWidth, targetHeight, null);
         graphics.dispose();
 
-        byte[] compressed = reencodeJpeg(scaled);
-        return new PreparedImage("image/jpeg", Base64.getEncoder().encodeToString(compressed));
+        byte[] jpegBytes = writeJpeg(outputImage, 0.82f);
+        if (jpegBytes.length > maxBytes) {
+            jpegBytes = writeJpeg(outputImage, 0.68f);
+        }
+
+        return new PreparedImage(jpegBytes, "image/jpeg");
     }
 
-    private byte[] reencodeJpeg(BufferedImage image) throws IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ImageIO.write(image, "jpg", baos);
-        return baos.toByteArray();
+    private byte[] writeJpeg(BufferedImage image, float quality) throws IOException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        ImageWriter writer = ImageIO.getImageWritersByFormatName("jpg").next();
+        try {
+            ImageWriteParam params = writer.getDefaultWriteParam();
+            if (params.canWriteCompressed()) {
+                params.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+                params.setCompressionQuality(quality);
+            }
+            ImageOutputStream ios = ImageIO.createImageOutputStream(output);
+            writer.setOutput(ios);
+            writer.write(null, new IIOImage(image, null, null), params);
+            ios.close();
+            return output.toByteArray();
+        } finally {
+            writer.dispose();
+        }
     }
 
-    private int parseImageMaxDimension(String value) {
+    private int parseDimension(String value) {
         try {
             int parsed = Integer.parseInt(value.trim());
-            return Math.max(512, Math.min(2200, parsed));
+            return Math.max(600, Math.min(2200, parsed));
         } catch (Exception ignored) {
             return 1400;
+        }
+    }
+
+    private long parseMaxBytes(String value) {
+        try {
+            long parsed = Long.parseLong(value.trim());
+            return Math.max(200_000L, Math.min(4_000_000L, parsed));
+        } catch (Exception ignored) {
+            return 900_000L;
+        }
+    }
+
+    private static class PreparedImage {
+        private final byte[] bytes;
+        private final String mimeType;
+
+        private PreparedImage(byte[] bytes, String mimeType) {
+            this.bytes = bytes;
+            this.mimeType = mimeType;
         }
     }
 
@@ -349,16 +407,6 @@ public class ProductOcrPrefillService {
         private OpenAiCallResult(int statusCode, String body) {
             this.statusCode = statusCode;
             this.body = body;
-        }
-    }
-
-    private static class PreparedImage {
-        private final String mimeType;
-        private final String base64;
-
-        private PreparedImage(String mimeType, String base64) {
-            this.mimeType = mimeType;
-            this.base64 = base64;
         }
     }
 
