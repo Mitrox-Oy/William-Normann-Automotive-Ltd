@@ -56,6 +56,7 @@ public class ProductOcrPrefillService {
     private ProductOcrPrefillResponse runOpenAiPrefill(MultipartFile file, String apiKey)
             throws IOException, InterruptedException {
         String model = env("OCR_OPENAI_MODEL", "gpt-5-mini");
+        int requestTimeoutSeconds = parseTimeoutSeconds(env("OCR_OPENAI_TIMEOUT_SECONDS", "22"));
         String mimeType = file.getContentType() != null ? file.getContentType() : "image/jpeg";
         String base64Image = Base64.getEncoder().encodeToString(file.getBytes());
 
@@ -102,7 +103,8 @@ public class ProductOcrPrefillService {
                 "For cars, extract bodyType (sedan/coupe/suv/etc), driveType (fwd/rwd/awd), transmission type. " +
                 "For parts, identify position (front/rear/left/right) and category depth where visible.";
 
-        OpenAiCallResult responsesResult = callResponsesApi(apiKey, model, mimeType, base64Image, instruction);
+        OpenAiCallResult responsesResult = callResponsesApi(apiKey, model, mimeType, base64Image, instruction,
+            requestTimeoutSeconds);
         String content = "";
         String finalEndpoint = "responses";
         int finalStatusCode = responsesResult.statusCode;
@@ -113,7 +115,8 @@ public class ProductOcrPrefillService {
             content = extractResponseContentFromResponses(root);
         } else {
             finalErrorDetails = extractOpenAiErrorDetails(responsesResult.body);
-            OpenAiCallResult chatResult = callChatCompletionsApi(apiKey, model, mimeType, base64Image, instruction);
+                OpenAiCallResult chatResult = callChatCompletionsApi(apiKey, model, mimeType, base64Image, instruction,
+                    requestTimeoutSeconds);
             finalEndpoint = "chat/completions";
             finalStatusCode = chatResult.statusCode;
 
@@ -153,8 +156,8 @@ public class ProductOcrPrefillService {
         return result;
     }
 
-    private OpenAiCallResult callResponsesApi(String apiKey, String model, String mimeType, String base64Image,
-            String instruction) throws IOException, InterruptedException {
+        private OpenAiCallResult callResponsesApi(String apiKey, String model, String mimeType, String base64Image,
+            String instruction, int requestTimeoutSeconds) throws IOException, InterruptedException {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("model", model);
         payload.put("input", List.of(
@@ -167,7 +170,7 @@ public class ProductOcrPrefillService {
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://api.openai.com/v1/responses"))
-                .timeout(Duration.ofSeconds(60))
+            .timeout(Duration.ofSeconds(requestTimeoutSeconds))
                 .header("Authorization", "Bearer " + apiKey)
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(payload)))
@@ -177,8 +180,8 @@ public class ProductOcrPrefillService {
         return new OpenAiCallResult(response.statusCode(), response.body());
     }
 
-    private OpenAiCallResult callChatCompletionsApi(String apiKey, String model, String mimeType, String base64Image,
-            String instruction) throws IOException, InterruptedException {
+        private OpenAiCallResult callChatCompletionsApi(String apiKey, String model, String mimeType, String base64Image,
+            String instruction, int requestTimeoutSeconds) throws IOException, InterruptedException {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("model", model);
 
@@ -199,7 +202,7 @@ public class ProductOcrPrefillService {
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://api.openai.com/v1/chat/completions"))
-                .timeout(Duration.ofSeconds(60))
+            .timeout(Duration.ofSeconds(requestTimeoutSeconds))
                 .header("Authorization", "Bearer " + apiKey)
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(payload)))
@@ -243,6 +246,15 @@ public class ProductOcrPrefillService {
             return message.isBlank() ? body : message;
         } catch (Exception e) {
             return body;
+        }
+    }
+
+    private int parseTimeoutSeconds(String value) {
+        try {
+            int parsed = Integer.parseInt(value.trim());
+            return Math.max(5, Math.min(29, parsed));
+        } catch (Exception ignored) {
+            return 22;
         }
     }
 
