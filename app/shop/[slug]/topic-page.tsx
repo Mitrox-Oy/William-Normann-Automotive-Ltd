@@ -13,7 +13,7 @@ import {
   type Category,
   type ShopTopic
 } from "@/lib/shopApi"
-import { getCategoryImageUrl } from "@/lib/utils"
+import { getImageUrl } from "@/lib/utils"
 import Image from "next/image"
 import Link from "next/link"
 import { motion } from "framer-motion"
@@ -251,16 +251,14 @@ interface SubcategoryTileProps {
 }
 
 function SubcategoryTile({ category, topic, index }: SubcategoryTileProps) {
-  const fallbackImageUrl =
-    CATEGORY_BACKGROUND_BY_SLUG[category.slug] ||
+  // Default image if category doesn't have one
+  const imageUrl = category.imageUrl
+    ? getImageUrl(category.imageUrl)
+    : CATEGORY_BACKGROUND_BY_SLUG[category.slug] ||
     (topic === "parts" && isEngineCategory(category) ? "/Engines _ Drivetrain.jpg" : undefined) ||
     (topic === "parts" && isWheelCategory(category) ? "/Wheels.jpg" : undefined) ||
     CATEGORY_BACKGROUND_BY_SLUG[topic] ||
     "/placeholder.jpg"
-
-  const imageUrl = category.imageUrl
-    ? getCategoryImageUrl(category.imageUrl)
-    : fallbackImageUrl
   const displayName = getCategoryDisplayName(topic, category)
 
   return (
@@ -283,12 +281,8 @@ function SubcategoryTile({ category, topic, index }: SubcategoryTileProps) {
             className="object-cover transition-transform duration-300 group-hover:scale-110"
             sizes="(min-width: 1024px) 20vw, (min-width: 640px) 33vw, 50vw"
             onError={(e) => {
-              if (!e.currentTarget.dataset.fallbackApplied) {
-                e.currentTarget.dataset.fallbackApplied = "true"
-                e.currentTarget.src = fallbackImageUrl
-                return
-              }
-              e.currentTarget.src = "/placeholder.jpg"
+              // Fallback if image doesn't exist
+              e.currentTarget.src = '/placeholder.jpg'
             }}
           />
           <div className="absolute inset-0 bg-black/30 transition-colors duration-300 group-hover:bg-black/40" />
