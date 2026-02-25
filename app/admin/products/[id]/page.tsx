@@ -70,6 +70,8 @@ function showToast(message: string, type: 'success' | 'error' | 'warning' = 'suc
     }
 }
 
+const CAR_CONDITION_SCORES = ["1", "2", "3", "4", "5"] as const
+
 interface Category {
     id: number
     name: string
@@ -1099,6 +1101,9 @@ export default function EditProductPage() {
     }
 
     const isCarProduct = productType === "car"
+    const conditionOptions = isCarProduct ? CAR_CONDITION_SCORES : PRODUCT_CONDITIONS
+    const hasLegacyConditionValue = isCarProduct && condition !== "all" && !CAR_CONDITION_SCORES.includes(condition as any)
+    const conditionPlaceholder = isCarProduct ? "Select condition (1-5)" : "Select condition"
     const showVehicleTab = productType === "part" || productType === "custom"
     const namePlaceholder = getProductNamePlaceholder(productType)
     const partsSubOptions = getPartsSubcategories(partsMainCategory)
@@ -1209,18 +1214,21 @@ export default function EditProductPage() {
                                             <Input value={productType || ""} readOnly />
                                         </div>
                                         <div>
-                                            <Label>Condition *</Label>
+                                            <Label>{isCarProduct ? "Condition (1-5) *" : "Condition *"}</Label>
                                             <Select value={condition} onValueChange={setCondition}>
                                                 <SelectTrigger>
-                                                    <SelectValue placeholder="Select condition" />
+                                                    <SelectValue placeholder={conditionPlaceholder} />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="all">Select condition</SelectItem>
-                                                    {PRODUCT_CONDITIONS.map((value) => (
+                                                    <SelectItem value="all">{conditionPlaceholder}</SelectItem>
+                                                    {conditionOptions.map((value) => (
                                                         <SelectItem key={value} value={value}>
-                                                            {value.replace("_", " ")}
+                                                            {isCarProduct ? `${value}/5` : value.replace("_", " ")}
                                                         </SelectItem>
                                                     ))}
+                                                    {hasLegacyConditionValue && (
+                                                        <SelectItem value={condition}>{condition}</SelectItem>
+                                                    )}
                                                 </SelectContent>
                                             </Select>
                                         </div>

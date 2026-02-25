@@ -43,7 +43,7 @@ function AdminProductsContent() {
   const [csvImportLoading, setCsvImportLoading] = useState(false)
   const [csvImportSummary, setCsvImportSummary] = useState<ProductCsvImportResult | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
+  const [statusFilter, setStatusFilter] = useState("active")
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const csvFileInputRef = useRef<HTMLInputElement | null>(null)
@@ -95,7 +95,7 @@ function AdminProductsContent() {
       const response = await getAdminProducts({
         page,
         limit: 20,
-        status: statusFilter !== "all" ? (statusFilter as any) : undefined,
+        status: statusFilter as any,
         search: searchQuery || undefined,
         rootCategoryId: topicRootCategoryId,  // Filter by topic
       })
@@ -451,7 +451,6 @@ function AdminProductsContent() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="archived">Archived</SelectItem>
                 </SelectContent>

@@ -47,6 +47,8 @@ function showToast(message: string, type: 'success' | 'error' | 'warning' = 'suc
   }
 }
 
+const CAR_CONDITION_SCORES = ["1", "2", "3", "4", "5"] as const
+
 interface Category {
   id: number
   name: string
@@ -303,25 +305,161 @@ function NewProductPageContent() {
     if (!ocrResult?.fields) return
 
     const fieldValue = (key: string) => ocrResult.fields[key]?.value?.trim()
+    const normalizeToken = (value?: string) =>
+      (value || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9\s_-]/g, " ")
+        .replace(/[_-]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+    const normalizeSlug = (value?: string) =>
+      (value || "")
+        .toLowerCase()
+        .replace(/[_\s]+/g, "-")
+        .replace(/[^a-z0-9-]/g, "")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "")
+
     const asBoolean = (key: string): boolean | undefined => {
       const value = fieldValue(key)
       if (!value) return undefined
       const normalized = value.toLowerCase()
-      if (["true", "1", "yes"].includes(normalized)) return true
-      if (["false", "0", "no"].includes(normalized)) return false
+      if (["true", "1", "yes", "y", "on"].includes(normalized)) return true
+      if (["false", "0", "no", "n", "off"].includes(normalized)) return false
       return undefined
     }
 
-    const asNumberString = (key: string): string | undefined => {
-      const value = fieldValue(key)
-      if (!value) return undefined
-      const normalized = value.replace(/[^0-9.\-]/g, "")
-      return normalized || undefined
+    const normalizeNumericLiteral = (literal: string): string => {
+      const compact = literal.trim().replace(/\s+/g, "")
+      const sign = compact.startsWith("-") ? "-" : ""
+      let core = compact.replace(/^[-+]/, "")
+      const commaCount = (core.match(/,/g) || []).length
+      const dotCount = (core.match(/\./g) || []).length
+      const looksThousandsSeparated = (value: string, separator: "," | ".") => {
+        const parts = value.split(separator)
+        if (parts.length < 2 || !parts[0] || parts[0].length > 3) return false
+        return parts.slice(1).every((segment) => segment.length === 3)
+      }
+
+      if (commaCount > 0 && dotCount > 0) {
+        if (core.lastIndexOf(",") > core.lastIndexOf(".")) {
+          core = core.replace(/\./g, "").replace(/,/g, ".")
+        } else {
+          core = core.replace(/,/g, "")
+        }
+      } else if (commaCount > 0) {
+        if (looksThousandsSeparated(core, ",")) {
+          core = core.replace(/,/g, "")
+        } else if (commaCount === 1 && core.length - core.lastIndexOf(",") - 1 <= 2) {
+          core = core.replace(",", ".")
+        } else {
+          core = core.replace(/,/g, "")
+        }
+      } else if (dotCount > 0) {
+        if (looksThousandsSeparated(core, ".")) {
+          core = core.replace(/\./g, "")
+        } else if (dotCount > 1) {
+          core = core.replace(/\./g, "")
+        }
+      }
+
+      core = core.replace(/[^0-9.]/g, "")
+      if (core.endsWith(".")) core = core.slice(0, -1)
+      if (!core) return ""
+      return `${sign}${core}`
     }
 
-    const categorySlug = fieldValue("categorySlug")
+    const asNumberString = (
+      key: string,
+      options: { integer?: boolean; mileage?: boolean } = { integer: true, mileage: false }
+    ): string | undefined => {
+      const value = fieldValue(key)
+      if (!value) return undefined
+
+      const match = value.match(/[-+]?\d{1,3}(?:[\s.,]\d{3})+|[-+]?\d+(?:[.,]\d+)?/)
+      if (!match) return undefined
+
+      const normalizedLiteral = normalizeNumericLiteral(match[0])
+      if (!normalizedLiteral) return undefined
+      let parsed = Number(normalizedLiteral)
+      if (!Number.isFinite(parsed)) return undefined
+
+      const suffixTail = value.slice(match.index! + match[0].length).trim().toLowerCase()
+      if (suffixTail.startsWith("k")) parsed *= 1000
+      else if (suffixTail.startsWith("m")) parsed *= 1_000_000
+
+      if (options.mileage) {
+        const lower = value.toLowerCase()
+        if (/\bmiles?\b/.test(lower) || /\bmi\b/.test(lower)) {
+          parsed *= 1.609344
+        }
+      }
+
+      if (options.integer ?? true) {
+        return String(Math.round(parsed))
+      }
+
+      return String(parsed)
+    }
+
+    const normalizeProductType = (value?: string): ProductType | undefined => {
+      const normalized = normalizeToken(value).replace(/\s+/g, "")
+      if (["car", "cars", "vehicle", "vehicles", "auto", "automobile"].includes(normalized)) return "car"
+      if (["part", "parts", "sparepart", "spares", "component", "components"].includes(normalized)) return "part"
+      if (["custom", "mod", "mods", "modification", "modifications"].includes(normalized)) return "custom"
+      if (["tool", "tools"].includes(normalized)) return "tool"
+      return undefined
+    }
+
+    const detectedProductType = normalizeProductType(fieldValue("productType"))
+    if (detectedProductType) {
+      setProductType(detectedProductType)
+    }
+
+    const findCategoryMatch = (candidate?: string): Category | undefined => {
+      if (!candidate) return undefined
+
+      const normalizedCandidateSlug = normalizeSlug(candidate)
+      const normalizedCandidateText = normalizeToken(candidate)
+      const direct = categories.find((category) => category.slug.toLowerCase() === normalizedCandidateSlug)
+      if (direct) return direct
+
+      const byName = categories.find((category) => normalizeToken(category.name) === normalizedCandidateText)
+      if (byName) return byName
+
+      const prefixedCandidates: string[] = [normalizedCandidateSlug]
+      if (!normalizedCandidateSlug.includes("-")) {
+        if (detectedProductType === "car") prefixedCandidates.push(`cars-${normalizedCandidateSlug}`)
+        if (detectedProductType === "part") prefixedCandidates.push(`parts-${normalizedCandidateSlug}`)
+        if (detectedProductType === "custom") prefixedCandidates.push(`custom-${normalizedCandidateSlug}`)
+        if (detectedProductType === "tool") prefixedCandidates.push(`tools-${normalizedCandidateSlug}`)
+      }
+
+      for (const prefixed of prefixedCandidates) {
+        const prefixedMatch = categories.find((category) => category.slug.toLowerCase() === prefixed)
+        if (prefixedMatch) return prefixedMatch
+      }
+
+      if (normalizedCandidateText.length >= 3) {
+        const loose = categories.find((category) => {
+          const categorySlug = category.slug.toLowerCase()
+          const categoryName = normalizeToken(category.name)
+          return (
+            categorySlug.includes(normalizedCandidateSlug) ||
+            normalizedCandidateSlug.includes(categorySlug) ||
+            categoryName.includes(normalizedCandidateText) ||
+            normalizedCandidateText.includes(categoryName)
+          )
+        })
+        if (loose) return loose
+      }
+
+      return undefined
+    }
+
+    const categorySlug = fieldValue("categorySlug") || fieldValue("category")
     if (categorySlug) {
-      const matched = categories.find((category) => category.slug.toLowerCase() === categorySlug.toLowerCase())
+      const matched = findCategoryMatch(categorySlug)
       if (matched) {
         setCategoryId(String(matched.id))
       }
@@ -330,14 +468,41 @@ function NewProductPageContent() {
     const maybeName = fieldValue("name")
     if (maybeName) setName(maybeName)
     const maybeDescription = fieldValue("description")
-    if (maybeDescription) setDescription(maybeDescription)
+    const maybeRawText = ocrResult.rawText?.trim()
+    const extraDescriptionFields = [
+      fieldValue("servicesHistory"),
+      fieldValue("upgrades"),
+      fieldValue("conditionNotes"),
+      fieldValue("notesAndGrades"),
+    ].filter(Boolean) as string[]
+
+    const baseDescription =
+      (maybeRawText && maybeRawText.length > (maybeDescription?.length || 0) ? maybeRawText : maybeDescription) || ""
+
+    const mergedDescription = [baseDescription, ...extraDescriptionFields]
+      .map((value) => value.trim())
+      .filter((value, index, all) => value && all.indexOf(value) === index)
+      .join("\n\n")
+
+    if (mergedDescription) {
+      setDescription(mergedDescription.slice(0, 1000))
+    }
     const maybeBrand = fieldValue("brand")
     if (maybeBrand) setBrand(maybeBrand)
     const maybeCondition = fieldValue("condition")
-    if (maybeCondition) setCondition(maybeCondition)
-    const maybeType = fieldValue("productType")
-    if (maybeType && ["car", "part", "custom"].includes(maybeType.toLowerCase())) {
-      setProductType(maybeType.toLowerCase() as ProductType)
+    if (maybeCondition) {
+      const normalizedCondition = normalizeToken(maybeCondition)
+      const conditionMapping: Record<string, string> = {
+        one: "1",
+        two: "2",
+        three: "3",
+        four: "4",
+        five: "5",
+        reconditioned: "refurbished",
+        refurb: "refurbished",
+      }
+      const mappedCondition = conditionMapping[normalizedCondition] || normalizedCondition
+      setCondition(mappedCondition)
     }
 
     const maybePrice = asNumberString("price")
@@ -346,7 +511,7 @@ function NewProductPageContent() {
     if (maybeStock) setStockQuantity(maybeStock)
     const maybeYear = asNumberString("year")
     if (maybeYear) setCarYear(maybeYear)
-    const maybeMileage = asNumberString("mileage")
+    const maybeMileage = asNumberString("mileage", { integer: true, mileage: true })
     if (maybeMileage) setMileage(maybeMileage)
     const maybePower = asNumberString("powerKw")
     if (maybePower) setPowerKw(maybePower)
@@ -358,14 +523,55 @@ function NewProductPageContent() {
     const maybeModel = fieldValue("model")
     if (maybeModel) setCarModel(maybeModel)
 
-    const maybeFuel = fieldValue("fuelType")
+    const maybeFuelRaw = normalizeToken(fieldValue("fuelType"))
+    const fuelMap: Record<string, string> = {
+      gasoline: "petrol",
+      gas: "petrol",
+      ev: "electric",
+      "plug in hybrid": "plug_in_hybrid",
+      "plugin hybrid": "plug_in_hybrid",
+      phev: "plug_in_hybrid",
+    }
+    const maybeFuel = fuelMap[maybeFuelRaw] || maybeFuelRaw.replace(/\s+/g, "_")
     if (maybeFuel && FUEL_TYPES.includes(maybeFuel as any)) setFuelType(maybeFuel)
-    const maybeTransmission = fieldValue("transmission")
+    const maybeTransmissionRaw = normalizeToken(fieldValue("transmission"))
+    const transmissionMap: Record<string, string> = {
+      auto: "automatic",
+      at: "automatic",
+      mt: "manual",
+      "semi automatic": "semi_automatic",
+      "semi-automatic": "semi_automatic",
+      "dual clutch": "dual_clutch",
+      dct: "dual_clutch",
+    }
+    const maybeTransmission = transmissionMap[maybeTransmissionRaw] || maybeTransmissionRaw.replace(/\s+/g, "_")
     if (maybeTransmission && TRANSMISSION_TYPES.includes(maybeTransmission as any)) setTransmission(maybeTransmission)
-    const maybeBody = fieldValue("bodyType")
+    const maybeBodyRaw = normalizeToken(fieldValue("bodyType"))
+    const bodyMap: Record<string, string> = {
+      hatch: "hatchback",
+      saloon: "sedan",
+      estate: "wagon",
+      truck: "pickup",
+      minivan: "van",
+      mpv: "van",
+      cabrio: "convertible",
+      roadster: "convertible",
+    }
+    const maybeBody = bodyMap[maybeBodyRaw] || maybeBodyRaw.replace(/\s+/g, "_")
     if (maybeBody && BODY_TYPES.includes(maybeBody as any)) setBodyType(maybeBody)
-    const maybeDrive = fieldValue("driveType")
+    const maybeDriveRaw = normalizeToken(fieldValue("driveType")).replace(/\s+/g, "")
+    const driveMap: Record<string, string> = {
+      "4x4": "4wd",
+      fourwheeldrive: "4wd",
+      allwheeldrive: "awd",
+      frontwheeldrive: "fwd",
+      rearwheeldrive: "rwd",
+    }
+    const maybeDrive = driveMap[maybeDriveRaw] || maybeDriveRaw
     if (maybeDrive && DRIVE_TYPES.includes(maybeDrive as any)) setDriveType(maybeDrive)
+    const maybeOemTypeRaw = normalizeToken(fieldValue("oemType"))
+    const maybeOemType = maybeOemTypeRaw === "genuine" ? "oem" : maybeOemTypeRaw
+    if (maybeOemType && OEM_TYPES.includes(maybeOemType as any)) setOemType(maybeOemType)
 
     const maybeActive = asBoolean("active")
     if (maybeActive !== undefined) setActive(maybeActive)
@@ -381,15 +587,19 @@ function NewProductPageContent() {
     // Parts-specific fields
     const maybePartCategory = fieldValue("partCategory")
     if (maybePartCategory) setPartCategory(maybePartCategory)
+    const maybePartsMain = normalizeSlug(fieldValue("partsMainCategory"))
+    if (maybePartsMain) setPartsMainCategory(maybePartsMain)
+    const maybePartsSub = normalizeSlug(fieldValue("partsSubCategory"))
+    if (maybePartsSub) setPartsSubCategory(maybePartsSub)
     const maybePartsDeep = fieldValue("partsDeepCategory")
     if (maybePartsDeep) setPartsDeepCategory(maybePartsDeep)
     const maybePartPosition = fieldValue("partPosition")
     if (maybePartPosition) setPartPositionInput(maybePartPosition)
 
     // Wheel-specific fields
-    const maybeWheelDiameter = asNumberString("wheelDiameterInch")
+    const maybeWheelDiameter = asNumberString("wheelDiameterInch", { integer: false })
     if (maybeWheelDiameter) setWheelDiameterInch(maybeWheelDiameter)
-    const maybeWheelWidth = asNumberString("wheelWidthInch")
+    const maybeWheelWidth = asNumberString("wheelWidthInch", { integer: false })
     if (maybeWheelWidth) setWheelWidthInch(maybeWheelWidth)
     const maybeWheelBolt = fieldValue("wheelBoltPattern")
     if (maybeWheelBolt) setWheelBoltPattern(maybeWheelBolt)
@@ -669,6 +879,8 @@ function NewProductPageContent() {
   }
 
   const isCarProduct = productType === "car"
+  const conditionOptions = isCarProduct ? CAR_CONDITION_SCORES : PRODUCT_CONDITIONS
+  const conditionPlaceholder = isCarProduct ? "Select condition (1-5)" : "Select condition"
   const showVehicleTab = productType === "part" || productType === "custom"
   const namePlaceholder = getProductNamePlaceholder(productType)
   const partsSubOptions = getPartsSubcategories(partsMainCategory)
@@ -828,15 +1040,17 @@ function NewProductPageContent() {
                       <Input value={productType || ""} readOnly />
                     </div>
                     <div className="space-y-2">
-                      <Label>Condition *</Label>
+                      <Label>{isCarProduct ? "Condition (1-5) *" : "Condition *"}</Label>
                       <Select value={condition} onValueChange={setCondition}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select condition" />
+                          <SelectValue placeholder={conditionPlaceholder} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">Select condition</SelectItem>
-                          {PRODUCT_CONDITIONS.map((value) => (
-                            <SelectItem key={value} value={value}>{value.replace("_", " ")}</SelectItem>
+                          <SelectItem value="all">{conditionPlaceholder}</SelectItem>
+                          {conditionOptions.map((value) => (
+                            <SelectItem key={value} value={value}>
+                              {isCarProduct ? `${value}/5` : value.replace("_", " ")}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>

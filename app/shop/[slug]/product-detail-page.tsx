@@ -246,6 +246,14 @@ export default function ProductDetailPage({ slug }: ProductDetailPageProps) {
       .join(" ")
   }
 
+  const formatConditionValue = (value?: string) => {
+    if (!value) return undefined
+    if (isCarProduct && /^[1-5]$/.test(value.trim())) {
+      return `${value.trim()}/5`
+    }
+    return formatEnumValue(value)
+  }
+
   const hasValue = (value: unknown) => {
     if (Array.isArray(value)) return value.length > 0
     return value !== undefined && value !== null && value !== ""
@@ -588,7 +596,7 @@ export default function ProductDetailPage({ slug }: ProductDetailPageProps) {
                       )}
                       {product.condition && (
                         <div>
-                          <span className="font-medium text-foreground">Condition:</span> {formatEnumValue(product.condition)}
+                          <span className="font-medium text-foreground">Condition:</span> {formatConditionValue(product.condition)}
                         </div>
                       )}
                       {product.oemType && (
