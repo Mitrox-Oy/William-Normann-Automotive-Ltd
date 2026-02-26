@@ -6,9 +6,12 @@ import com.ecommerse.backend.dto.ProductVariantResponse;
 import com.ecommerse.backend.entities.Category;
 import com.ecommerse.backend.entities.Product;
 import com.ecommerse.backend.entities.ProductVariant;
+import com.ecommerse.backend.repositories.CartItemRepository;
 import com.ecommerse.backend.repositories.CategoryRepository;
+import com.ecommerse.backend.repositories.OrderItemRepository;
 import com.ecommerse.backend.repositories.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -36,6 +39,8 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final CategoryService categoryService;
+    private final CartItemRepository cartItemRepository;
+    private final OrderItemRepository orderItemRepository;
 
     private static final int MAX_SKU_LENGTH = 50;
     private static final int SKU_SUFFIX_LENGTH = 6;
@@ -44,10 +49,13 @@ public class ProductService {
 
     @Autowired
     public ProductService(ProductRepository productRepository, CategoryRepository categoryRepository,
-            CategoryService categoryService) {
+            CategoryService categoryService, CartItemRepository cartItemRepository,
+            OrderItemRepository orderItemRepository) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.categoryService = categoryService;
+        this.cartItemRepository = cartItemRepository;
+        this.orderItemRepository = orderItemRepository;
     }
 
     /**
@@ -83,6 +91,15 @@ public class ProductService {
     @Transactional(readOnly = true)
     public Optional<ProductDTO> getProductById(Long id) {
         return productRepository.findByIdAndActiveTrue(id)
+                .map(this::convertToDTO);
+    }
+
+    /**
+     * Get product by ID including archived/inactive products.
+     */
+    @Transactional(readOnly = true)
+    public Optional<ProductDTO> getProductByIdIncludingInactive(Long id) {
+        return productRepository.findById(id)
                 .map(this::convertToDTO);
     }
 
@@ -202,14 +219,27 @@ public class ProductService {
     }
 
     /**
-     * Delete product (Owner only) - soft delete
+     * Delete product (Owner only) - permanent delete unless protected by order
+     * history.
      */
     public void deleteProduct(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Product not found with id: " + id));
 
-        product.setActive(false);
-        productRepository.save(product);
+        long orderReferences = orderItemRepository.countByProductId(id);
+        if (orderReferences > 0) {
+            throw new IllegalStateException(
+                    "Product is linked to existing orders and cannot be permanently deleted. Archive it instead.");
+        }
+
+        try {
+            cartItemRepository.deleteByProductId(id);
+            productRepository.delete(product);
+            productRepository.flush();
+        } catch (DataIntegrityViolationException ex) {
+            throw new IllegalStateException(
+                    "Product is referenced by other records and cannot be permanently deleted.", ex);
+        }
     }
 
     /**

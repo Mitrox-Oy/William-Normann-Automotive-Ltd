@@ -6,5 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
-    // Additional custom methods can be defined here if needed
+    long countByProductId(Long productId);
 }

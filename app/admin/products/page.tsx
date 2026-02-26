@@ -115,8 +115,9 @@ function AdminProductsContent() {
     try {
       await deleteProduct(id)
       await loadProducts()
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to delete product:", error)
+      alert(error?.message || "Failed to delete product")
     }
   }
 

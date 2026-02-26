@@ -289,8 +289,10 @@ public class ProductController {
     @GetMapping("/{id}")
     public ResponseEntity<ProductDTO> getProductById(
             @Parameter(description = "Product ID", example = "1", required = true) @PathVariable Long id) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean ownerOrAdmin = hasOwnerOrAdminRole(authentication);
 
-        return productService.getProductById(id)
+        return (ownerOrAdmin ? productService.getProductByIdIncludingInactive(id) : productService.getProductById(id))
                 .map(product -> ResponseEntity.ok(product))
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -413,16 +415,17 @@ public class ProductController {
         return ResponseEntity.ok(updatedProduct);
     }
 
-    @Operation(summary = "Delete product", description = "Soft delete a product (mark as inactive). Requires OWNER role.", security = @SecurityRequirement(name = "Bearer Authentication"))
+    @Operation(summary = "Delete product", description = "Permanently delete a product. Requires OWNER role.", security = @SecurityRequirement(name = "Bearer Authentication"))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Product deleted successfully"),
+            @ApiResponse(responseCode = "400", description = "Product cannot be deleted due to history/references"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "403", description = "Forbidden - requires OWNER role"),
             @ApiResponse(responseCode = "404", description = "Product not found")
     })
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('OWNER', 'ADMIN')")
-    public ResponseEntity<Void> deleteProduct(
+    public ResponseEntity<?> deleteProduct(
             @Parameter(description = "Product ID", example = "1", required = true) @PathVariable Long id) {
 
         try {
@@ -430,6 +433,8 @@ public class ProductController {
             return ResponseEntity.noContent().build();
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 
