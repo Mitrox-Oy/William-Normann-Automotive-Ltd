@@ -222,6 +222,8 @@ export default function ProductDetailPage({ slug }: ProductDetailPageProps) {
   const isQuoteOnly = product.quoteOnly === true
   const normalizedProductType = product.productType?.toLowerCase()
   const isCarProduct = normalizedProductType === "car"
+  const usesConditionScore =
+    normalizedProductType === "car" || normalizedProductType === "part" || normalizedProductType === "custom"
 
   const topicBackTarget = (() => {
     switch (normalizedProductType) {
@@ -248,7 +250,7 @@ export default function ProductDetailPage({ slug }: ProductDetailPageProps) {
 
   const formatConditionValue = (value?: string) => {
     if (!value) return undefined
-    if (isCarProduct && /^[1-5]$/.test(value.trim())) {
+    if (usesConditionScore && /^[1-5]$/.test(value.trim())) {
       return `${value.trim()}/5`
     }
     return formatEnumValue(value)

@@ -1101,9 +1101,10 @@ export default function EditProductPage() {
     }
 
     const isCarProduct = productType === "car"
-    const conditionOptions = isCarProduct ? CAR_CONDITION_SCORES : PRODUCT_CONDITIONS
-    const hasLegacyConditionValue = isCarProduct && condition !== "all" && !CAR_CONDITION_SCORES.includes(condition as any)
-    const conditionPlaceholder = isCarProduct ? "Select condition (1-5)" : "Select condition"
+    const usesConditionScore = productType === "car" || productType === "part" || productType === "custom"
+    const conditionOptions = usesConditionScore ? CAR_CONDITION_SCORES : PRODUCT_CONDITIONS
+    const hasLegacyConditionValue = usesConditionScore && condition !== "all" && !CAR_CONDITION_SCORES.includes(condition as any)
+    const conditionPlaceholder = usesConditionScore ? "Select condition (1-5)" : "Select condition"
     const showVehicleTab = productType === "part" || productType === "custom"
     const namePlaceholder = getProductNamePlaceholder(productType)
     const partsSubOptions = getPartsSubcategories(partsMainCategory)
@@ -1214,7 +1215,7 @@ export default function EditProductPage() {
                                             <Input value={productType || ""} readOnly />
                                         </div>
                                         <div>
-                                            <Label>{isCarProduct ? "Condition (1-5) *" : "Condition *"}</Label>
+                                            <Label>{usesConditionScore ? "Condition (1-5) *" : "Condition *"}</Label>
                                             <Select value={condition} onValueChange={setCondition}>
                                                 <SelectTrigger>
                                                     <SelectValue placeholder={conditionPlaceholder} />
@@ -1223,7 +1224,7 @@ export default function EditProductPage() {
                                                     <SelectItem value="all">{conditionPlaceholder}</SelectItem>
                                                     {conditionOptions.map((value) => (
                                                         <SelectItem key={value} value={value}>
-                                                            {isCarProduct ? `${value}/5` : value.replace("_", " ")}
+                                                            {usesConditionScore ? `${value}/5` : value.replace("_", " ")}
                                                         </SelectItem>
                                                     ))}
                                                     {hasLegacyConditionValue && (
