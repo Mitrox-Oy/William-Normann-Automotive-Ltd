@@ -173,8 +173,11 @@ export default function EditProductPage() {
     const [name, setName] = useState("")
     const [description, setDescription] = useState("")
     const [price, setPrice] = useState("")
+    const [salePrice, setSalePrice] = useState("")
+    const [onSale, setOnSale] = useState(false)
     const [sku, setSku] = useState("")
     const [stockQuantity, setStockQuantity] = useState("")
+    const [stockNa, setStockNa] = useState(false)
     const [categoryId, setCategoryId] = useState<string>("")
     const [imageUrl, setImageUrl] = useState("")
     const [initialImageUrl, setInitialImageUrl] = useState("")
@@ -353,8 +356,11 @@ export default function EditProductPage() {
                 setName(product.name || "")
                 setDescription(product.description || "")
                 setPrice(product.price?.toString() || "")
+                setSalePrice((product as any).salePrice?.toString() || "")
+                setOnSale(Boolean((product as any).onSale) || Number((product as any).salePrice) > 0)
                 setSku(product.sku || "")
                 setStockQuantity(product.stockQuantity?.toString() || product.stockLevel?.toString() || "0")
+                setStockNa(Boolean((product as any).stockNa))
                 setCategoryId(product.categoryId?.toString() || product.category || "")
                 setImageUrl(product.imageUrl || "")
                 setInitialImageUrl(product.imageUrl || "")
@@ -892,6 +898,12 @@ export default function EditProductPage() {
         return null
     }
 
+    useEffect(() => {
+        if (!onSale) {
+            setSalePrice("")
+        }
+    }, [onSale])
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
 
@@ -903,15 +915,30 @@ export default function EditProductPage() {
             return
         }
 
+        const parsedPrice = parseFloat(price)
+        const parsedSalePrice = parseFloat(salePrice)
+        if (onSale) {
+            if (!salePrice || !Number.isFinite(parsedSalePrice) || parsedSalePrice <= 0) {
+                showToast("Sale price must be greater than 0", "error")
+                return
+            }
+            if (!Number.isFinite(parsedPrice) || parsedSalePrice >= parsedPrice) {
+                showToast("Sale price must be lower than regular price", "error")
+                return
+            }
+        }
+
         try {
             setSaving(true)
 
             const updateData: any = {
                 name,
                 description: description || undefined,
-                price: parseFloat(price),
+                price: parsedPrice,
+                salePrice: onSale ? parsedSalePrice : undefined,
                 sku,
                 stockQuantity: parseInt(stockQuantity) || 0,
+                stockNa,
                 weight: weight ? parseFloat(weight) : undefined,
                 brand: brand || undefined,
                 active,
@@ -1266,8 +1293,9 @@ export default function EditProductPage() {
                                                 min="0"
                                                 value={stockQuantity}
                                                 onChange={(e) => setStockQuantity(e.target.value)}
-                                                required
-                                                placeholder="0"
+                                                required={!stockNa}
+                                                placeholder={stockNa ? "N/A" : "0"}
+                                                disabled={stockNa}
                                             />
                                         </div>
 
@@ -1285,6 +1313,29 @@ export default function EditProductPage() {
                                                 />
                                             </div>
                                         )}
+                                    </div>
+                                    <div className="grid gap-4 sm:grid-cols-3">
+                                        <div className="flex items-center gap-2">
+                                            <Switch id="onSale" checked={onSale} onCheckedChange={setOnSale} />
+                                            <Label htmlFor="onSale">On Sale</Label>
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="salePrice">Sale Price (€)</Label>
+                                            <Input
+                                                id="salePrice"
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                value={salePrice}
+                                                onChange={(e) => setSalePrice(e.target.value)}
+                                                placeholder="0.00"
+                                                disabled={!onSale}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Switch id="stockNa" checked={stockNa} onCheckedChange={setStockNa} />
+                                        <Label htmlFor="stockNa">Stock N/A</Label>
                                     </div>
                                 </CardContent>
                             </Card>

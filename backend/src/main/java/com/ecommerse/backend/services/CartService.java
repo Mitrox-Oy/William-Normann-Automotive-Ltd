@@ -49,6 +49,9 @@ public class CartService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private PricingService pricingService;
+
     @Value("${cart.expiration.hours:24}")
     private int cartExpirationHours;
 
@@ -57,6 +60,10 @@ public class CartService {
 
     @Value("${cart.reservation.minutes:30}")
     private int cartReservationMinutes;
+
+    private boolean tracksStock(Product product) {
+        return product != null && !Boolean.TRUE.equals(product.getStockNa());
+    }
 
     private void reserveStock(Product product, int quantity) {
         if (quantity <= 0) {
@@ -183,18 +190,20 @@ public class CartService {
             int currentQuantity = cartItem.getQuantity();
             int newQuantity = currentQuantity + quantity;
 
-            if (product.getStockQuantity() < quantity) {
+            if (tracksStock(product) && product.getStockQuantity() < quantity) {
                 throw new IllegalArgumentException("Insufficient stock. Available: " + product.getStockQuantity());
             }
 
             reserveStock(product, quantity);
 
             cartItem.setQuantity(newQuantity);
+            cartItem.setUnitPrice(pricingService.resolveEffectiveUnitPrice(product));
+            cartItem.setOriginalPrice(product.getPrice());
             cartItem.updateTotalPrice();
             cartItem.setUpdatedDate(LocalDateTime.now());
             refreshReservation(cartItem);
         } else {
-            if (product.getStockQuantity() < quantity) {
+            if (tracksStock(product) && product.getStockQuantity() < quantity) {
                 throw new IllegalArgumentException("Insufficient stock. Available: " + product.getStockQuantity());
             }
             reserveStock(product, quantity);
@@ -204,7 +213,8 @@ public class CartService {
             cartItem.setCart(cart);
             cartItem.setProduct(product);
             cartItem.setQuantity(quantity);
-            cartItem.setUnitPrice(product.getPrice());
+            cartItem.setUnitPrice(pricingService.resolveEffectiveUnitPrice(product));
+            cartItem.setOriginalPrice(product.getPrice());
             cartItem.updateTotalPrice();
             cartItem.setCreatedDate(LocalDateTime.now());
             cartItem.setUpdatedDate(LocalDateTime.now());
@@ -248,7 +258,7 @@ public class CartService {
         int currentQuantity = cartItem.getQuantity();
         if (quantity > currentQuantity) {
             int additional = quantity - currentQuantity;
-            if (product.getStockQuantity() < additional) {
+            if (tracksStock(product) && product.getStockQuantity() < additional) {
                 throw new IllegalArgumentException("Insufficient stock. Available: " + product.getStockQuantity());
             }
             reserveStock(product, additional);
@@ -258,6 +268,8 @@ public class CartService {
         }
 
         cartItem.setQuantity(quantity);
+        cartItem.setUnitPrice(pricingService.resolveEffectiveUnitPrice(product));
+        cartItem.setOriginalPrice(product.getPrice());
         cartItem.updateTotalPrice();
         cartItem.setUpdatedDate(LocalDateTime.now());
         refreshReservation(cartItem);
@@ -345,12 +357,13 @@ public class CartService {
                     if (!product.isAvailable()) {
                         return "Product '" + product.getName() + "' is currently unavailable";
                     }
-                    if (product.getStockQuantity() < item.getQuantity()) {
+                    if (tracksStock(product) && product.getStockQuantity() < item.getQuantity()) {
                         return "Insufficient stock for '" + product.getName() + "'. Available: "
                                 + product.getStockQuantity();
                     }
-                    if (!product.getPrice().equals(item.getUnitPrice())) {
-                        return "Price changed for '" + product.getName() + "'. Current price: " + product.getPrice();
+                    BigDecimal expectedUnitPrice = pricingService.resolveEffectiveUnitPrice(product);
+                    if (item.getUnitPrice() == null || expectedUnitPrice.compareTo(item.getUnitPrice()) != 0) {
+                        return "Price changed for '" + product.getName() + "'. Current price: " + expectedUnitPrice;
                     }
                     return null;
                 })
@@ -417,6 +430,8 @@ public class CartService {
 
         // Update each cart item
         for (CartItem item : cart.getItems()) {
+            item.setUnitPrice(pricingService.resolveEffectiveUnitPrice(item.getProduct()));
+            item.setOriginalPrice(item.getProduct().getPrice());
             item.updateTotalPrice();
             refreshReservation(item);
         }
@@ -539,8 +554,9 @@ public class CartService {
         dto.setUnitPrice(cartItem.getUnitPrice());
         dto.setTotalPrice(cartItem.getTotalPrice());
         dto.setAvailable(cartItem.getProduct().isAvailable());
-        dto.setInStock(cartItem.getProduct().getStockQuantity() >= cartItem.getQuantity());
-        dto.setCurrentStock(cartItem.getProduct().getStockQuantity());
+        boolean stockNa = Boolean.TRUE.equals(cartItem.getProduct().getStockNa());
+        dto.setInStock(stockNa || cartItem.getProduct().getStockQuantity() >= cartItem.getQuantity());
+        dto.setCurrentStock(stockNa ? null : cartItem.getProduct().getStockQuantity());
         dto.setCreatedDate(cartItem.getCreatedDate());
         dto.setUpdatedDate(cartItem.getUpdatedDate());
         dto.setReservationExpiresAt(cartItem.getReservedUntil());

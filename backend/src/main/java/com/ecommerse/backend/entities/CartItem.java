@@ -66,9 +66,9 @@ public class CartItem {
         this.cart = cart;
         this.product = product;
         this.quantity = quantity;
-        this.unitPrice = product.getPrice(); // Capture price at time of adding to cart
+        this.unitPrice = product.getEffectivePrice(); // Capture effective price at time of adding to cart
         this.originalPrice = product.getPrice(); // Store original price
-        this.isAvailable = product.getStockQuantity() > 0;
+        this.isAvailable = product.isInStock();
     }
 
     public void refreshReservation(int minutes) {
@@ -98,7 +98,7 @@ public class CartItem {
                 // Price changed - could implement notification or auto-update logic here
                 // For now, keep the original price when item was added
             }
-            this.isAvailable = product.getStockQuantity() >= this.quantity;
+            this.isAvailable = Boolean.TRUE.equals(product.getStockNa()) || product.getStockQuantity() >= this.quantity;
         }
     }
 
@@ -119,7 +119,8 @@ public class CartItem {
     }
 
     public boolean isStockAvailable() {
-        return product != null && product.getStockQuantity() >= quantity;
+        return product != null
+                && (Boolean.TRUE.equals(product.getStockNa()) || product.getStockQuantity() >= quantity);
     }
 
     public void increaseQuantity(int additionalQuantity) {

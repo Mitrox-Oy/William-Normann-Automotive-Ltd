@@ -148,8 +148,11 @@ function NewProductPageContent() {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [price, setPrice] = useState("")
+  const [salePrice, setSalePrice] = useState("")
+  const [onSale, setOnSale] = useState(false)
   const [sku, setSku] = useState("")
   const [stockQuantity, setStockQuantity] = useState("0")
+  const [stockNa, setStockNa] = useState(false)
   const [categoryId, setCategoryId] = useState<string>("")
   const [imageUrl, setImageUrl] = useState("")
   const [weight, setWeight] = useState("")
@@ -263,6 +266,12 @@ function NewProductPageContent() {
       setPartsDeepCategory("")
     }
   }, [categoryId, categories, partsMainCategory])
+
+  useEffect(() => {
+    if (!onSale) {
+      setSalePrice("")
+    }
+  }, [onSale])
 
   async function loadCategories() {
     try {
@@ -509,6 +518,8 @@ function NewProductPageContent() {
     if (maybePrice) setPrice(maybePrice)
     const maybeStock = asNumberString("stockQuantity")
     if (maybeStock) setStockQuantity(maybeStock)
+    const maybeStockNa = asBoolean("stockNa")
+    if (maybeStockNa !== undefined) setStockNa(maybeStockNa)
     const maybeYear = asNumberString("year")
     if (maybeYear) setCarYear(maybeYear)
     const maybeMileage = asNumberString("mileage", { integer: true, mileage: true })
@@ -748,6 +759,19 @@ function NewProductPageContent() {
       return
     }
 
+    const parsedPrice = parseFloat(price)
+    const parsedSalePrice = parseFloat(salePrice)
+    if (onSale) {
+      if (!salePrice || !Number.isFinite(parsedSalePrice) || parsedSalePrice <= 0) {
+        showToast("Sale price must be greater than 0", "error")
+        return
+      }
+      if (!Number.isFinite(parsedPrice) || parsedSalePrice >= parsedPrice) {
+        showToast("Sale price must be lower than regular price", "error")
+        return
+      }
+    }
+
     const publishValidationError = validatePublishAttributes()
     if (publishValidationError) {
       showToast(publishValidationError, "error")
@@ -766,8 +790,10 @@ function NewProductPageContent() {
       const productData: ProductCreateInput = {
         name,
         description: description || undefined,
-        price: parseFloat(price),
+        price: parsedPrice,
+        salePrice: onSale ? parsedSalePrice : undefined,
         stockQuantity: parseInt(stockQuantity) || 0,
+        stockNa,
         sku: sku.trim() ? sku.trim() : undefined,
         categoryId: parseInt(categoryId),
         imageUrl: imageUrl || undefined,
@@ -1085,7 +1111,28 @@ function NewProductPageContent() {
                         min="0"
                         value={stockQuantity}
                         onChange={(e) => setStockQuantity(e.target.value)}
-                        placeholder="0"
+                        placeholder={stockNa ? "N/A" : "0"}
+                        disabled={stockNa}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch id="onSale" checked={onSale} onCheckedChange={setOnSale} />
+                      <Label htmlFor="onSale">On Sale</Label>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="salePrice">Sale Price</Label>
+                      <Input
+                        id="salePrice"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={salePrice}
+                        onChange={(e) => setSalePrice(e.target.value)}
+                        placeholder="0.00"
+                        disabled={!onSale}
                       />
                     </div>
                   </div>
@@ -1115,6 +1162,10 @@ function NewProductPageContent() {
                     <div className="flex items-center space-x-2">
                       <Switch id="quoteOnly" checked={quoteOnly} onCheckedChange={setQuoteOnly} />
                       <Label htmlFor="quoteOnly">Request Quote Only</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch id="stockNa" checked={stockNa} onCheckedChange={setStockNa} />
+                      <Label htmlFor="stockNa">Stock N/A</Label>
                     </div>
                   </div>
                   {quoteOnly && (
@@ -1670,4 +1721,3 @@ export default function NewProductPage() {
     </RequireAuth>
   )
 }
-

@@ -17,6 +17,9 @@ import type { Product, Category } from './shopApi'
 export interface AdminProduct extends Product {
   stockLevel: number
   stockQuantity?: number
+  stockNa?: boolean
+  salePrice?: number
+  onSale?: boolean
   costPrice?: number
   profitMargin?: number
   sku: string
@@ -33,7 +36,9 @@ export interface ProductCreateInput {
   name: string // Required, 2-200 chars
   description?: string // Optional, max 1000 chars
   price: number // Required, BigDecimal
+  salePrice?: number // Optional, must be lower than price
   stockQuantity?: number // Optional, default 0
+  stockNa?: boolean // Optional, default false
   // Optional on create: backend auto-generates a stable SKU if blank/omitted.
   sku?: string // Optional, 3-50 chars if provided, unique
   imageUrl?: string // Optional
@@ -214,7 +219,17 @@ function parseBooleanFlag(value: unknown): boolean {
 
 function mapBackendProductToAdminProduct(p: any): AdminProduct {
   const stockQuantity = p.stockQuantity ?? p.stock_level ?? 0
-  const availability = stockQuantity > 0 ? 'in_stock' : 'out_of_stock'
+  const stockNa = parseBooleanFlag(p.stockNa ?? p.stock_na)
+  const regularPrice = typeof p.price === 'number' ? p.price : parseFloat(p.price) || 0
+  const rawSalePrice = p.salePrice ?? p.sale_price
+  const parsedSalePrice = typeof rawSalePrice === 'number' ? rawSalePrice : parseFloat(rawSalePrice)
+  const hasSalePrice = Number.isFinite(parsedSalePrice) && parsedSalePrice > 0 && parsedSalePrice < regularPrice
+  let availability: AdminProduct['availability'] = 'out_of_stock'
+  if (stockNa || stockQuantity > 10) {
+    availability = 'in_stock'
+  } else if (stockQuantity > 0) {
+    availability = 'low_stock'
+  }
   const images = p.images?.map((img: any) => img.imageUrl || img.url || '') || [p.imageUrl].filter(Boolean)
   const quoteOnly = parseBooleanFlag(p.quoteOnly ?? p.quote_only)
 
@@ -222,7 +237,10 @@ function mapBackendProductToAdminProduct(p: any): AdminProduct {
     id: p.id?.toString() || '',
     name: p.name || '',
     description: p.description || '',
-    price: typeof p.price === 'number' ? p.price : parseFloat(p.price) || 0,
+    price: regularPrice,
+    originalPrice: regularPrice,
+    salePrice: hasSalePrice ? parsedSalePrice : undefined,
+    onSale: hasSalePrice,
     currency: 'USD',
     availability,
     quoteOnly,
@@ -231,6 +249,7 @@ function mapBackendProductToAdminProduct(p: any): AdminProduct {
     categoryName: p.categoryName || '',
     sku: p.sku || '',
     stockLevel: stockQuantity,
+    stockNa,
     status: p.active ? 'active' : 'archived',
     slug: p.slug || p.sku?.toLowerCase().replace(/\s+/g, '-') || '',
     brand: p.brand || '',
@@ -712,8 +731,12 @@ export async function deleteProduct(id: string): Promise<void> {
 /**
  * Update product stock
  */
-export async function updateProductStock(id: string, stockLevel: number): Promise<AdminProduct> {
-  return api.patch<AdminProduct>(`/api/products/${id}/stock`, { stockLevel })
+export async function updateProductStock(id: string, stockLevel: number, stockNa?: boolean): Promise<void> {
+  return api.patch<void>(`/api/products/${id}/stock`, {
+    quantity: stockLevel,
+    stockLevel,
+    stockNa,
+  })
 }
 
 // ============================================================================
@@ -915,6 +938,78 @@ export async function uploadCategoryImage(file: File): Promise<{ imageUrl: strin
   }
 
   return payload as { imageUrl: string; message: string }
+}
+
+// ============================================================================
+// DISCOUNTS
+// ============================================================================
+
+export interface AdminDiscountCode {
+  id: string
+  code: string
+  description?: string
+  percentage: number
+  active: boolean
+  appliesToAllProducts: boolean
+  categoryIds: number[]
+  categoryNames: string[]
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface DiscountCodeInput {
+  code: string
+  description?: string
+  percentage: number
+  active?: boolean
+  appliesToAllProducts: boolean
+  categoryIds?: number[]
+}
+
+function mapBackendDiscountCode(discount: any): AdminDiscountCode {
+  return {
+    id: String(discount.id ?? ''),
+    code: String(discount.code ?? ''),
+    description: discount.description || undefined,
+    percentage: typeof discount.percentage === 'number' ? discount.percentage : parseFloat(discount.percentage) || 0,
+    active: parseBooleanFlag(discount.active ?? true),
+    appliesToAllProducts: parseBooleanFlag(discount.appliesToAllProducts ?? discount.applies_to_all_products ?? true),
+    categoryIds: Array.isArray(discount.categoryIds)
+      ? discount.categoryIds.map((id: any) => Number(id)).filter((id: number) => Number.isFinite(id))
+      : [],
+    categoryNames: Array.isArray(discount.categoryNames) ? discount.categoryNames.map((name: any) => String(name)) : [],
+    createdAt: discount.createdDate || undefined,
+    updatedAt: discount.updatedDate || undefined,
+  }
+}
+
+export async function getAdminDiscountCodes(): Promise<AdminDiscountCode[]> {
+  const response = await api.get<any[]>('/api/admin/discounts')
+  return (response || []).map(mapBackendDiscountCode)
+}
+
+export async function createAdminDiscountCode(input: DiscountCodeInput): Promise<AdminDiscountCode> {
+  const payload = {
+    ...input,
+    code: input.code.trim().toUpperCase(),
+    categoryIds: input.appliesToAllProducts ? [] : (input.categoryIds || []),
+  }
+  const response = await api.post<any>('/api/admin/discounts', payload)
+  return mapBackendDiscountCode(response)
+}
+
+export async function updateAdminDiscountCode(id: string, input: DiscountCodeInput): Promise<AdminDiscountCode> {
+  const payload = {
+    ...input,
+    code: input.code.trim().toUpperCase(),
+    categoryIds: input.appliesToAllProducts ? [] : (input.categoryIds || []),
+  }
+  const response = await api.put<any>(`/api/admin/discounts/${id}`, payload)
+  return mapBackendDiscountCode(response)
+}
+
+export async function deleteAdminDiscountCode(id: string): Promise<void> {
+  return api.delete<void>(`/api/admin/discounts/${id}`)
 }
 
 // ============================================================================

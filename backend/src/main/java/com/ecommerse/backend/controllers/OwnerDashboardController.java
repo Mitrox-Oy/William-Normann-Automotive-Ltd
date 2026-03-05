@@ -60,7 +60,7 @@ public class OwnerDashboardController {
         List<OrderDTO> recentOrders = orderService.getRecentOrdersForOwner(5);
 
         List<ProductSummary> lowStockProducts = productRepository
-                .findByActiveTrueAndStockQuantityLessThanOrderByStockQuantityAsc(5)
+                .findLowStockProducts(5)
                 .stream()
                 .map(p -> new ProductSummary(p.getId(), p.getName(), p.getSku(), p.getStockQuantity()))
                 .collect(java.util.stream.Collectors.toList());

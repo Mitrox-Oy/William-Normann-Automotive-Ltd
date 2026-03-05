@@ -10,6 +10,9 @@ COPY mvnw.cmd .
 COPY .mvn .mvn
 COPY pom.xml .
 
+# Ensure Maven wrapper is executable in container (macOS often checks out without +x)
+RUN chmod +x mvnw
+
 # Download dependencies (this layer will be cached if pom.xml doesn't change)
 RUN ./mvnw dependency:go-offline -B
 

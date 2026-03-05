@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
 import { RequireAuth } from "@/components/AuthProvider"
 import { getAdminProducts, updateProductStock, type AdminProduct } from "@/lib/adminApi"
 import { ChevronLeft } from "lucide-react"
@@ -32,11 +33,11 @@ function AdminInventoryContent() {
     loadProducts()
   }, [])
 
-  async function handleStockUpdate(id: string, newStock: number) {
+  async function handleStockUpdate(id: string, newStock: number, stockNa?: boolean) {
     try {
-      await updateProductStock(id, newStock)
+      await updateProductStock(id, newStock, stockNa)
       setProducts((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, stockLevel: newStock } : p))
+        prev.map((p) => (p.id === id ? { ...p, stockLevel: newStock, stockNa: stockNa ?? p.stockNa } : p))
       )
     } catch (error) {
       console.error("Failed to update stock:", error)
@@ -77,21 +78,33 @@ function AdminInventoryContent() {
                       <TableCell className="font-medium">{product.name}</TableCell>
                       <TableCell className="font-mono text-sm">{product.sku}</TableCell>
                       <TableCell>
-                        <Badge variant={product.stockLevel < 10 ? "destructive" : "secondary"}>
-                          {product.stockLevel}
+                        <Badge
+                          variant={product.stockNa ? "outline" : product.stockLevel < 10 ? "destructive" : "secondary"}
+                        >
+                          {product.stockNa ? "N/A" : product.stockLevel}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={Boolean(product.stockNa)}
+                              onCheckedChange={(checked) => {
+                                handleStockUpdate(product.id, product.stockLevel, checked)
+                              }}
+                            />
+                            <span className="text-xs text-muted-foreground">N/A</span>
+                          </div>
                           <Input
                             type="number"
                             min="0"
                             defaultValue={product.stockLevel}
                             className="w-24"
+                            disabled={Boolean(product.stockNa)}
                             onBlur={(e) => {
                               const newValue = parseInt(e.target.value)
                               if (!isNaN(newValue) && newValue !== product.stockLevel) {
-                                handleStockUpdate(product.id, newValue)
+                                handleStockUpdate(product.id, newValue, false)
                               }
                             }}
                           />
@@ -120,4 +133,3 @@ export default function AdminInventoryPage() {
     </RequireAuth>
   )
 }
-

@@ -246,10 +246,29 @@ public class ProductService {
      * Update stock quantity
      */
     public void updateStock(Long productId, Integer quantity) {
+        updateStock(productId, quantity, null);
+    }
+
+    public void updateStock(Long productId, Integer quantity, Boolean stockNa) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("Product not found with id: " + productId));
 
-        product.setStockQuantity(quantity);
+        if (quantity != null && quantity < 0) {
+            throw new IllegalArgumentException("Stock quantity cannot be negative");
+        }
+
+        if (stockNa != null) {
+            product.setStockNa(stockNa);
+        }
+
+        if (quantity != null) {
+            product.setStockQuantity(quantity);
+            // Numeric updates always switch back from N/A stock mode unless caller explicitly sets stockNa.
+            if (stockNa == null) {
+                product.setStockNa(false);
+            }
+        }
+
         productRepository.save(product);
     }
 
@@ -258,7 +277,7 @@ public class ProductService {
      */
     @Transactional(readOnly = true)
     public List<ProductDTO> getLowStockProducts(Integer threshold) {
-        return productRepository.findByActiveTrueAndStockQuantityLessThanOrderByStockQuantityAsc(threshold)
+        return productRepository.findLowStockProducts(threshold)
                 .stream()
                 .map(this::convertToDTO)
                 .toList();
@@ -273,6 +292,15 @@ public class ProductService {
             throw new IllegalArgumentException("Product price must be greater than 0");
         }
 
+        if (productDTO.getSalePrice() != null) {
+            if (productDTO.getSalePrice().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException("Sale price must be greater than 0");
+            }
+            if (productDTO.getSalePrice().compareTo(productDTO.getPrice()) >= 0) {
+                throw new IllegalArgumentException("Sale price must be lower than regular price");
+            }
+        }
+
         if (productDTO.getStockQuantity() != null && productDTO.getStockQuantity() < 0) {
             throw new IllegalArgumentException("Stock quantity cannot be negative");
         }
@@ -283,7 +311,9 @@ public class ProductService {
         product.setName(dto.getName());
         product.setDescription(dto.getDescription());
         product.setPrice(dto.getPrice());
+        product.setSalePrice(dto.getSalePrice());
         product.setStockQuantity(dto.getStockQuantity() != null ? dto.getStockQuantity() : 0);
+        product.setStockNa(dto.getStockNa() != null ? dto.getStockNa() : false);
         // SKU is resolved explicitly by createProduct (and preserved on update unless
         // manually overridden).
         // Do not normalize-case SKUs here.
@@ -403,7 +433,9 @@ public class ProductService {
         product.setName(dto.getName());
         product.setDescription(dto.getDescription());
         product.setPrice(dto.getPrice());
+        product.setSalePrice(dto.getSalePrice());
         product.setStockQuantity(dto.getStockQuantity() != null ? dto.getStockQuantity() : 0);
+        product.setStockNa(dto.getStockNa() != null ? dto.getStockNa() : false);
         // Do not auto-regenerate or clear SKU on update. Manual SKU overrides are
         // handled in updateProduct().
         product.setImageUrl(dto.getImageUrl());
@@ -522,7 +554,9 @@ public class ProductService {
         dto.setName(product.getName());
         dto.setDescription(product.getDescription());
         dto.setPrice(product.getPrice());
+        dto.setSalePrice(product.getSalePrice());
         dto.setStockQuantity(product.getStockQuantity());
+        dto.setStockNa(product.getStockNa());
         dto.setSku(product.getSku());
         dto.setImageUrl(product.getImageUrl());
         dto.setActive(product.getActive());

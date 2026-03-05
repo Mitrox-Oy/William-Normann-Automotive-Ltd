@@ -386,7 +386,7 @@ class ProductServiceTest {
         Integer threshold = 10;
         testProduct.setStockQuantity(5); // Below threshold
         List<Product> lowStockProducts = Arrays.asList(testProduct);
-        when(productRepository.findByActiveTrueAndStockQuantityLessThanOrderByStockQuantityAsc(threshold))
+        when(productRepository.findLowStockProducts(threshold))
                 .thenReturn(lowStockProducts);
 
         // When
@@ -395,7 +395,7 @@ class ProductServiceTest {
         // Then
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getStockQuantity()).isLessThan(threshold);
-        verify(productRepository).findByActiveTrueAndStockQuantityLessThanOrderByStockQuantityAsc(threshold);
+        verify(productRepository).findLowStockProducts(threshold);
     }
 
     @Test

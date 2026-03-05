@@ -77,6 +77,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/owner/login").permitAll()
                         .requestMatchers("/api/lead").permitAll()
                         .requestMatchers("/api/checkout/**", "/api/stripe/webhook").permitAll()
+                        .requestMatchers("/api/discounts/**").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
                         .requestMatchers("/api/images/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll()

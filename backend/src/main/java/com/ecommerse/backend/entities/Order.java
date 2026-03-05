@@ -42,6 +42,12 @@ public class Order {
     @Column(name = "tax_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal taxAmount = BigDecimal.ZERO;
 
+    @Column(name = "discount_code", length = 64)
+    private String discountCode;
+
+    @Column(name = "discount_amount", nullable = false, precision = 10, scale = 2)
+    private BigDecimal discountAmount = BigDecimal.ZERO;
+
     // Shipping Address
     @NotBlank(message = "Shipping address is required")
     @Size(max = 255, message = "Shipping address cannot exceed 255 characters")
@@ -158,7 +164,10 @@ public class Order {
                 .map(OrderItem::getTotalPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        this.totalAmount = itemsTotal.add(shippingAmount).add(taxAmount);
+        BigDecimal subtotalWithCharges = itemsTotal.add(shippingAmount).add(taxAmount);
+        BigDecimal appliedDiscount = discountAmount != null ? discountAmount : BigDecimal.ZERO;
+        BigDecimal computedTotal = subtotalWithCharges.subtract(appliedDiscount);
+        this.totalAmount = computedTotal.max(BigDecimal.ZERO);
     }
 
     public boolean canBeCancelled() {
@@ -266,6 +275,22 @@ public class Order {
 
     public void setTaxAmount(BigDecimal taxAmount) {
         this.taxAmount = taxAmount;
+    }
+
+    public String getDiscountCode() {
+        return discountCode;
+    }
+
+    public void setDiscountCode(String discountCode) {
+        this.discountCode = discountCode;
+    }
+
+    public BigDecimal getDiscountAmount() {
+        return discountAmount;
+    }
+
+    public void setDiscountAmount(BigDecimal discountAmount) {
+        this.discountAmount = discountAmount;
     }
 
     public String getShippingAddress() {

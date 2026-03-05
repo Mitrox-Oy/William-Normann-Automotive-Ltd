@@ -30,9 +30,16 @@ public class ProductDTO {
     @Schema(description = "Product price", example = "999.99", required = true)
     private BigDecimal price;
 
+    @DecimalMin(value = "0.0", inclusive = false, message = "Sale price must be greater than 0")
+    @Schema(description = "Optional sale price. Must be lower than regular price.", example = "899.99")
+    private BigDecimal salePrice;
+
     @Min(value = 0, message = "Stock quantity cannot be negative")
     @Schema(description = "Available stock quantity", example = "50")
     private Integer stockQuantity;
+
+    @Schema(description = "If true, stock is shown as N/A and product remains purchasable", example = "false")
+    private Boolean stockNa;
 
     // SKU is optional on create. If omitted/blank, backend auto-generates a stable
     // SKU.
@@ -406,12 +413,28 @@ public class ProductDTO {
         this.price = price;
     }
 
+    public BigDecimal getSalePrice() {
+        return salePrice;
+    }
+
+    public void setSalePrice(BigDecimal salePrice) {
+        this.salePrice = salePrice;
+    }
+
     public Integer getStockQuantity() {
         return stockQuantity;
     }
 
     public void setStockQuantity(Integer stockQuantity) {
         this.stockQuantity = stockQuantity;
+    }
+
+    public Boolean getStockNa() {
+        return stockNa;
+    }
+
+    public void setStockNa(Boolean stockNa) {
+        this.stockNa = stockNa;
     }
 
     public String getSku() {

@@ -52,7 +52,7 @@ export const metadata: Metadata = {
     "wholesale automotive distributor",
     "cross-border automotive trade",
     "discontinued car parts",
-    "JDM parts Europe",
+    "JDM-Spec parts Europe",
     "automotive parts import export",
   ],
   authors: [{ name: siteConfig.company.name }],

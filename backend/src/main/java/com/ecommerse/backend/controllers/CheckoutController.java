@@ -4,6 +4,7 @@ import com.ecommerse.backend.entities.Order;
 import com.ecommerse.backend.entities.OrderItem;
 import com.ecommerse.backend.entities.User;
 import com.ecommerse.backend.repositories.UserRepository;
+import com.ecommerse.backend.services.CartService;
 import com.ecommerse.backend.services.OrderService;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
@@ -36,17 +37,22 @@ import java.util.Map;
 public class CheckoutController {
 
         private static final Logger logger = LoggerFactory.getLogger(CheckoutController.class);
+        private static final BigDecimal STRIPE_CHECKOUT_MAX_TOTAL = BigDecimal.valueOf(2000);
+        private static final long STRIPE_CHECKOUT_MAX_TOTAL_CENTS = 200_000L;
         private final OrderService orderService;
+        private final CartService cartService;
         private final UserRepository userRepository;
         private final String frontendBaseUrl;
         private final String configuredStripeSecret;
 
         public CheckoutController(
                         OrderService orderService,
+                        CartService cartService,
                         UserRepository userRepository,
                         @Value("${app.frontend-url:http://localhost:4200}") String frontendBaseUrl,
                         @Value("${stripe.secret.key:${STRIPE_SECRET_KEY:}}") String configuredStripeSecret) {
                 this.orderService = orderService;
+                this.cartService = cartService;
                 this.userRepository = userRepository;
                 this.frontendBaseUrl = normalizeFrontendUrl(frontendBaseUrl);
                 this.configuredStripeSecret = configuredStripeSecret != null ? configuredStripeSecret.trim() : "";
@@ -81,7 +87,8 @@ public class CheckoutController {
                         String shippingPostalCode,
                         String shippingCountry,
                         BigDecimal shippingAmount,
-                        BigDecimal taxAmount) {
+                        BigDecimal taxAmount,
+                        String discountCode) {
         }
 
         /**
@@ -121,6 +128,15 @@ public class CheckoutController {
                         User user = userRepository.findByUsername(authentication.getName())
                                         .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
+                        BigDecimal cartTotal = cartService.getCartTotal(user.getId());
+                        if (cartTotal != null && cartTotal.compareTo(STRIPE_CHECKOUT_MAX_TOTAL) > 0) {
+                                return ResponseEntity.badRequest().body(Map.of(
+                                                "error",
+                                                "Stripe checkout is unavailable for carts above $2,000. Please request a quote.",
+                                                "requiresQuote", true,
+                                                "threshold", STRIPE_CHECKOUT_MAX_TOTAL));
+                        }
+
                         // Create order from cart with PENDING status
                         var orderDTO = orderService.createOrderFromCart(
                                         user.getId(),
@@ -129,7 +145,8 @@ public class CheckoutController {
                                         request.shippingPostalCode(),
                                         request.shippingCountry(),
                                         request.shippingAmount() != null ? request.shippingAmount() : BigDecimal.ZERO,
-                                        request.taxAmount() != null ? request.taxAmount() : BigDecimal.ZERO);
+                                        request.taxAmount() != null ? request.taxAmount() : BigDecimal.ZERO,
+                                        request.discountCode());
 
                         // Calculate total in cents
                         BigDecimal totalAmount = orderDTO.getTotalAmount() != null ? orderDTO.getTotalAmount()
@@ -187,6 +204,23 @@ public class CheckoutController {
                         }
                         var order = orderOpt.get();
 
+                        // Recalculate total from DB
+                        long totalCents = orderService.recalculateTotalCents(req.orderId());
+                        if (totalCents <= 0) {
+                                return ResponseEntity.badRequest().body(Map.of(
+                                                "error", "Total must be > 0",
+                                                "computedTotal", totalCents,
+                                                "hint", "Check unit prices and quantities"));
+                        }
+                        if (totalCents > STRIPE_CHECKOUT_MAX_TOTAL_CENTS) {
+                                return ResponseEntity.badRequest().body(Map.of(
+                                                "error",
+                                                "Stripe checkout is unavailable for carts above $2,000. Please request a quote.",
+                                                "requiresQuote", true,
+                                                "thresholdCents", STRIPE_CHECKOUT_MAX_TOTAL_CENTS,
+                                                "computedTotal", totalCents));
+                        }
+
                         // If order already has a checkout session, return it instead of creating a new
                         // one
                         // This prevents conflicts with old Stripe data and avoids duplicate sessions
@@ -195,15 +229,6 @@ public class CheckoutController {
                                 logger.info("Order {} already has checkout session {}, returning existing session",
                                                 req.orderId(), order.getStripeCheckoutSessionId());
                                 return ResponseEntity.ok(Map.of("id", order.getStripeCheckoutSessionId()));
-                        }
-
-                        // Recalculate total from DB
-                        long totalCents = orderService.recalculateTotalCents(req.orderId());
-                        if (totalCents <= 0) {
-                                return ResponseEntity.badRequest().body(Map.of(
-                                                "error", "Total must be > 0",
-                                                "computedTotal", totalCents,
-                                                "hint", "Check unit prices and quantities"));
                         }
 
                         // Load items from DB

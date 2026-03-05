@@ -18,8 +18,8 @@ import {
 import { TopicProductListing } from "@/components/topic-product-listing"
 
 const CARS_CATEGORY_DISPLAY_NAMES: Record<string, string> = {
-    "cars-bmw": "JDM",
-    "cars-jdm": "JDM",
+    "cars-bmw": "JDM-Spec",
+    "cars-jdm": "JDM-Spec",
     "cars-audi": "Euro-spec",
     "cars-euro": "Euro-spec",
     "cars-euro-spec": "Euro-spec",

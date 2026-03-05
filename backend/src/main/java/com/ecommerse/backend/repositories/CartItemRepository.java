@@ -62,7 +62,7 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
     /**
      * Find cart items with insufficient stock
      */
-    @Query("SELECT ci FROM CartItem ci WHERE ci.quantity > ci.product.stockQuantity")
+    @Query("SELECT ci FROM CartItem ci WHERE COALESCE(ci.product.stockNa, false) = false AND ci.quantity > ci.product.stockQuantity")
     List<CartItem> findItemsWithInsufficientStock();
 
     /**

@@ -39,6 +39,12 @@ public class OrderDTO {
     @Schema(description = "Tax amount", example = "139.99")
     private BigDecimal taxAmount;
 
+    @Schema(description = "Applied discount code", example = "SAVE10")
+    private String discountCode;
+
+    @Schema(description = "Discount amount removed from subtotal", example = "50.00")
+    private BigDecimal discountAmount;
+
     @NotBlank(message = "Shipping address is required")
     @Size(max = 255, message = "Shipping address cannot exceed 255 characters")
     @Schema(description = "Shipping address", example = "123 Main St, Apt 4B", required = true)
@@ -197,6 +203,22 @@ public class OrderDTO {
 
     public void setTaxAmount(BigDecimal taxAmount) {
         this.taxAmount = taxAmount;
+    }
+
+    public String getDiscountCode() {
+        return discountCode;
+    }
+
+    public void setDiscountCode(String discountCode) {
+        this.discountCode = discountCode;
+    }
+
+    public BigDecimal getDiscountAmount() {
+        return discountAmount;
+    }
+
+    public void setDiscountAmount(BigDecimal discountAmount) {
+        this.discountAmount = discountAmount;
     }
 
     public String getShippingAddress() {

@@ -106,12 +106,15 @@ public class WishlistService {
         dto.setId(product.getId());
         dto.setName(product.getName());
         dto.setDescription(product.getDescription());
-        dto.setPrice(product.getPrice());
+        dto.setPrice(product.getEffectivePrice());
+        dto.setSalePrice(product.getSalePrice());
         dto.setStockQuantity(product.getStockQuantity());
         dto.setSku(product.getSku());
         dto.setImageUrl(product.getImageUrl());
         dto.setActive(product.getActive());
         dto.setFeatured(product.getFeatured());
+        dto.setQuoteOnly(product.getQuoteOnly());
+        dto.setStockNa(product.getStockNa());
         dto.setWeight(product.getWeight());
         dto.setBrand(product.getBrand());
         dto.setCategoryId(product.getCategory().getId());

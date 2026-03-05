@@ -5,47 +5,178 @@ import { SectionHeading } from "@/components/section-heading"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { useCart } from "@/components/CartContext"
 import { useAuth } from "@/components/AuthProvider"
-import { formatCurrency, createCheckoutOrder, createCheckoutSession, syncCartToBackend } from "@/lib/shopApi"
+import { formatCurrency, createCheckoutOrder, createCheckoutSession, previewDiscountCode, syncCartToBackend, type DiscountPreviewResponse } from "@/lib/shopApi"
+import { openLeadInWhatsApp } from "@/lib/whatsappLead"
 import { getImageUrl } from "@/lib/utils"
-import { ShoppingCart, Minus, Plus, Trash2, ArrowLeft, FileText, Package, CreditCard, Loader2 } from "lucide-react"
+import { ShoppingCart, Minus, Plus, Trash2, ArrowLeft, FileText, Package, CreditCard, Loader2, CheckCircle2, MessageSquare } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { loadStripe } from "@stripe/stripe-js"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 // Initialize Stripe
 const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''
 const stripePromise = loadStripe(stripePublishableKey)
+const STRIPE_CHECKOUT_THRESHOLD = 2000
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, clearCart, getTotalItems, getTotalPrice } = useCart()
-  const { isAuthenticated, token } = useAuth()
+  const { isAuthenticated, token, user } = useAuth()
   const router = useRouter()
   const [isProcessingCheckout, setIsProcessingCheckout] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string>("")
+  const [discountCodeInput, setDiscountCodeInput] = useState("")
+  const [isApplyingDiscount, setIsApplyingDiscount] = useState(false)
+  const [discountError, setDiscountError] = useState("")
+  const [appliedDiscountCode, setAppliedDiscountCode] = useState<string>("")
+  const [discountPreview, setDiscountPreview] = useState<DiscountPreviewResponse | null>(null)
+  const [showQuoteDialog, setShowQuoteDialog] = useState(false)
+  const [quoteFormState, setQuoteFormState] = useState<"idle" | "loading" | "success" | "error">("idle")
 
   const totalItems = getTotalItems()
   const totalPrice = getTotalPrice()
   const currency = items[0]?.product.currency || 'USD'
+  const requiresQuoteOnly = totalPrice > STRIPE_CHECKOUT_THRESHOLD
+  const appliedCodeSavings = discountPreview?.valid ? discountPreview.codeSavings : 0
+  const finalCheckoutTotal = discountPreview?.valid ? discountPreview.totalAfterDiscount : totalPrice
+  const cartSummaryLines = items.map((item, index) => {
+    const partNumber = item.product.partNumber || item.product.sku || "N/A"
+    const lineTotal = formatCurrency(item.product.price * item.quantity, item.product.currency)
+    return `${index + 1}. ${item.product.name} (Part #: ${partNumber}) x ${item.quantity} - ${lineTotal}`
+  })
+
+  useEffect(() => {
+    if (!appliedDiscountCode || items.length === 0) return
+    let canceled = false
+
+    async function refreshDiscountPreview() {
+      try {
+        const preview = await previewDiscountCode(
+          appliedDiscountCode,
+          items.map((item) => ({ productId: item.product.id, quantity: item.quantity })),
+        )
+        if (canceled) return
+        if (!preview.valid) {
+          setAppliedDiscountCode("")
+          setDiscountPreview(null)
+          setDiscountError(preview.message || "Discount code is no longer valid.")
+          return
+        }
+        setDiscountPreview(preview)
+        setDiscountError("")
+      } catch (error: any) {
+        if (canceled) return
+        setAppliedDiscountCode("")
+        setDiscountPreview(null)
+        setDiscountError(error?.message || "Failed to refresh discount.")
+      }
+    }
+
+    refreshDiscountPreview()
+    return () => {
+      canceled = true
+    }
+  }, [appliedDiscountCode, items])
+
+  useEffect(() => {
+    if (items.length !== 0) return
+    setAppliedDiscountCode("")
+    setDiscountPreview(null)
+    setDiscountCodeInput("")
+    setDiscountError("")
+  }, [items.length])
 
   const handleRequestQuote = () => {
-    const cartSummary = items
-      .map((item) => `${item.product.name} (Part #: ${item.product.partNumber || 'N/A'}) x ${item.quantity}`)
-      .join(', ')
+    setCheckoutError("")
+    setQuoteFormState("idle")
+    setShowQuoteDialog(true)
+  }
 
-    const queryParams = new URLSearchParams({
-      cart_items: cartSummary,
-      total_items: totalItems.toString(),
-    })
+  const handleApplyDiscount = async () => {
+    const normalizedCode = discountCodeInput.trim().toUpperCase()
+    if (!normalizedCode) {
+      setDiscountError("Enter a discount code first.")
+      return
+    }
 
-    router.push(`/#contact?${queryParams.toString()}`)
+    setIsApplyingDiscount(true)
+    setDiscountError("")
+
+    try {
+      const preview = await previewDiscountCode(
+        normalizedCode,
+        items.map((item) => ({ productId: item.product.id, quantity: item.quantity })),
+      )
+
+      if (!preview.valid) {
+        setAppliedDiscountCode("")
+        setDiscountPreview(null)
+        setDiscountError(preview.message || "Discount code is invalid.")
+        return
+      }
+
+      setAppliedDiscountCode(preview.code || normalizedCode)
+      setDiscountPreview(preview)
+      setDiscountCodeInput(preview.code || normalizedCode)
+      setDiscountError("")
+    } catch (error: any) {
+      setAppliedDiscountCode("")
+      setDiscountPreview(null)
+      setDiscountError(error?.message || "Failed to apply discount code.")
+    } finally {
+      setIsApplyingDiscount(false)
+    }
+  }
+
+  const handleRemoveDiscount = () => {
+    setAppliedDiscountCode("")
+    setDiscountPreview(null)
+    setDiscountError("")
+  }
+
+  const handleCartQuoteSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setQuoteFormState("loading")
+
+    const formData = new FormData(e.currentTarget)
+    const name = String(formData.get("name") || "")
+    const email = String(formData.get("email") || "")
+    const phone = String(formData.get("phone") || "")
+    const userMessage = String(formData.get("message") || "").trim()
+    const cartMessage = `Cart Items:\n${cartSummaryLines.join("\n")}\nEstimated Total: ${formatCurrency(totalPrice, currency)}`
+    const composedMessage = userMessage ? `${userMessage}\n\n${cartMessage}` : cartMessage
+
+    try {
+      openLeadInWhatsApp({
+        source: "cart_quote",
+        name,
+        email,
+        phone: phone || null,
+        message: composedMessage,
+        product: `${totalItems} cart item${totalItems === 1 ? "" : "s"}`,
+        quantity: totalItems.toString(),
+      })
+      setQuoteFormState("success")
+    } catch (error) {
+      console.error("Cart quote submission error:", error)
+      setQuoteFormState("error")
+    }
   }
 
   const handleCheckout = async () => {
+    if (requiresQuoteOnly) {
+      setCheckoutError("Orders above $2,000 must be submitted as a quote request.")
+      return
+    }
+
     if (!isAuthenticated || !token) {
       router.push('/login?redirect=/cart')
       return
@@ -75,6 +206,7 @@ export default function CartPage() {
         shippingCountry: "GB",
         shippingAmount: 0,
         taxAmount: 0,
+        discountCode: appliedDiscountCode || undefined,
       })
 
       if (!orderResponse?.orderId) {
@@ -289,6 +421,12 @@ export default function CartPage() {
                     <span className="text-muted-foreground">Subtotal</span>
                     <span className="font-medium">{formatCurrency(totalPrice, currency)}</span>
                   </div>
+                  {appliedCodeSavings > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Discount ({appliedDiscountCode})</span>
+                      <span className="font-medium text-green-600">-{formatCurrency(appliedCodeSavings, currency)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Total Items</span>
                     <span className="font-medium">{totalItems}</span>
@@ -296,11 +434,42 @@ export default function CartPage() {
                   <Separator />
                   <div className="flex justify-between">
                     <span className="font-semibold">Estimated Total</span>
-                    <span className="text-xl font-bold">{formatCurrency(totalPrice, currency)}</span>
+                    <span className="text-xl font-bold">{formatCurrency(finalCheckoutTotal, currency)}</span>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Final pricing, shipping, and duties will be calculated in your quote
                   </p>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-3">
+                  <Label htmlFor="discount-code">Discount Code</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="discount-code"
+                      value={discountCodeInput}
+                      onChange={(e) => setDiscountCodeInput(e.target.value)}
+                      placeholder="Enter code"
+                      className="uppercase"
+                    />
+                    <Button type="button" variant="outline" onClick={handleApplyDiscount} disabled={isApplyingDiscount}>
+                      {isApplyingDiscount ? "Applying..." : "Apply"}
+                    </Button>
+                  </div>
+                  {appliedDiscountCode && discountPreview?.valid && (
+                    <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50 px-3 py-2">
+                      <p className="text-xs text-green-800">
+                        {appliedDiscountCode} applied. You save {formatCurrency(appliedCodeSavings, currency)}.
+                      </p>
+                      <Button type="button" variant="ghost" size="sm" onClick={handleRemoveDiscount}>
+                        Remove
+                      </Button>
+                    </div>
+                  )}
+                  {discountError && (
+                    <p className="text-xs text-red-700">{discountError}</p>
+                  )}
                 </div>
 
                 <Separator />
@@ -312,32 +481,73 @@ export default function CartPage() {
                 )}
 
                 <div className="space-y-3">
-                  <Button
-                    onClick={handleCheckout}
-                    size="lg"
-                    className="w-full"
-                    disabled={isProcessingCheckout}
-                  >
-                    {isProcessingCheckout ? (
-                      <>
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
+                  {requiresQuoteOnly ? (
+                    <>
+                      {/* Quote-required info panel */}
+                      <div className="rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 ring-1 ring-primary/30">
+                            <MessageSquare className="h-4 w-4 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold leading-tight">
+                              This order goes through our quote process
+                            </p>
+                            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                              Orders above $2,000 receive a personalised quote with accurate shipping, duties, and lead times — handled directly by our team.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Quote is primary CTA */}
+                      <Button onClick={handleRequestQuote} size="lg" className="w-full">
+                        <FileText className="mr-2 h-5 w-5" />
+                        Request a Quote
+                      </Button>
+
+                      {/* Stripe checkout quietly disabled */}
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        className="w-full cursor-not-allowed opacity-40"
+                        disabled
+                        title="Checkout is not available for orders above $2,000"
+                      >
                         <CreditCard className="mr-2 h-5 w-5" />
-                        Proceed to Checkout
-                      </>
-                    )}
-                  </Button>
-                  <Button onClick={handleRequestQuote} variant="outline" size="lg" className="w-full">
-                    <FileText className="mr-2 h-5 w-5" />
-                    Request Quote Instead
-                  </Button>
-                  {!isAuthenticated && (
-                    <p className="text-center text-xs text-muted-foreground">
-                      You'll be asked to sign in to complete checkout
-                    </p>
+                        Checkout Unavailable
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        onClick={handleCheckout}
+                        size="lg"
+                        className="w-full"
+                        disabled={isProcessingCheckout}
+                      >
+                        {isProcessingCheckout ? (
+                          <>
+                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <CreditCard className="mr-2 h-5 w-5" />
+                            Proceed to Checkout
+                          </>
+                        )}
+                      </Button>
+                      <Button onClick={handleRequestQuote} variant="outline" size="lg" className="w-full">
+                        <FileText className="mr-2 h-5 w-5" />
+                        Request Quote Instead
+                      </Button>
+                      {!isAuthenticated && (
+                        <p className="text-center text-xs text-muted-foreground">
+                          You'll be asked to sign in to complete checkout
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
 
@@ -351,7 +561,104 @@ export default function CartPage() {
           </div>
         </div>
       </Container>
+
+      <Dialog open={showQuoteDialog} onOpenChange={setShowQuoteDialog}>
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle>Request a Cart Quote</DialogTitle>
+            <DialogDescription>
+              Submit your cart details through the same WhatsApp quote flow.
+            </DialogDescription>
+          </DialogHeader>
+
+          {quoteFormState === "success" ? (
+            <div className="py-6 text-center">
+              <CheckCircle2 className="mx-auto mb-4 h-16 w-16 text-primary" />
+              <h3 className="mb-3 text-xl font-bold">Quote Request Ready</h3>
+              <p className="mb-6 text-muted-foreground">
+                Your cart quote details were prepared for WhatsApp.
+              </p>
+              <Button onClick={() => setShowQuoteDialog(false)}>Close</Button>
+            </div>
+          ) : (
+            <form onSubmit={handleCartQuoteSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="cart-quote-name">
+                  Full Name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="cart-quote-name"
+                  name="name"
+                  required
+                  placeholder="John Smith"
+                  defaultValue={user?.name || ""}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cart-quote-email">
+                  Email Address <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="cart-quote-email"
+                  name="email"
+                  type="email"
+                  required
+                  placeholder="john@example.com"
+                  defaultValue={user?.email || ""}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cart-quote-phone">Phone Number</Label>
+                <Input id="cart-quote-phone" name="phone" type="tel" placeholder="+1 (555) 123-4567" />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cart-quote-message">Additional Details</Label>
+                <Textarea
+                  id="cart-quote-message"
+                  name="message"
+                  placeholder="Any specific requirements or delivery notes..."
+                  rows={4}
+                />
+              </div>
+
+              <div className="rounded-lg border border-white/15 bg-gradient-to-br from-slate-900/85 via-slate-800/75 to-slate-900/85 p-3 text-sm shadow-sm backdrop-blur-sm">
+                <p className="font-medium">Cart Quote Details:</p>
+                <p className="text-slate-200">Items: {totalItems}</p>
+                <p className="text-slate-200">Estimated Total: {formatCurrency(totalPrice, currency)}</p>
+                <div className="mt-2 space-y-1 text-xs text-slate-200">
+                  {cartSummaryLines.map((line, index) => (
+                    <p key={`${index}-${line}`}>{line}</p>
+                  ))}
+                </div>
+              </div>
+
+              {quoteFormState === "error" && (
+                <p className="text-sm text-destructive">
+                  There was an error preparing your quote request. Please try again.
+                </p>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  disabled={quoteFormState === "loading"}
+                  onClick={() => setShowQuoteDialog(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" className="flex-1" disabled={quoteFormState === "loading"}>
+                  {quoteFormState === "loading" ? "Submitting..." : "Submit Request"}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </section>
   )
 }
-

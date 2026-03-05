@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RequireAuth } from "@/components/AuthProvider"
 import { getDashboardStats, loadTestCreateProducts, loadTestDeleteProducts, type DashboardStats } from "@/lib/adminApi"
 import { formatCurrency } from "@/lib/shopApi"
-import { DollarSign, ShoppingBag, Users, Package, TrendingUp, AlertTriangle } from "lucide-react"
+import { DollarSign, ShoppingBag, Users, Package, TrendingUp, AlertTriangle, Percent } from "lucide-react"
 import Link from "next/link"
 
 function AdminDashboardContent() {
@@ -246,7 +246,7 @@ function AdminDashboardContent() {
         </div>
 
         {/* Quick Links */}
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <Link href="/admin/products">
             <Card className="transition-all hover:shadow-lg hover:border-primary">
               <CardContent className="flex items-center gap-4 p-6">
@@ -298,6 +298,20 @@ function AdminDashboardContent() {
                 <div>
                   <h4 className="font-semibold">Inventory</h4>
                   <p className="text-sm text-muted-foreground">Stock levels</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/admin/discounts">
+            <Card className="transition-all hover:shadow-lg hover:border-primary">
+              <CardContent className="flex items-center gap-4 p-6">
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                  <Percent className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h4 className="font-semibold">Discounts</h4>
+                  <p className="text-sm text-muted-foreground">Codes and campaigns</p>
                 </div>
               </CardContent>
             </Card>
@@ -403,4 +417,3 @@ export default function AdminDashboardPage() {
     </RequireAuth>
   )
 }
-

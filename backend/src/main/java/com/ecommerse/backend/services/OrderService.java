@@ -49,12 +49,16 @@ public class OrderService {
     private final CartRepository cartRepository;
     private final CartService cartService;
     private final ProductRepository productRepository;
+    private final DiscountService discountService;
+    private final PricingService pricingService;
     private final EmailService emailService;
     private final com.ecommerse.backend.services.analytics.AlertService alertService;
     private final String stripeSecretKeyProperty;
 
     public OrderService(OrderRepository orderRepository, UserRepository userRepository,
             CartRepository cartRepository, CartService cartService, ProductRepository productRepository,
+            DiscountService discountService,
+            PricingService pricingService,
             EmailService emailService,
             com.ecommerse.backend.services.analytics.AlertService alertService,
             @Value("${stripe.secret.key:}") String stripeSecretKeyProperty) {
@@ -63,6 +67,8 @@ public class OrderService {
         this.cartRepository = cartRepository;
         this.cartService = cartService;
         this.productRepository = productRepository;
+        this.discountService = discountService;
+        this.pricingService = pricingService;
         this.emailService = emailService;
         this.alertService = alertService;
         this.stripeSecretKeyProperty = stripeSecretKeyProperty;
@@ -164,7 +170,7 @@ public class OrderService {
     @Transactional
     public OrderDTO createOrderFromCart(Long userId, String shippingAddress, String shippingCity,
             String shippingPostalCode, String shippingCountry,
-            BigDecimal shippingAmount, BigDecimal taxAmount) {
+            BigDecimal shippingAmount, BigDecimal taxAmount, String discountCode) {
         // Validate cart
         CartValidationResult validation = cartService.validateCartComprehensive(userId);
         if (!validation.isValid()) {
@@ -189,6 +195,10 @@ public class OrderService {
         order.setTaxAmount(taxAmount != null ? taxAmount : BigDecimal.ZERO);
         order.setStatus(OrderStatus.PENDING);
 
+        DiscountService.AppliedDiscount appliedDiscount = discountService.resolveAppliedDiscount(discountCode,
+                cart.getItems());
+        BigDecimal codeSavings = BigDecimal.ZERO;
+
         // Convert cart items to order items (stock already reserved while in cart)
         for (CartItem cartItem : cart.getItems()) {
             Product product = cartItem.getProduct();
@@ -199,9 +209,28 @@ public class OrderService {
             }
 
             OrderItem orderItem = new OrderItem(order, product, cartItem.getQuantity());
-            // Use cart item's unit price (snapshot at time of adding to cart)
-            orderItem.setUnitPrice(cartItem.getUnitPrice());
+            // Use cart item's effective unit price (already includes product-level sale price)
+            // and apply discount-code percentage when eligible.
+            BigDecimal effectiveUnitPrice = cartItem.getUnitPrice() != null
+                    ? pricingService.roundCurrency(cartItem.getUnitPrice())
+                    : pricingService.resolveEffectiveUnitPrice(product);
+            BigDecimal finalUnitPrice = effectiveUnitPrice;
+            if (appliedDiscount.appliesToProduct(product.getId())) {
+                finalUnitPrice = pricingService.applyPercentageDiscount(effectiveUnitPrice, appliedDiscount.percentage());
+                BigDecimal lineSavings = effectiveUnitPrice.subtract(finalUnitPrice)
+                        .multiply(BigDecimal.valueOf(cartItem.getQuantity()));
+                codeSavings = codeSavings.add(lineSavings);
+            }
+            orderItem.setUnitPrice(finalUnitPrice);
             order.addOrderItem(orderItem);
+        }
+
+        if (appliedDiscount.applied()) {
+            order.setDiscountCode(appliedDiscount.code());
+            order.setDiscountAmount(pricingService.roundCurrency(codeSavings));
+        } else {
+            order.setDiscountCode(null);
+            order.setDiscountAmount(BigDecimal.ZERO);
         }
 
         // Calculate totals
@@ -531,6 +560,10 @@ public class OrderService {
                         .orElseThrow(() -> new IllegalStateException("Product not found for ID: " + productId));
             }
 
+            if (Boolean.TRUE.equals(product.getStockNa())) {
+                continue;
+            }
+
             int currentStock = Optional.ofNullable(product.getStockQuantity()).orElse(0);
             int updatedStock = currentStock - decrementBy;
             if (updatedStock < 0) {
@@ -575,6 +608,10 @@ public class OrderService {
             if (product == null) {
                 product = productRepository.findById(productId)
                         .orElseThrow(() -> new IllegalStateException("Product not found for ID: " + productId));
+            }
+
+            if (Boolean.TRUE.equals(product.getStockNa())) {
+                continue;
             }
 
             product.increaseStock(increaseBy);
@@ -1122,6 +1159,8 @@ public class OrderService {
         dto.setTotalAmount(order.getTotalAmount());
         dto.setShippingAmount(order.getShippingAmount());
         dto.setTaxAmount(order.getTaxAmount());
+        dto.setDiscountCode(order.getDiscountCode());
+        dto.setDiscountAmount(order.getDiscountAmount());
         dto.setUserId(order.getUser() != null ? order.getUser().getId() : null);
         dto.setUsername(order.getUser() != null ? order.getUser().getUsername() : null);
         dto.setShippingAddress(order.getShippingAddress());

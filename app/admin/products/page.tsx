@@ -535,8 +535,8 @@ function AdminProductsContent() {
                             <TableCell className="font-mono text-sm">{product.sku}</TableCell>
                             <TableCell>{formatCurrency(product.price, product.currency)}</TableCell>
                             <TableCell>
-                              <Badge variant={product.stockLevel < 10 ? "destructive" : "secondary"}>
-                                {product.stockLevel}
+                              <Badge variant={product.stockNa ? "outline" : product.stockLevel < 10 ? "destructive" : "secondary"}>
+                                {product.stockNa ? "N/A" : product.stockLevel}
                               </Badge>
                             </TableCell>
                             <TableCell>

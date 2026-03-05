@@ -47,6 +47,9 @@ import java.util.Map;
 @Tag(name = "Products", description = "Product management operations")
 public class ProductController {
 
+    public record UpdateStockRequest(Integer quantity, Integer stockLevel, Boolean stockNa) {
+    }
+
     private final ProductService productService;
     private final ProductVariantService productVariantService;
     private final FileService fileService;
@@ -450,14 +453,32 @@ public class ProductController {
     @PreAuthorize("hasAnyRole('OWNER', 'ADMIN')")
     public ResponseEntity<Void> updateStock(
             @Parameter(description = "Product ID", example = "1", required = true) @PathVariable Long id,
-            @Parameter(description = "New stock quantity", example = "50", required = true) @RequestParam Integer quantity) {
+            @Parameter(description = "Stock update payload", required = false) @RequestBody(required = false) UpdateStockRequest request,
+            @Parameter(description = "New stock quantity", example = "50") @RequestParam(required = false) Integer quantity,
+            @Parameter(description = "Toggle stock as N/A") @RequestParam(required = false) Boolean stockNa) {
 
-        if (quantity < 0) {
+        Integer resolvedQuantity = quantity;
+        if (request != null) {
+            if (request.quantity() != null) {
+                resolvedQuantity = request.quantity();
+            } else if (request.stockLevel() != null) {
+                resolvedQuantity = request.stockLevel();
+            }
+            if (request.stockNa() != null) {
+                stockNa = request.stockNa();
+            }
+        }
+
+        if (resolvedQuantity == null && stockNa == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        if (resolvedQuantity != null && resolvedQuantity < 0) {
             return ResponseEntity.badRequest().build();
         }
 
         try {
-            productService.updateStock(id, quantity);
+            productService.updateStock(id, resolvedQuantity, stockNa);
             return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();

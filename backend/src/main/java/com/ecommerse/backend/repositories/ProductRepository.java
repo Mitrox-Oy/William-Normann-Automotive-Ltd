@@ -108,7 +108,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         /**
          * Find low stock products
          */
-        List<Product> findByActiveTrueAndStockQuantityLessThanOrderByStockQuantityAsc(Integer threshold);
+        @Query("SELECT p FROM Product p WHERE p.active = true AND COALESCE(p.stockNa, false) = false AND p.stockQuantity < :threshold ORDER BY p.stockQuantity ASC")
+        List<Product> findLowStockProducts(@Param("threshold") Integer threshold);
 
         /**
          * Get all distinct brands
@@ -221,7 +222,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                         +
                         "(:customCategoryPattern IS NULL OR LOWER(COALESCE(p.customCategory, '')) LIKE :customCategoryPattern) AND "
                         +
-                        "(:inStockOnly = false OR p.stockQuantity > 0) AND " +
+                        "(:inStockOnly = false OR COALESCE(p.stockNa, false) = true OR p.stockQuantity > 0) AND " +
                         "(:featuredOnly = false OR p.featured = true) AND " +
                         "(:activeFilter IS NULL OR p.active = :activeFilter)")
         Page<Product> findWithFilters(@Param("queryPattern") String queryPattern,
@@ -421,7 +422,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                         +
                         "(:customCategoryPattern IS NULL OR LOWER(COALESCE(p.customCategory, '')) LIKE :customCategoryPattern) AND "
                         +
-                        "(:inStockOnly = false OR p.stockQuantity > 0) AND " +
+                        "(:inStockOnly = false OR COALESCE(p.stockNa, false) = true OR p.stockQuantity > 0) AND " +
                         "(:featuredOnly = false OR p.featured = true)")
         Page<Product> findWithFiltersAndRootScope(@Param("categoryIds") List<Long> categoryIds,
                         @Param("queryPattern") String queryPattern,

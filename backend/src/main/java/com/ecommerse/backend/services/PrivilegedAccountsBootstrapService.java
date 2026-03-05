@@ -84,18 +84,16 @@ public class PrivilegedAccountsBootstrapService implements CommandLineRunner {
         String resolvedOwner2Password = resolvePassword(owner2Password, owner2PasswordB64, "owner2");
 
         List<BootstrapUser> users = new ArrayList<>();
-        users.add(new BootstrapUser(adminEmail, resolvedAdminPassword, User.Role.ADMIN, "Privileged admin bootstrap"));
-        users.add(new BootstrapUser(owner1Email, resolvedOwner1Password, User.Role.OWNER, "Privileged owner bootstrap"));
-        users.add(new BootstrapUser(owner2Email, resolvedOwner2Password, User.Role.OWNER, "Privileged owner bootstrap"));
+        addBootstrapUserIfConfigured(users, "admin", adminEmail, resolvedAdminPassword, User.Role.ADMIN,
+                "Privileged admin bootstrap");
+        addBootstrapUserIfConfigured(users, "owner1", owner1Email, resolvedOwner1Password, User.Role.OWNER,
+                "Privileged owner bootstrap");
+        addBootstrapUserIfConfigured(users, "owner2", owner2Email, resolvedOwner2Password, User.Role.OWNER,
+                "Privileged owner bootstrap");
 
-        // Fail-fast if enabled but incomplete.
-        for (BootstrapUser u : users) {
-            if (u.email == null || u.email.isBlank()) {
-                throw new IllegalStateException("Privileged bootstrap enabled but required email is missing.");
-            }
-            if (u.password == null || u.password.isBlank()) {
-                throw new IllegalStateException("Privileged bootstrap enabled but required password is missing.");
-            }
+        if (users.isEmpty()) {
+            throw new IllegalStateException(
+                    "Privileged bootstrap is enabled but no privileged accounts are configured.");
         }
 
         System.out.println("=== PRIVILEGED ACCOUNTS BOOTSTRAP START (enabled=true) ===");
@@ -106,6 +104,33 @@ public class PrivilegedAccountsBootstrapService implements CommandLineRunner {
         }
 
         System.out.println("=== PRIVILEGED ACCOUNTS BOOTSTRAP COMPLETE ===");
+    }
+
+    private static void addBootstrapUserIfConfigured(
+            List<BootstrapUser> users,
+            String label,
+            String email,
+            String password,
+            User.Role role,
+            String notes
+    ) {
+        boolean hasEmail = email != null && !email.isBlank();
+        boolean hasPassword = password != null && !password.isBlank();
+
+        if (!hasEmail && !hasPassword) {
+            return;
+        }
+
+        if (!hasEmail) {
+            throw new IllegalStateException(
+                    "Privileged bootstrap enabled but required email is missing for " + label + ".");
+        }
+        if (!hasPassword) {
+            throw new IllegalStateException(
+                    "Privileged bootstrap enabled but required password is missing for " + label + ".");
+        }
+
+        users.add(new BootstrapUser(email, password, role, notes));
     }
 
     private static String resolvePassword(String plain, String b64, String label) {

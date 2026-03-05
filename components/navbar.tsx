@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
-import { Menu, X, User, Package, Heart, MapPin, Settings, LogOut, LayoutDashboard, ShoppingBag, Users, BarChart3 } from "lucide-react"
+import { Menu, X, User, Package, Heart, MapPin, Settings, LogOut, LayoutDashboard, ShoppingBag, Users, BarChart3, Percent } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Container } from "@/components/container"
 import { CartDrawer } from "@/components/cart-drawer"
@@ -140,6 +140,12 @@ export function Navbar() {
                             Inventory
                           </Link>
                         </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href="/admin/discounts" className="cursor-pointer">
+                            <Percent className="mr-2 h-4 w-4" />
+                            Discounts
+                          </Link>
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive">
                           <LogOut className="mr-2 h-4 w-4" />
@@ -270,6 +276,14 @@ export function Navbar() {
                           <Link href="/admin/customers" className="block rounded-md px-3 py-2 text-sm text-white hover:bg-white/10" onClick={() => setMobileMenuOpen(false)}>
                             <Users className="mr-2 inline h-4 w-4" />
                             Customers
+                          </Link>
+                          <Link href="/admin/inventory" className="block rounded-md px-3 py-2 text-sm text-white hover:bg-white/10" onClick={() => setMobileMenuOpen(false)}>
+                            <BarChart3 className="mr-2 inline h-4 w-4" />
+                            Inventory
+                          </Link>
+                          <Link href="/admin/discounts" className="block rounded-md px-3 py-2 text-sm text-white hover:bg-white/10" onClick={() => setMobileMenuOpen(false)}>
+                            <Percent className="mr-2 inline h-4 w-4" />
+                            Discounts
                           </Link>
                         </>
                       ) : (

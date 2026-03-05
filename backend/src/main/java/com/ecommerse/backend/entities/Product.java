@@ -42,9 +42,17 @@ public class Product {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 
+    @DecimalMin(value = "0.0", inclusive = false, message = "Sale price must be greater than 0")
+    @Digits(integer = 8, fraction = 2, message = "Sale price must have at most 8 integer digits and 2 decimal places")
+    @Column(name = "sale_price", precision = 10, scale = 2)
+    private BigDecimal salePrice;
+
     @Min(value = 0, message = "Stock quantity cannot be negative")
     @Column(name = "stock_quantity", nullable = false)
     private Integer stockQuantity = 0;
+
+    @Column(name = "stock_na", nullable = false)
+    private Boolean stockNa = false;
 
     @NotBlank(message = "SKU is required")
     @Size(min = 3, max = 50, message = "SKU must be between 3 and 50 characters")
@@ -394,14 +402,28 @@ public class Product {
 
     // Business methods
     public boolean isInStock() {
-        return stockQuantity > 0;
+        return Boolean.TRUE.equals(stockNa) || (stockQuantity != null && stockQuantity > 0);
     }
 
     public boolean isAvailable() {
         return active && isInStock();
     }
 
+    public boolean isOnSale() {
+        return salePrice != null
+                && salePrice.compareTo(BigDecimal.ZERO) > 0
+                && price != null
+                && salePrice.compareTo(price) < 0;
+    }
+
+    public BigDecimal getEffectivePrice() {
+        return isOnSale() ? salePrice : price;
+    }
+
     public void reduceStock(int quantity) {
+        if (Boolean.TRUE.equals(stockNa)) {
+            return;
+        }
         if (stockQuantity < quantity) {
             throw new IllegalArgumentException(
                     "Insufficient stock. Available: " + stockQuantity + ", Requested: " + quantity);
@@ -410,6 +432,9 @@ public class Product {
     }
 
     public void increaseStock(int quantity) {
+        if (Boolean.TRUE.equals(stockNa)) {
+            return;
+        }
         if (quantity < 0) {
             throw new IllegalArgumentException("Quantity cannot be negative");
         }
@@ -449,12 +474,28 @@ public class Product {
         this.price = price;
     }
 
+    public BigDecimal getSalePrice() {
+        return salePrice;
+    }
+
+    public void setSalePrice(BigDecimal salePrice) {
+        this.salePrice = salePrice;
+    }
+
     public Integer getStockQuantity() {
         return stockQuantity;
     }
 
     public void setStockQuantity(Integer stockQuantity) {
         this.stockQuantity = stockQuantity;
+    }
+
+    public Boolean getStockNa() {
+        return stockNa;
+    }
+
+    public void setStockNa(Boolean stockNa) {
+        this.stockNa = stockNa;
     }
 
     public String getSku() {

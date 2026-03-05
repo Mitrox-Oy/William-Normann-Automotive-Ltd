@@ -73,6 +73,9 @@ export interface Product {
   description: string
   shortDescription?: string
   price: number
+  originalPrice?: number
+  salePrice?: number
+  onSale?: boolean
   currency: string
   availability: 'in_stock' | 'low_stock' | 'out_of_stock' | 'pre_order'
   availabilityText?: string
@@ -149,6 +152,7 @@ export interface Product {
   leadTime?: string
   minQuantity?: number
   stockLevel?: number
+  stockNa?: boolean
   variants?: ProductVariant[]
   infoSections?: Array<{ title: string; content: string }>
   createdAt?: string
@@ -464,11 +468,17 @@ export async function fetchProducts(params: SearchParams = {}): Promise<Products
     // Transform backend ProductDTO to frontend Product format
     const products: Product[] = (backendData.content || []).map((p: any) => {
       const images = extractOrderedImages(p.images, p.imageUrl)
+      const regularPrice = typeof p.price === 'number' ? p.price : parseFloat(p.price) || 0
+      const rawSalePrice = (p as any).salePrice ?? (p as any).sale_price
+      const parsedSalePrice = typeof rawSalePrice === 'number' ? rawSalePrice : parseFloat(rawSalePrice)
+      const hasSalePrice = Number.isFinite(parsedSalePrice) && parsedSalePrice > 0 && parsedSalePrice < regularPrice
+      const effectivePrice = hasSalePrice ? parsedSalePrice : regularPrice
 
       // Determine availability
+      const stockNa = parseBooleanFlag((p as any).stockNa ?? (p as any).stock_na)
       const stockQty = p.stockQuantity || 0
       let availability: 'in_stock' | 'low_stock' | 'out_of_stock' | 'pre_order' = 'out_of_stock'
-      if (stockQty > 10) {
+      if (stockNa || stockQty > 10) {
         availability = 'in_stock'
       } else if (stockQty > 0) {
         availability = 'low_stock'
@@ -481,10 +491,14 @@ export async function fetchProducts(params: SearchParams = {}): Promise<Products
         sku: p.sku || '',
         name: p.name || '',
         description: p.description || '',
-        price: typeof p.price === 'number' ? p.price : parseFloat(p.price) || 0,
+        price: effectivePrice,
+        originalPrice: regularPrice,
+        salePrice: hasSalePrice ? parsedSalePrice : undefined,
+        onSale: hasSalePrice,
         currency: 'USD', // Default, adjust if backend provides currency
         availability,
         quoteOnly: parseBooleanFlag((p as any).quoteOnly ?? (p as any).quote_only),
+        stockNa,
         images: images.length > 0 ? images : [''],
         category: p.categoryId?.toString() || '',
         categoryName: p.categoryName || '',
@@ -609,10 +623,16 @@ export async function fetchProductBySlug(slug: string): Promise<Product | null> 
     const data = await response.json()
 
     const images = extractOrderedImages(data.images, data.imageUrl)
+    const regularPrice = typeof data.price === 'number' ? data.price : parseFloat(data.price) || 0
+    const rawSalePrice = (data as any).salePrice ?? (data as any).sale_price
+    const parsedSalePrice = typeof rawSalePrice === 'number' ? rawSalePrice : parseFloat(rawSalePrice)
+    const hasSalePrice = Number.isFinite(parsedSalePrice) && parsedSalePrice > 0 && parsedSalePrice < regularPrice
+    const effectivePrice = hasSalePrice ? parsedSalePrice : regularPrice
 
+    const stockNa = parseBooleanFlag((data as any).stockNa ?? (data as any).stock_na)
     const stockQty = data.stockQuantity || 0
     let availability: 'in_stock' | 'low_stock' | 'out_of_stock' | 'pre_order' = 'out_of_stock'
-    if (stockQty > 10) {
+    if (stockNa || stockQty > 10) {
       availability = 'in_stock'
     } else if (stockQty > 0) {
       availability = 'low_stock'
@@ -636,10 +656,14 @@ export async function fetchProductBySlug(slug: string): Promise<Product | null> 
       name: data.name || '',
       description: data.description || '',
       shortDescription: data.shortDescription || '',
-      price: typeof data.price === 'number' ? data.price : parseFloat(data.price) || 0,
+      price: effectivePrice,
+      originalPrice: regularPrice,
+      salePrice: hasSalePrice ? parsedSalePrice : undefined,
+      onSale: hasSalePrice,
       currency: 'USD',
       availability,
       quoteOnly: parseBooleanFlag((data as any).quoteOnly ?? (data as any).quote_only),
+      stockNa,
       images: images.length > 0 ? images : [''],
       category: data.categoryId?.toString() || '',
       categoryName: data.categoryName || '',
@@ -890,6 +914,7 @@ export interface CreateOrderRequest {
   shippingCountry: string
   shippingAmount?: number
   taxAmount?: number
+  discountCode?: string
 }
 
 export interface CreateOrderResponse {
@@ -904,6 +929,23 @@ export interface CreateSessionResponse {
   url: string
 }
 
+export interface DiscountPreviewItem {
+  productId: string | number
+  quantity: number
+}
+
+export interface DiscountPreviewResponse {
+  valid: boolean
+  message: string
+  code: string
+  percentage: number
+  subtotal: number
+  saleSavings: number
+  codeSavings: number
+  totalSavings: number
+  totalAfterDiscount: number
+}
+
 /**
  * Create an order from the user's cart
  * This is the first step in the checkout process
@@ -915,6 +957,40 @@ export async function createCheckoutOrder(
     method: 'POST',
     body: JSON.stringify(orderData),
   })
+}
+
+export async function previewDiscountCode(
+  code: string,
+  items: DiscountPreviewItem[],
+): Promise<DiscountPreviewResponse> {
+  const payload = {
+    code,
+    items: items
+      .filter((item) => item && Number(item.quantity) > 0)
+      .map((item) => ({
+        productId: typeof item.productId === 'string' ? parseInt(item.productId, 10) : item.productId,
+        quantity: Number(item.quantity),
+      }))
+      .filter((item) => Number.isFinite(item.productId) && item.productId > 0 && Number.isFinite(item.quantity) && item.quantity > 0),
+  }
+
+  const response = await apiRequest<any>('/api/discounts/preview', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    skipAuth: true,
+  })
+
+  return {
+    valid: parseBooleanFlag(response?.valid),
+    message: String(response?.message || ''),
+    code: String(response?.code || ''),
+    percentage: Number(response?.percentage) || 0,
+    subtotal: Number(response?.subtotal) || 0,
+    saleSavings: Number(response?.saleSavings) || 0,
+    codeSavings: Number(response?.codeSavings) || 0,
+    totalSavings: Number(response?.totalSavings) || 0,
+    totalAfterDiscount: Number(response?.totalAfterDiscount) || 0,
+  }
 }
 
 /**
